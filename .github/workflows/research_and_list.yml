@@ -27,6 +27,7 @@ jobs:
 
       - name: Run research + draft-listing pipeline
         env:
+          PYTHONPATH: src
           EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
           EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
           EBAY_DEV_ID: ${{ secrets.EBAY_DEV_ID }}
