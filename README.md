@@ -3,9 +3,13 @@
 ## Printify: 自社ブランドの T シャツ・ステッカー作成
 
 このリポジトリには、Aries(牡羊座)ラムのライン アート([`assets/designs/aries-ram-lineart.jpg`](assets/designs/aries-ram-lineart.jpg))を使って
-Printify 上に T シャツとステッカーの商品を自動作成するスクリプトが入っています。印刷には白背景を除去した透過 PNG
-([`assets/designs/aries-ram-lineart-transparent.png`](assets/designs/aries-ram-lineart-transparent.png))を使い、
-T シャツは胸ワンポイント + 袖ワンポイント、ステッカーはダイカット(型抜き)で作成します。
+Printify 上に T シャツ・ステッカーの商品を自動作成するスクリプトが入っています。印刷には白背景を除去した透過 PNG
+([`assets/designs/aries-ram-lineart-transparent.png`](assets/designs/aries-ram-lineart-transparent.png))を使用します。
+作成される商品は次の 3 つです。
+
+- Aries Ram Left Chest T-Shirt(左胸ワンポイント)
+- Aries Ram Sleeve T-Shirt(左袖ワンポイント、デザイン違いとして別商品)
+- Aries Ram Sticker(ダイカット/型抜きステッカー)
 
 ### できること / できないこと
 
@@ -49,11 +53,10 @@ python -m printify.create_brand_products --brand-name "あなたのブランド�
 - Blueprint(商品テンプレート)は既定でキーワード検索(`Unisex Heavy Cotton Tee` / `Kiss-Cut Stickers`)により
   カタログから自動選択します。特定の blueprint / print provider を固定したい場合は `.env` の
   `TSHIRT_BLUEPRINT_ID` などを指定してください。
-- 既に作成済みの商品を作り直さず更新したい場合は、`.env` の `TSHIRT_PRODUCT_ID` / `STICKER_PRODUCT_ID` に
-  商品 ID(`printify/last_run.json` に出力されます)を設定してから再実行してください。デザイン差し替えや
-  配置調整のたびに毎回新しい商品を作らずに済みます。
-- T シャツの配置は既定で「胸ワンポイント(小さめ・やや上寄り)」+「`TSHIRT_SLEEVE_POSITION` で指定した袖
-  (既定は左袖)のワンポイント」です。袖プリントを外したい場合は `TSHIRT_NO_SLEEVE_PRINT=true` にしてください。
+- 既に作成済みの商品を作り直さず更新したい場合は、`.env` の `TSHIRT_CHEST_PRODUCT_ID` /
+  `TSHIRT_SLEEVE_PRODUCT_ID` / `STICKER_PRODUCT_ID` に商品 ID(`printify/last_run.json` に出力されます)を
+  設定してから再実行してください。デザイン差し替えや配置調整のたびに毎回新しい商品を作らずに済みます。
+- 袖プリントの向きは `TSHIRT_SLEEVE_POSITION`(既定は `left_sleeve`、`right_sleeve` にも変更可)で指定します。
 
 ### 画像について
 

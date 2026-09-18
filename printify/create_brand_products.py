@@ -40,9 +40,9 @@ from .client import PrintifyClient
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DESIGN = REPO_ROOT / "assets" / "designs" / "aries-ram-lineart-transparent.png"
 
-# A "one point" chest print: small and sitting where a breast-pocket logo
-# would go, rather than a full front-panel print.
-DEFAULT_CHEST_PLACEMENT = {"position": "front", "x": 0.5, "y": 0.32, "scale": 0.35, "angle": 0}
+# A "one point" left-chest print: small badge-sized logo sitting where a
+# breast-pocket would go, rather than a full front-panel print.
+LEFT_CHEST_PLACEMENT = {"position": "front", "x": 0.28, "y": 0.22, "scale": 0.22, "angle": 0}
 # A single sleeve print, centered in the (small) sleeve print area.
 DEFAULT_SLEEVE_PLACEMENT = {"position": "left_sleeve", "x": 0.5, "y": 0.5, "scale": 0.8, "angle": 0}
 
@@ -165,10 +165,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sticker-price-cents", type=int, default=_int_env("STICKER_PRICE_CENTS", 499))
     parser.add_argument("--tshirt-max-variants", type=int, default=_int_env("TSHIRT_MAX_VARIANTS"))
     parser.add_argument("--sticker-max-variants", type=int, default=_int_env("STICKER_MAX_VARIANTS"))
-    parser.add_argument("--tshirt-product-id", default=os.environ.get("TSHIRT_PRODUCT_ID"), help="Update this existing product instead of creating a new one.")
+    parser.add_argument("--tshirt-chest-product-id", default=os.environ.get("TSHIRT_CHEST_PRODUCT_ID"), help="Update this existing left-chest T-shirt product instead of creating a new one.")
+    parser.add_argument("--tshirt-sleeve-product-id", default=os.environ.get("TSHIRT_SLEEVE_PRODUCT_ID"), help="Update this existing sleeve T-shirt product instead of creating a new one.")
     parser.add_argument("--sticker-product-id", default=os.environ.get("STICKER_PRODUCT_ID"), help="Update this existing product instead of creating a new one.")
     parser.add_argument("--sleeve-position", default=os.environ.get("TSHIRT_SLEEVE_POSITION", "left_sleeve"), choices=["left_sleeve", "right_sleeve"])
-    parser.add_argument("--no-sleeve-print", action="store_true", default=os.environ.get("TSHIRT_NO_SLEEVE_PRINT") == "true", help="Chest print only, skip the sleeve placement.")
     parser.add_argument("--publish", action="store_true", default=os.environ.get("PRINTIFY_PUBLISH") == "true")
     parser.add_argument("--out", default=str(REPO_ROOT / "printify" / "last_run.json"), help="Where to write a JSON summary of created products.")
     args = parser.parse_args(argv)
@@ -192,29 +192,45 @@ def main(argv: list[str] | None = None) -> int:
 
     tags = [args.brand_name, "Aries", "Ram", "zodiac"]
 
-    tshirt_placements = [DEFAULT_CHEST_PLACEMENT]
-    if not args.no_sleeve_print:
-        tshirt_placements.append({**DEFAULT_SLEEVE_PLACEMENT, "position": args.sleeve_position})
-
-    tshirt_extra_variant_ids = _existing_variant_ids(client, args.shop_id, args.tshirt_product_id)
-    tshirt_payload = build_product_payload(
+    chest_extra_variant_ids = _existing_variant_ids(client, args.shop_id, args.tshirt_chest_product_id)
+    tshirt_chest_payload = build_product_payload(
         client,
         keyword=args.tshirt_keyword,
         blueprint_id=args.tshirt_blueprint_id,
         print_provider_id=args.tshirt_print_provider_id,
         image_id=image["id"],
-        title=f"{args.brand_name} - Aries Ram Unisex T-Shirt",
+        title=f"{args.brand_name} - Aries Ram Left Chest T-Shirt",
         description=(
-            f"{args.brand_name} original Aries ram line-art print - a small chest "
-            "logo with a matching sleeve print, on a soft everyday unisex tee."
+            f"{args.brand_name} original Aries ram line-art - a small left-chest "
+            "logo print on a soft everyday unisex tee."
         ),
-        tags=tags + ["T-Shirt"],
+        tags=tags + ["T-Shirt", "Left Chest"],
         price_cents=args.tshirt_price_cents,
         max_variants=args.tshirt_max_variants,
-        placements=tshirt_placements,
-        extra_variant_ids=tshirt_extra_variant_ids,
+        placements=[LEFT_CHEST_PLACEMENT],
+        extra_variant_ids=chest_extra_variant_ids,
     )
-    tshirt = create_or_update_product(client, args.shop_id, args.tshirt_product_id, tshirt_payload)
+    tshirt_chest = create_or_update_product(client, args.shop_id, args.tshirt_chest_product_id, tshirt_chest_payload)
+
+    sleeve_extra_variant_ids = _existing_variant_ids(client, args.shop_id, args.tshirt_sleeve_product_id)
+    tshirt_sleeve_payload = build_product_payload(
+        client,
+        keyword=args.tshirt_keyword,
+        blueprint_id=args.tshirt_blueprint_id,
+        print_provider_id=args.tshirt_print_provider_id,
+        image_id=image["id"],
+        title=f"{args.brand_name} - Aries Ram Sleeve T-Shirt",
+        description=(
+            f"{args.brand_name} original Aries ram line-art - a small sleeve "
+            "logo print on a soft everyday unisex tee."
+        ),
+        tags=tags + ["T-Shirt", "Sleeve"],
+        price_cents=args.tshirt_price_cents,
+        max_variants=args.tshirt_max_variants,
+        placements=[{**DEFAULT_SLEEVE_PLACEMENT, "position": args.sleeve_position}],
+        extra_variant_ids=sleeve_extra_variant_ids,
+    )
+    tshirt_sleeve = create_or_update_product(client, args.shop_id, args.tshirt_sleeve_product_id, tshirt_sleeve_payload)
 
     sticker_extra_variant_ids = _existing_variant_ids(client, args.shop_id, args.sticker_product_id)
     sticker_payload = build_product_payload(
@@ -232,10 +248,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     sticker = create_or_update_product(client, args.shop_id, args.sticker_product_id, sticker_payload)
 
-    results = {"image": image, "tshirt": tshirt, "sticker": sticker, "published": False}
+    results = {
+        "image": image,
+        "tshirt_left_chest": tshirt_chest,
+        "tshirt_sleeve": tshirt_sleeve,
+        "sticker": sticker,
+        "published": False,
+    }
 
     if args.publish:
-        for label, product in (("t-shirt", tshirt), ("sticker", sticker)):
+        for label, product in (
+            ("left-chest t-shirt", tshirt_chest),
+            ("sleeve t-shirt", tshirt_sleeve),
+            ("sticker", sticker),
+        ):
             print(f"Publishing {label} (product id={product['id']})...", file=sys.stderr)
             client.publish_product(args.shop_id, product["id"])
             client.mark_publish_succeeded(
