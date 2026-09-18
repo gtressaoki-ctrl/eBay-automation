@@ -41,16 +41,23 @@ def pick_print_provider(client: PrintifyClient, blueprint_id: int, print_provide
 PREFERRED_POSITIONS = ["front", "default"]
 
 
-def pick_placeholder_positions(variants_response: dict) -> list[str]:
-    """Return a single print position (e.g. just the front of a T-shirt),
-    not every placeholder a blueprint exposes (front/back/sleeves/neck),
-    since we're only placing one design."""
-    available: list[str] = []
+def available_positions(variants_response: dict) -> list[str]:
+    """All placeholder positions (front/back/sleeves/neck/...) a blueprint
+    exposes, in the order the catalog returns them."""
+    positions: list[str] = []
     for variant in variants_response.get("variants", []):
         for placeholder in variant.get("placeholders", []):
             position = placeholder.get("position")
-            if position and position not in available:
-                available.append(position)
+            if position and position not in positions:
+                positions.append(position)
+    return positions
+
+
+def pick_placeholder_positions(variants_response: dict) -> list[str]:
+    """Return a single print position (e.g. just the front of a T-shirt),
+    not every placeholder a blueprint exposes (front/back/sleeves/neck),
+    since by default we're only placing one design."""
+    available = available_positions(variants_response)
     if not available:
         return ["front"]
     for preferred in PREFERRED_POSITIONS:

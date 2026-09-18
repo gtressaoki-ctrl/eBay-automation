@@ -94,6 +94,9 @@ class PrintifyClient:
     def get_product(self, shop_id: str, product_id: str) -> dict:
         return self._request("GET", f"/shops/{shop_id}/products/{product_id}.json")
 
+    def update_product(self, shop_id: str, product_id: str, payload: dict) -> dict:
+        return self._request("PUT", f"/shops/{shop_id}/products/{product_id}.json", json=payload)
+
     def publish_product(self, shop_id: str, product_id: str, publish_payload: dict | None = None) -> None:
         payload = publish_payload or {
             "title": True,
