@@ -28,7 +28,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .catalog import pick_blueprint, pick_placeholder_positions, pick_print_provider
+from .catalog import pick_blueprint, pick_placeholder_positions, pick_print_provider, select_variants
 from .client import PrintifyClient
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -73,7 +73,7 @@ def create_product(
     if not all_variants:
         raise ValueError(f"Blueprint {blueprint['id']} / provider {provider['id']} has no variants.")
 
-    enabled_variants = all_variants[:max_variants] if max_variants else all_variants
+    enabled_variants = select_variants(all_variants, max_variants=max_variants)
     variant_ids = [v["id"] for v in enabled_variants]
     positions = pick_placeholder_positions(variants_response)
 
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shop-id", default=os.environ.get("PRINTIFY_SHOP_ID"), help="Printify shop id.")
     parser.add_argument("--api-token", default=os.environ.get("PRINTIFY_API_TOKEN"), help="Printify API token.")
     parser.add_argument("--tshirt-keyword", default=os.environ.get("TSHIRT_BLUEPRINT_KEYWORD", "Unisex Heavy Cotton Tee"))
-    parser.add_argument("--sticker-keyword", default=os.environ.get("STICKER_BLUEPRINT_KEYWORD", "Kiss Cut Stickers"))
+    parser.add_argument("--sticker-keyword", default=os.environ.get("STICKER_BLUEPRINT_KEYWORD", "Kiss-Cut Stickers"))
     parser.add_argument("--tshirt-blueprint-id", type=int, default=_int_env("TSHIRT_BLUEPRINT_ID"))
     parser.add_argument("--sticker-blueprint-id", type=int, default=_int_env("STICKER_BLUEPRINT_ID"))
     parser.add_argument("--tshirt-print-provider-id", type=int, default=_int_env("TSHIRT_PRINT_PROVIDER_ID"))
