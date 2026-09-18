@@ -1,0 +1,14 @@
+{
+  "daily_listing_quota": 3,
+  "totals": {
+    "listings_created": 0,
+    "listings_published": 0,
+    "orders_fulfilled": 0,
+    "revenue_cents": 0,
+    "cost_cents": 0,
+    "profit_cents": 0
+  },
+  "orders": [],
+  "paused": false,
+  "pause_reason": null
+}

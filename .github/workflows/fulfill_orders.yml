@@ -1,0 +1,51 @@
+name: eBay POD Order Fulfillment Sync
+
+on:
+  schedule:
+    - cron: "15 */2 * * *"  # every 2 hours
+  workflow_dispatch: {}
+
+concurrency:
+  group: ebay-automation-state
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  fulfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Sync orders -> Printify -> tracking
+        env:
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_DEV_ID: ${{ secrets.EBAY_DEV_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+          PRINTIFY_API_KEY: ${{ secrets.PRINTIFY_API_KEY }}
+          PRINTIFY_SHOP_ID: ${{ vars.PRINTIFY_SHOP_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python -m ebay_automation.pipeline_fulfill
+
+      - name: Commit updated state
+        run: |
+          git config user.name "ebay-automation-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(state): fulfillment sync $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            git push
+          else
+            echo "No state changes to commit."
+          fi
