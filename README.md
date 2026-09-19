@@ -77,6 +77,57 @@ python -m printify.create_brand_products --brand-name "あなたのブランド�
 `assets/reference/aries-ram-tattoo-reference.jpg` はデザインの参照用(タトゥー写真)であり、印刷用データとしては
 使用していません。
 
+## eBay: Printify 商品の出品
+
+`ebay/` に、Printify で作った商品(EQUINOX の T シャツ・ステッカー)を eBay に多バリエーション出品として
+連携するスクリプトが入っています。Printify と違い、eBay 側は以下の理由で **完全な無人セットアップができません**。
+
+- API キー発行に加えて、**ブラウザでの eBay ログイン + 同意操作**(OAuth)が必要(この環境から代行不可)。
+- 出品には配送方法・支払い・返品ポリシーと発送元住所が必須で、これらは実際のビジネス情報のため代わりに
+  決められません。
+
+### 事前準備(手動)
+
+1. [developer.ebay.com](https://developer.ebay.com/) で Developer アカウントを作成し、**Application Keys** ページで
+   キーセット(Client ID / Client Secret)を発行する。最初は Sandbox キーでのテストを推奨。
+2. 同じページで **RuName**(OAuth のリダイレクト先識別子)を作成する。
+3. `.env` に `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET` / `EBAY_RU_NAME` / `EBAY_SANDBOX` を設定する。
+
+### OAuth 同意(手動・1 回だけ)
+
+```bash
+python -m ebay.oauth_consent
+# 表示された URL をブラウザで開き、eBay セラーアカウントでログインして許可する
+# リダイレクト先 URL の ?code=... の値をコピーする
+python -m ebay.exchange_code "<コピーした code>"
+# 出力された refresh_token を .env の EBAY_REFRESH_TOKEN に保存する
+```
+
+`EBAY_REFRESH_TOKEN` は約 18 ヶ月有効で、以降のスクリプトはこれを使って自動でアクセストークンを更新します。
+
+### アカウント初期設定(発送元ロケーション・出品ポリシー)
+
+`.env` に実際の発送元住所とポリシー条件(ハンドリング日数・送料・返品条件など)を入力してから:
+
+```bash
+python -m ebay.setup_account
+```
+
+既存の同名ロケーション/ポリシーがあればそれを再利用し、なければ作成します。出力された ID を `.env` の
+`EBAY_MERCHANT_LOCATION_KEY` / `EBAY_FULFILLMENT_POLICY_ID` / `EBAY_PAYMENT_POLICY_ID` / `EBAY_RETURN_POLICY_ID`
+に設定してください。
+
+### 出品実行
+
+```bash
+python -m ebay.sync_from_printify <Printify商品ID> --sku-prefix EQX-CHEST --category-query "T-Shirt"
+# 内容を確認できたら --publish を付けて再実行すると eBay に公開されます
+```
+
+Printify 商品の各バリエーション(色・サイズ)ごとに eBay の inventory item を作成し、1 つの
+inventory item group にまとめて多バリエーション出品として公開します。eBay の商品カテゴリは
+`--category-query` のキーワードからカタログ(Taxonomy API)を検索して自動選択します(`--category-id` で固定も可能)。
+
 ### ファイル構成
 
 ```
@@ -85,6 +136,12 @@ printify/
   catalog.py                blueprint / print provider / variant の自動選択ロジック
   create_brand_products.py  T シャツ・ステッカーを作成/更新するメインスクリプト (CLI)
   prepare_design.py         白背景を透過 PNG に変換するユーティリティ
+ebay/
+  client.py                 eBay REST API(OAuth・Taxonomy・Account・Inventory)の薄いラッパー
+  oauth_consent.py          OAuth 同意 URL を表示(ブラウザでの手動承認が必要)
+  exchange_code.py          認可コードを refresh_token に交換
+  setup_account.py          発送元ロケーション・出品ポリシーの作成/再利用
+  sync_from_printify.py     Printify 商品を eBay に多バリエーション出品するメインスクリプト (CLI)
 assets/
   designs/                  印刷に使うデザインデータ
   reference/                参考画像(印刷には使わない)
