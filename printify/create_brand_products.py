@@ -10,8 +10,8 @@ products against the live Printify catalog, and (optionally) publishes them.
 
 Usage:
     python -m printify.create_brand_products \
-        --brand-name "Half Moon Ram" \
-        --design assets/designs/aries-ram-lineart.jpg \
+        --brand-name "EQUINOX" \
+        --design assets/designs/aries-ram-lineart-transparent.png \
         --publish
 
 Required environment variables (see .env.example):
@@ -151,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
     load_dotenv()
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--brand-name", required=True, help="Brand name used in product titles/descriptions.")
+    parser.add_argument("--brand-name", default=os.environ.get("BRAND_NAME", "EQUINOX"), help="Brand name used in product titles/descriptions.")
     parser.add_argument("--design", default=str(DEFAULT_DESIGN), help="Path to the artwork file to print.")
     parser.add_argument("--shop-id", default=os.environ.get("PRINTIFY_SHOP_ID"), help="Printify shop id.")
     parser.add_argument("--api-token", default=os.environ.get("PRINTIFY_API_TOKEN"), help="Printify API token.")

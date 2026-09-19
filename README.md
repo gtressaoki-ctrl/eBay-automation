@@ -1,15 +1,20 @@
 # eBay-automation
 
-## Printify: 自社ブランドの T シャツ・ステッカー作成
+## Printify: 自社ブランド「EQUINOX」の T シャツ・ステッカー作成
 
-このリポジトリには、Aries(牡羊座)ラムのライン アート([`assets/designs/aries-ram-lineart.jpg`](assets/designs/aries-ram-lineart.jpg))を使って
+ブランド名は **EQUINOX**(春分)。Aries(牡羊座)のシーズンが春分から始まることにちなんでいます。
+
+このリポジトリには、Aries ラムのライン アート([`assets/designs/aries-ram-lineart.jpg`](assets/designs/aries-ram-lineart.jpg))を使って
 Printify 上に T シャツ・ステッカーの商品を自動作成するスクリプトが入っています。印刷には白背景を除去した透過 PNG
 ([`assets/designs/aries-ram-lineart-transparent.png`](assets/designs/aries-ram-lineart-transparent.png))を使用します。
 作成される商品は次の 3 つです。
 
-- Aries Ram Left Chest T-Shirt(左胸ワンポイント)
-- Aries Ram Sleeve T-Shirt(左袖ワンポイント、デザイン違いとして別商品)
-- Aries Ram Sticker(ダイカット/型抜きステッカー)
+- EQUINOX - Aries Ram Left Chest T-Shirt(左胸ワンポイント)
+- EQUINOX - Aries Ram Sleeve T-Shirt(左袖ワンポイント、デザイン違いとして別商品)
+- EQUINOX - Aries Ram Sticker(ダイカット/型抜きステッカー、公開済み)
+
+Printify にはショップ名(ブランド名)を API から変更する仕組みがないため、ショップ名自体
+(現在は作成時の「Aries」)を変更したい場合は Printify ダッシュボードで手動リネームが必要です。
 
 ### できること / できないこと
 
