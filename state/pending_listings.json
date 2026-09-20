@@ -63,5 +63,44 @@
     "status": "pending_approval",
     "printify_variant_id": 38178,
     "issue_number": 10
+  },
+  "POD-birdwatching-gift-shirt-f3d47ef9": {
+    "sku": "POD-birdwatching-gift-shirt-f3d47ef9",
+    "keyword": "birdwatching gift shirt",
+    "phrase": "BIRDWATCHING",
+    "printify_product_id": "6ab070b9aa4cbdce9a0afee3",
+    "ebay_offer_id": "270922174011",
+    "price_cents": 3344,
+    "cost_cents": 1520,
+    "image_url": "https://images-api.printify.com/mockup/6ab070b9aa4cbdce9a0afee3/38178/97992/birdwatching-unisex-graphic-tee.jpg?camera_label=front",
+    "status": "pending_approval",
+    "printify_variant_id": 38178,
+    "issue_number": 12
+  },
+  "POD-camping-life-shirt-befaa53b": {
+    "sku": "POD-camping-life-shirt-befaa53b",
+    "keyword": "camping life shirt",
+    "phrase": "CAMPING LIFE",
+    "printify_product_id": "6ab070c160ffe2ce5f030404",
+    "ebay_offer_id": "270922219011",
+    "price_cents": 3344,
+    "cost_cents": 1520,
+    "image_url": "https://images-api.printify.com/mockup/6ab070c160ffe2ce5f030404/38178/97992/camping-life-unisex-graphic-tee.jpg?camera_label=front",
+    "status": "pending_approval",
+    "printify_variant_id": 38178,
+    "issue_number": 13
+  },
+  "POD-dinosaur-lover-shirt-c1e04c51": {
+    "sku": "POD-dinosaur-lover-shirt-c1e04c51",
+    "keyword": "dinosaur lover shirt",
+    "phrase": "DINOSAUR LOVER",
+    "printify_product_id": "6ab070c889e06fcb290ab834",
+    "ebay_offer_id": "270922260011",
+    "price_cents": 3344,
+    "cost_cents": 1520,
+    "image_url": "https://images-api.printify.com/mockup/6ab070c889e06fcb290ab834/38178/97992/dinosaur-lover-unisex-graphic-tee.jpg?camera_label=front",
+    "status": "pending_approval",
+    "printify_variant_id": 38178,
+    "issue_number": 14
   }
 }
