@@ -13,8 +13,10 @@ Usage:
 from __future__ import annotations
 
 import os
+import re
 import sys
 
+import requests
 from dotenv import load_dotenv
 
 from .client import EbayClient
@@ -54,30 +56,71 @@ def ensure_fulfillment_policy(ebay: EbayClient, marketplace_id: str) -> str:
             return policy["fulfillmentPolicyId"]
 
     handling_days = int(os.environ.get("EBAY_HANDLING_DAYS", "3"))
+
+    # eBay's fulfillment policy schema requires a DOMESTIC shipping option to
+    # be present even when the seller never actually ships domestically
+    # (e.g. a Japan-based seller listing on EBAY_US) - omitting it fails
+    # validation with SHIPELIG_ERROR_CODE_NAME=DOMESTIC_SHIPPING_REQUIRED.
+    # The codes below are real eBay ShippingService enum values pulled from
+    # the Trading API's GeteBayDetails(ShippingServiceDetails) reference,
+    # not guessed - eBay silently rejects unlisted codes
+    # (UNKNOWN_SHIPPING_SERVICE_CODE) with no live lookup in the REST APIs.
+    shipping_options = [
+        {
+            "optionType": "DOMESTIC",
+            "costType": "FLAT_RATE",
+            "shippingServices": [
+                {
+                    "sortOrder": 1,
+                    "shippingCarrierCode": os.environ.get("EBAY_DOMESTIC_SHIPPING_CARRIER", "USPS"),
+                    "shippingServiceCode": os.environ.get("EBAY_DOMESTIC_SHIPPING_SERVICE", "USPSParcel"),
+                    "shippingCost": {"value": os.environ.get("EBAY_DOMESTIC_SHIPPING_COST", "0.00"), "currency": "USD"},
+                    "freeShipping": os.environ.get("EBAY_DOMESTIC_SHIPPING_COST", "0.00") == "0.00",
+                }
+            ],
+        }
+    ]
+
+    if os.environ.get("EBAY_INCLUDE_INTERNATIONAL_SHIPPING", "true") == "true":
+        ship_to_region = os.environ.get("EBAY_SHIP_TO_REGION", "US")
+        shipping_options.append(
+            {
+                "optionType": "INTERNATIONAL",
+                "costType": "FLAT_RATE",
+                "shippingServices": [
+                    {
+                        "sortOrder": 1,
+                        # "StandardInternational" is carrier-agnostic in eBay's
+                        # schema (it auto-assigns shippingCarrierCode=GENERIC);
+                        # the actual carrier used to fulfill (e.g. Japan Post)
+                        # doesn't need to be declared here.
+                        "shippingServiceCode": os.environ.get("EBAY_INTERNATIONAL_SHIPPING_SERVICE", "StandardInternational"),
+                        "shippingCost": {"value": os.environ.get("EBAY_SHIPPING_COST", "25.00"), "currency": "USD"},
+                        "freeShipping": False,
+                        "shipToLocations": {"regionIncluded": [{"regionName": ship_to_region}]},
+                    }
+                ],
+            }
+        )
+
     payload = {
         "name": name,
         "marketplaceId": marketplace_id,
         "categoryTypes": [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}],
         "handlingTime": {"value": handling_days, "unit": "DAY"},
-        "shippingOptions": [
-            {
-                "optionType": "DOMESTIC",
-                "costType": "FLAT_RATE",
-                "shippingServices": [
-                    {
-                        "sortOrder": 1,
-                        "shippingCarrierCode": os.environ.get("EBAY_SHIPPING_CARRIER", "USPS"),
-                        "shippingServiceCode": os.environ.get("EBAY_SHIPPING_SERVICE", "USPSGroundAdvantage"),
-                        "shippingCost": {"value": os.environ.get("EBAY_SHIPPING_COST", "0.00"), "currency": "USD"},
-                        "freeShipping": os.environ.get("EBAY_SHIPPING_COST", "0.00") == "0.00",
-                    }
-                ],
-            }
-        ],
+        "shippingOptions": shipping_options,
     }
     result = ebay.create_fulfillment_policy(payload)
     print(f"   created fulfillment policy '{name}'.", file=sys.stderr)
     return result["fulfillmentPolicyId"]
+
+
+def _duplicate_policy_id(exc: requests.HTTPError) -> str | None:
+    """eBay refuses a second policy with the same categoryTypes/marketplace
+    ('Duplicate Policy') - most accounts already have a default payment/
+    return policy from signup, so extract and reuse it instead of failing."""
+    match = re.search(r"'duplicatePolicyId', 'value': '(\d+)'", str(exc))
+    return match.group(1) if match else None
 
 
 def ensure_payment_policy(ebay: EbayClient, marketplace_id: str) -> str:
@@ -93,7 +136,14 @@ def ensure_payment_policy(ebay: EbayClient, marketplace_id: str) -> str:
         "categoryTypes": [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}],
         "immediatePay": False,
     }
-    result = ebay.create_payment_policy(payload)
+    try:
+        result = ebay.create_payment_policy(payload)
+    except requests.HTTPError as exc:
+        duplicate_id = _duplicate_policy_id(exc)
+        if not duplicate_id:
+            raise
+        print(f"   reusing existing payment policy {duplicate_id} (account already has one for this category/marketplace).", file=sys.stderr)
+        return duplicate_id
     print(f"   created payment policy '{name}'.", file=sys.stderr)
     return result["paymentPolicyId"]
 
@@ -114,7 +164,14 @@ def ensure_return_policy(ebay: EbayClient, marketplace_id: str) -> str:
         "returnShippingCostPayer": os.environ.get("EBAY_RETURN_SHIPPING_PAYER", "BUYER"),
         "refundMethod": "MONEY_BACK",
     }
-    result = ebay.create_return_policy(payload)
+    try:
+        result = ebay.create_return_policy(payload)
+    except requests.HTTPError as exc:
+        duplicate_id = _duplicate_policy_id(exc)
+        if not duplicate_id:
+            raise
+        print(f"   reusing existing return policy {duplicate_id} (account already has one for this category/marketplace).", file=sys.stderr)
+        return duplicate_id
     print(f"   created return policy '{name}'.", file=sys.stderr)
     return result["returnPolicyId"]
 

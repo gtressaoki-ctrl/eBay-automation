@@ -113,9 +113,18 @@ python -m ebay.exchange_code "<コピーした code>"
 python -m ebay.setup_account
 ```
 
-既存の同名ロケーション/ポリシーがあればそれを再利用し、なければ作成します。出力された ID を `.env` の
-`EBAY_MERCHANT_LOCATION_KEY` / `EBAY_FULFILLMENT_POLICY_ID` / `EBAY_PAYMENT_POLICY_ID` / `EBAY_RETURN_POLICY_ID`
-に設定してください。
+既存の同名ロケーション/ポリシーがあればそれを再利用し、なければ作成します。アカウントに既に同じ
+カテゴリ/マーケットプレイス向けの支払い・返品ポリシーがある場合(`Duplicate Policy`)は、そちらを自動で
+再利用します。出力された ID を `.env` の `EBAY_MERCHANT_LOCATION_KEY` / `EBAY_FULFILLMENT_POLICY_ID` /
+`EBAY_PAYMENT_POLICY_ID` / `EBAY_RETURN_POLICY_ID` に設定してください。
+
+**配送ポリシーについて**: eBay の仕様上、発送元が海外(例: 日本)でも `DOMESTIC` の配送オプションが
+1つ必須です(`SHIPELIG_ERROR_CODE_NAME: DOMESTIC_SHIPPING_REQUIRED`)。実際には使われない前提のダミー
+として `EBAY_DOMESTIC_SHIPPING_*` を設定し、実際に使う海外発送は `EBAY_INTERNATIONAL_SHIPPING_SERVICE`
+(既定: `StandardInternational`、eBay 側で自動的に `shippingCarrierCode=GENERIC` が割り当てられる、
+特定キャリア非依存の国際配送クラス)側で設定します。配送キャリア/サービスコードは REST API から一覧取得
+できないため(Metadata API に該当エンドポイントなし)、レガシー Trading API の `GeteBayDetails`
+(`DetailName=ShippingServiceDetails`)で実在するコードを確認して使っています。
 
 ### 出品実行
 
