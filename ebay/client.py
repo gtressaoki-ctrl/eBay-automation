@@ -41,6 +41,7 @@ class EbayClient:
         ru_name: str | None = None,
         refresh_token: str | None = None,
         sandbox: bool = False,
+        content_language: str = "en-US",
     ):
         if not client_id or not client_secret:
             raise ValueError("eBay client id/secret are required (EBAY_CLIENT_ID / EBAY_CLIENT_SECRET).")
@@ -49,6 +50,9 @@ class EbayClient:
         self.ru_name = ru_name
         self.refresh_token = refresh_token
         self.sandbox = sandbox
+        # Required by the Sell Inventory API on every write (item/group/offer);
+        # the Account and Taxonomy APIs don't need it.
+        self.content_language = content_language
         self.api_base = SANDBOX_API_BASE if sandbox else PRODUCTION_API_BASE
         self.auth_base = SANDBOX_AUTH_BASE if sandbox else PRODUCTION_AUTH_BASE
         self.token_url = f"{self.api_base}/identity/v1/oauth2/token"
@@ -212,14 +216,24 @@ class EbayClient:
         return self._user_request("POST", "/sell/account/v1/return_policy", json=payload)
 
     # -- Sell Inventory API (user token) ---------------------------------
+    def _content_language_headers(self) -> dict:
+        return {"Content-Language": self.content_language}
+
     def create_or_replace_inventory_item(self, sku: str, payload: dict) -> None:
-        self._user_request("PUT", f"/sell/inventory/v1/inventory_item/{sku}", json=payload)
+        self._user_request(
+            "PUT", f"/sell/inventory/v1/inventory_item/{sku}", json=payload, headers=self._content_language_headers()
+        )
 
     def get_inventory_item(self, sku: str) -> dict:
         return self._user_request("GET", f"/sell/inventory/v1/inventory_item/{sku}")
 
     def create_or_replace_inventory_item_group(self, group_key: str, payload: dict) -> None:
-        self._user_request("PUT", f"/sell/inventory/v1/inventory_item_group/{group_key}", json=payload)
+        self._user_request(
+            "PUT",
+            f"/sell/inventory/v1/inventory_item_group/{group_key}",
+            json=payload,
+            headers=self._content_language_headers(),
+        )
 
     def get_inventory_item_group(self, group_key: str) -> dict:
         return self._user_request("GET", f"/sell/inventory/v1/inventory_item_group/{group_key}")
@@ -229,16 +243,28 @@ class EbayClient:
             "POST",
             "/sell/inventory/v1/offer/publish_by_inventory_item_group",
             json={"inventoryItemGroupKey": group_key, "marketplaceId": marketplace_id},
+            headers=self._content_language_headers(),
         )
 
     def create_offer(self, payload: dict) -> dict:
-        return self._user_request("POST", "/sell/inventory/v1/offer", json=payload)
+        return self._user_request(
+            "POST", "/sell/inventory/v1/offer", json=payload, headers=self._content_language_headers()
+        )
 
     def update_offer(self, offer_id: str, payload: dict) -> None:
-        self._user_request("PUT", f"/sell/inventory/v1/offer/{offer_id}", json=payload)
+        self._user_request(
+            "PUT", f"/sell/inventory/v1/offer/{offer_id}", json=payload, headers=self._content_language_headers()
+        )
 
     def get_offers_for_sku(self, sku: str) -> list[dict]:
-        result = self._user_request("GET", "/sell/inventory/v1/offer", params={"sku": sku})
+        # eBay 404s (errorId 25713, "This Offer is not available") instead
+        # of returning an empty list when a SKU has no offers yet.
+        try:
+            result = self._user_request("GET", "/sell/inventory/v1/offer", params={"sku": sku})
+        except requests.HTTPError as exc:
+            if "25713" in str(exc):
+                return []
+            raise
         return result.get("offers", []) if result else []
 
     def publish_offer(self, offer_id: str) -> dict:
