@@ -272,3 +272,9 @@ class EbayClient:
 
     def withdraw_offer(self, offer_id: str) -> dict:
         return self._user_request("POST", f"/sell/inventory/v1/offer/{offer_id}/withdraw")
+
+    def delete_offer(self, offer_id: str) -> None:
+        self._user_request("DELETE", f"/sell/inventory/v1/offer/{offer_id}")
+
+    def delete_inventory_item(self, sku: str) -> None:
+        self._user_request("DELETE", f"/sell/inventory/v1/inventory_item/{sku}")
