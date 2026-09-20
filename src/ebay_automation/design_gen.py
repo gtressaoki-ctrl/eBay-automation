@@ -1,104 +1,363 @@
-"""Generate original, copyright-free typography designs for POD products.
+"""Render printable designs sized to the product's actual print area.
 
-v1 keeps this deliberately simple and deterministic: turn a niche keyword
-into a short uppercase phrase and render it as centered text on a
-transparent-background PNG using an open-license (SIL OFL) Google Font.
-No third-party artwork, logos, or characters are ever used, so there is
-no trademark/copyright exposure. Swap in an image-generation model later
-for more visual variety once the pipeline is proven.
+Two things went wrong in the first version and both are fixed here.
+
+The canvas was a 3000x3600 portrait sheet holding one small line of text,
+so Printify scaled that mostly-empty sheet down into the print area and
+the artwork came out tiny on the product. Now the canvas matches the
+print area's real aspect ratio and the content is laid out to fill it.
+
+Ink colour was picked without reference to the product colour, so dark
+purple was printed on a black shirt. Colour now comes from the garment
+colour: only inks with real contrast against it are eligible.
+
+Fonts are SIL OFL (Anton, Noto Sans JP) and all artwork is generated from
+our own text, so nothing here carries licensing risk.
 """
 from __future__ import annotations
 
-import re
+import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
+from .themes import Design
+
 _ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 _FONT_DIR = _ASSETS_DIR / "fonts"
-_FONT_URL = "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf"
-_FONT_PATH = _FONT_DIR / "Anton-Regular.ttf"
 
-_SUFFIXES_TO_STRIP = ["shirt", "mug", "hoodie", "t-shirt", "tee", "gift"]
+# raw.githubusercontent.com rather than github.com/.../raw/... — the latter
+# is blocked by some egress proxies and fails the whole run.
+_FONTS = {
+    "display": (
+        "Anton-Regular.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf",
+    ),
+    "jp": (
+        "NotoSansJP.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf",
+    ),
+}
 
-# A small, hand-picked, brand-neutral color palette (hex) reused across
-# designs so the shop has a consistent look.
-PALETTE = ["#1d1d1d", "#2f3e46", "#6a4c93", "#d64550", "#1b998b"]
+# Inks that hold up on a light product, and on a dark one.
+_INK_ON_LIGHT = ("#111111", "#1b3a5c", "#7a2020", "#1f4d3d", "#4a2c6b")
+_INK_ON_DARK = ("#f5f5f5", "#ffd166", "#7fd1c1", "#ff8fa3", "#a9d6ff")
+_ACCENT_ON_LIGHT = ("#c1272d", "#c77d02", "#0f7b6c", "#3c5ccf")
+_ACCENT_ON_DARK = ("#ffd166", "#ff8fa3", "#7fd1c1", "#ffffff")
+
+_DARK_PRODUCT_WORDS = ("black", "navy", "charcoal", "forest", "military", "dark", "purple", "red", "royal")
 
 
-def ensure_font() -> Path:
-    _FONT_DIR.mkdir(parents=True, exist_ok=True)
-    if not _FONT_PATH.exists():
-        resp = requests.get(_FONT_URL, timeout=30)
+@dataclass(frozen=True)
+class Palette:
+    ink: str
+    accent: str
+
+
+def product_is_dark(product_colour: str) -> bool:
+    lowered = (product_colour or "").lower()
+    return any(word in lowered for word in _DARK_PRODUCT_WORDS)
+
+
+def palette_for(product_colour: str, seed: str) -> Palette:
+    """Pick ink and accent that contrast with the product, deterministically.
+
+    Uses a stable digest rather than hash(), whose value changes between
+    processes, so the same design renders identically on every run.
+    """
+    digest = int(hashlib.sha256(seed.encode("utf-8")).hexdigest(), 16)
+    if product_is_dark(product_colour):
+        inks, accents = _INK_ON_DARK, _ACCENT_ON_DARK
+    else:
+        inks, accents = _INK_ON_LIGHT, _ACCENT_ON_LIGHT
+    return Palette(ink=inks[digest % len(inks)], accent=accents[(digest // 7) % len(accents)])
+
+
+def ensure_font(kind: str = "display") -> Path:
+    file_name, url = _FONTS[kind]
+    path = _FONT_DIR / file_name
+    if not path.exists():
+        _FONT_DIR.mkdir(parents=True, exist_ok=True)
+        resp = requests.get(url, timeout=120)
         resp.raise_for_status()
-        _FONT_PATH.write_bytes(resp.content)
-    return _FONT_PATH
+        path.write_bytes(resp.content)
+    return path
 
 
-def keyword_to_phrase(keyword: str) -> str:
-    phrase = keyword.lower()
-    for suffix in _SUFFIXES_TO_STRIP:
-        phrase = re.sub(rf"\b{re.escape(suffix)}\b", "", phrase)
-    phrase = re.sub(r"\s+", " ", phrase).strip()
-    return phrase.upper() or keyword.upper()
+def _font(kind: str, size: int) -> ImageFont.FreeTypeFont:
+    font = ImageFont.truetype(str(ensure_font(kind)), size)
+    if kind == "jp":
+        # Noto Sans JP ships as a variable font whose default instance is
+        # Thin (weight 100) — far too light to print legibly.
+        font.set_variation_by_name("Bold")
+    return font
 
 
-def _fit_font(draw: ImageDraw.ImageDraw, lines: list[str], font_path: Path, max_width: int, max_height: int) -> ImageFont.FreeTypeFont:
-    size = 400
-    while size > 20:
-        font = ImageFont.truetype(str(font_path), size)
-        line_heights = []
-        max_line_width = 0
-        for line in lines:
-            bbox = draw.textbbox((0, 0), line, font=font)
-            max_line_width = max(max_line_width, bbox[2] - bbox[0])
-            line_heights.append(bbox[3] - bbox[1])
-        total_height = sum(line_heights) + (len(lines) - 1) * (size // 4)
-        if max_line_width <= max_width and total_height <= max_height:
-            return font
-        size -= 10
-    return ImageFont.truetype(str(font_path), 20)
+def _text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> tuple[int, int]:
+    box = draw.textbbox((0, 0), text, font=font)
+    return box[2] - box[0], box[3] - box[1]
 
 
-def _wrap_into_lines(phrase: str) -> list[str]:
-    """Split into at most two roughly-balanced lines, never breaking a word."""
-    words = phrase.split()
-    if len(words) <= 2:
-        return [phrase]
-    mid = (len(words) + 1) // 2
-    return [" ".join(words[:mid]), " ".join(words[mid:])]
+def _fit_text(
+    draw: ImageDraw.ImageDraw, text: str, kind: str, max_width: int, max_height: int
+) -> ImageFont.FreeTypeFont:
+    """Largest font size at which a single string fits the box."""
+    size = 20
+    best = _font(kind, size)
+    while size < 1200:
+        candidate = _font(kind, size)
+        width, height = _text_size(draw, text, candidate)
+        if width > max_width or height > max_height:
+            break
+        best = candidate
+        size += 10
+    return best
 
 
-def render_design(phrase: str, output_path: str | Path, color: str, width: int = 3000, height: int = 3600) -> Path:
-    font_path = ensure_font()
-    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+def _fit_lines(
+    draw: ImageDraw.ImageDraw,
+    lines: tuple[str, ...],
+    kind: str,
+    max_width: int,
+    max_height: int,
+    line_gap_ratio: float = 0.22,
+) -> ImageFont.FreeTypeFont:
+    """Largest font size at which all lines fit the box — grows to fill it."""
+    size = 20
+    best = _font(kind, size)
+    while size < 1200:
+        candidate = _font(kind, size)
+        widest = max(_text_size(draw, line, candidate)[0] for line in lines)
+        total_height = sum(_text_size(draw, line, candidate)[1] for line in lines)
+        total_height += int(size * line_gap_ratio) * (len(lines) - 1)
+        if widest > max_width or total_height > max_height:
+            break
+        best = candidate
+        size += 10
+    return best
+
+
+def _regroup_lines(
+    lines: tuple[str, ...], accent_line: int | None, groups: tuple[int, ...]
+) -> tuple[tuple[str, ...], int | None]:
+    """Join the design's lines into `groups` consecutive runs.
+
+    `groups` holds the number of source lines in each output line. Lines are
+    only ever joined at their existing breaks, never split, so a word can
+    never end up straddling two rows.
+    """
+    merged: list[str] = []
+    accent: int | None = None
+    index = 0
+    for position, count in enumerate(groups):
+        run = lines[index : index + count]
+        if accent_line is not None and index <= accent_line < index + count:
+            accent = position
+        merged.append(" ".join(run))
+        index += count
+    return tuple(merged), accent
+
+
+def _groupings(count: int):
+    """Every way of splitting `count` ordered lines into consecutive runs."""
+    if count == 0:
+        return
+    if count == 1:
+        yield (1,)
+        return
+    for first in range(1, count + 1):
+        if first == count:
+            yield (count,)
+            continue
+        for rest in _groupings(count - first):
+            yield (first,) + rest
+
+
+def _layout_lines(
+    draw: ImageDraw.ImageDraw,
+    lines: tuple[str, ...],
+    accent_line: int | None,
+    kind: str,
+    max_width: int,
+    max_height: int,
+) -> tuple[tuple[str, ...], int | None, ImageFont.FreeTypeFont]:
+    """Pick the arrangement of `lines` that fills the box best.
+
+    A design's line breaks read well on a tall print area but waste a wide
+    one: three stacked rows in a 2:1 mug panel are height-capped and end up
+    covering less than half its width. Trying each way of joining adjacent
+    lines and keeping the largest type that still fits lets the same design
+    adapt to whatever panel the product actually has.
+    """
+    best: tuple[tuple[str, ...], int | None, ImageFont.FreeTypeFont] | None = None
+    best_size = -1
+    for groups in _groupings(len(lines)):
+        merged, accent = _regroup_lines(lines, accent_line, groups)
+        font = _fit_lines(draw, merged, kind, max_width, max_height)
+        if font.size > best_size:
+            best_size = font.size
+            best = (merged, accent, font)
+    assert best is not None
+    return best
+
+
+def _draw_lines(
+    draw: ImageDraw.ImageDraw,
+    lines: tuple[str, ...],
+    font: ImageFont.FreeTypeFont,
+    palette: Palette,
+    accent_line: int | None,
+    box: tuple[int, int, int, int],
+) -> None:
+    left, top, right, bottom = box
+    gap = int(font.size * 0.22)
+    boxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
+    heights = [b[3] - b[1] for b in boxes]
+    total = sum(heights) + gap * (len(lines) - 1)
+    y = top + ((bottom - top) - total) // 2
+
+    for index, (line, bbox, height) in enumerate(zip(lines, boxes, heights)):
+        width = bbox[2] - bbox[0]
+        x = left + ((right - left) - width) // 2
+        colour = palette.accent if index == accent_line else palette.ink
+        draw.text((x - bbox[0], y - bbox[1]), line, font=font, fill=colour)
+        y += height + gap
+
+
+def _render_stacked(image: Image.Image, design: Design, palette: Palette) -> None:
     draw = ImageDraw.Draw(image)
+    width, height = image.size
+    margin_x, margin_y = int(width * 0.05), int(height * 0.08)
 
-    lines = _wrap_into_lines(phrase)
-    padding = int(width * 0.1)
-    font = _fit_font(draw, lines, font_path, width - 2 * padding, height - 2 * padding)
+    subtitle_height = int(height * 0.16) if design.subtitle else 0
+    body_box = (margin_x, margin_y, width - margin_x, height - margin_y - subtitle_height)
+    lines, accent, font = _layout_lines(
+        draw,
+        design.lines,
+        design.accent_line,
+        "display",
+        body_box[2] - body_box[0],
+        body_box[3] - body_box[1],
+    )
+    _draw_lines(draw, lines, font, palette, accent, body_box)
 
-    line_bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
-    line_heights = [b[3] - b[1] for b in line_bboxes]
-    gap = font.size // 3
-    total_height = sum(line_heights) + gap * (len(lines) - 1)
-    y = (height - total_height) // 2
+    if design.subtitle:
+        sub_font = _fit_lines(
+            draw, (design.subtitle,), "jp", width - 2 * margin_x, int(subtitle_height * 0.55)
+        )
+        sub_w, sub_h = _text_size(draw, design.subtitle, sub_font)
+        box = draw.textbbox((0, 0), design.subtitle, font=sub_font)
+        draw.text(
+            ((width - sub_w) // 2 - box[0], height - margin_y - sub_h - box[1]),
+            design.subtitle,
+            font=sub_font,
+            fill=palette.accent,
+        )
 
-    for line, bbox, line_height in zip(lines, line_bboxes, line_heights):
-        line_width = bbox[2] - bbox[0]
-        x = (width - line_width) // 2
-        draw.text((x, y - bbox[1]), line, font=font, fill=color)
-        y += line_height + gap
+
+def _render_hero(image: Image.Image, design: Design, palette: Palette) -> None:
+    """One oversized glyph or word, with a caption underneath."""
+    draw = ImageDraw.Draw(image)
+    width, height = image.size
+    margin = int(height * 0.08)
+    caption_height = int(height * 0.18) if design.subtitle else 0
+
+    hero_box = (margin, margin, width - margin, height - margin - caption_height)
+    font = _fit_lines(draw, design.lines, "jp", hero_box[2] - hero_box[0], hero_box[3] - hero_box[1])
+    _draw_lines(draw, design.lines, font, palette, None, hero_box)
+
+    if design.subtitle:
+        cap_font = _fit_lines(draw, (design.subtitle,), "jp", int(width * 0.9), int(caption_height * 0.5))
+        cap_w, cap_h = _text_size(draw, design.subtitle, cap_font)
+        box = draw.textbbox((0, 0), design.subtitle, font=cap_font)
+        draw.text(
+            ((width - cap_w) // 2 - box[0], height - margin - cap_h - box[1]),
+            design.subtitle,
+            font=cap_font,
+            fill=palette.accent,
+        )
+
+
+def _render_grid(image: Image.Image, design: Design, palette: Palette) -> None:
+    """Dense character grid with small romaji captions, sushi-shop style."""
+    draw = ImageDraw.Draw(image)
+    width, height = image.size
+    margin_x, margin_y = int(width * 0.04), int(height * 0.08)
+    title_height = int(height * 0.16) if design.subtitle else 0
+
+    cells = list(design.grid)
+    captions = list(design.grid_captions) + [""] * (len(cells) - len(design.grid_captions))
+
+    columns = 6 if len(cells) > 6 else len(cells)
+    rows = (len(cells) + columns - 1) // columns
+
+    area_w = width - 2 * margin_x
+    area_h = height - 2 * margin_y - title_height
+    cell_w = area_w // columns
+    cell_h = area_h // rows
+
+    # Each glyph is sized to fill its own cell. Sizing the whole set as
+    # stacked lines (as this did originally) shrank every character to a
+    # twelfth of the available height.
+    widest_caption = max((c for c in captions if c), key=len, default="A")
+    glyph_font = _fit_text(draw, cells[0], "jp", int(cell_w * 0.85), int(cell_h * 0.62))
+    caption_font = _fit_text(draw, widest_caption, "jp", int(cell_w * 0.92), int(cell_h * 0.18))
+
+    for index, glyph in enumerate(cells):
+        row, column = divmod(index, columns)
+        cx = margin_x + column * cell_w + cell_w // 2
+        cell_top = margin_y + row * cell_h
+
+        gw, gh = _text_size(draw, glyph, glyph_font)
+        gbox = draw.textbbox((0, 0), glyph, font=glyph_font)
+        colour = palette.accent if index % 5 == 0 else palette.ink
+        glyph_y = cell_top + int(cell_h * 0.08)
+        draw.text((cx - gw // 2 - gbox[0], glyph_y - gbox[1]), glyph, font=glyph_font, fill=colour)
+
+        caption = captions[index]
+        if caption:
+            cw, ch = _text_size(draw, caption, caption_font)
+            cbox = draw.textbbox((0, 0), caption, font=caption_font)
+            draw.text(
+                (cx - cw // 2 - cbox[0], glyph_y + gh + int(cell_h * 0.06) - cbox[1]),
+                caption,
+                font=caption_font,
+                fill=palette.ink,
+            )
+
+    if design.subtitle:
+        t_font = _fit_lines(draw, (design.subtitle,), "jp", int(width * 0.8), int(title_height * 0.55))
+        tw, th = _text_size(draw, design.subtitle, t_font)
+        tbox = draw.textbbox((0, 0), design.subtitle, font=t_font)
+        draw.text(
+            ((width - tw) // 2 - tbox[0], height - margin_y - th - tbox[1]),
+            design.subtitle,
+            font=t_font,
+            fill=palette.accent,
+        )
+
+
+def render_design(
+    design: Design,
+    output_path: str | Path,
+    product_colour: str,
+    print_area: tuple[int, int],
+) -> Path:
+    """Render `design` onto a transparent canvas matching the print area."""
+    width, height = print_area
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    palette = palette_for(product_colour, design.slug)
+
+    if design.grid:
+        _render_grid(image, design, palette)
+    elif len(design.lines) == 1 and len(design.lines[0]) <= 6:
+        _render_hero(image, design, palette)
+    else:
+        _render_stacked(image, design, palette)
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path)
     return output_path
-
-
-def generate_design_for_niche(keyword: str, output_path: str | Path, color: str | None = None) -> tuple[Path, str]:
-    phrase = keyword_to_phrase(keyword)
-    chosen_color = color or PALETTE[hash(keyword) % len(PALETTE)]
-    path = render_design(phrase, output_path, chosen_color)
-    return path, phrase

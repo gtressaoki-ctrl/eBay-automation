@@ -46,14 +46,16 @@ class Config:
     # Printify
     printify_api_key: str = field(default_factory=lambda: os.environ.get("PRINTIFY_API_KEY", ""))
     printify_shop_id: str = field(default_factory=lambda: os.environ.get("PRINTIFY_SHOP_ID", ""))
-    # Look these up once with scripts/list_printify_catalog.py for the
-    # blank product you want to sell (e.g. a specific t-shirt blueprint
-    # from a specific print provider) and set them as repo secrets.
-    printify_blueprint_id: int = field(default_factory=lambda: _int_env("PRINTIFY_BLUEPRINT_ID", 0))
-    printify_print_provider_id: int = field(default_factory=lambda: _int_env("PRINTIFY_PRINT_PROVIDER_ID", 0))
+    # Defaults are the 11oz ceramic mug from Printify Choice. Demand
+    # measurement put mug niches at roughly twelve times the monthly
+    # profit per listing of graphic tees, which is why this is the
+    # default product rather than apparel. Override via repo variables to
+    # sell something else; scripts/list_printify_catalog.py lists IDs.
+    printify_blueprint_id: int = field(default_factory=lambda: _int_env("PRINTIFY_BLUEPRINT_ID", 478))
+    printify_print_provider_id: int = field(default_factory=lambda: _int_env("PRINTIFY_PRINT_PROVIDER_ID", 99))
     printify_variant_ids: list[int] = field(
         default_factory=lambda: [
-            int(v) for v in os.environ.get("PRINTIFY_VARIANT_IDS", "").split(",") if v.strip()
+            int(v) for v in os.environ.get("PRINTIFY_VARIANT_IDS", "65216").split(",") if v.strip()
         ]
     )
 
@@ -65,9 +67,13 @@ class Config:
     daily_listing_quota: int = field(default_factory=lambda: _int_env("DAILY_LISTING_QUOTA", 3))
     auto_publish: bool = field(default_factory=lambda: _bool_env("AUTO_PUBLISH", False))
     dry_run: bool = field(default_factory=lambda: _bool_env("DRY_RUN", False))
-    default_markup_multiplier: float = field(
-        default_factory=lambda: float(os.environ.get("DEFAULT_MARKUP_MULTIPLIER", "2.2"))
-    )
+    # Never list a design whose unit economics at the going market price
+    # come in under this, however well the niche sells.
+    min_unit_profit_cents: int = field(default_factory=lambda: _int_env("MIN_UNIT_PROFIT_CENTS", 100))
+    # Landed cost per unit is production plus shipping; Printify bills
+    # both, and ignoring shipping is what made the first pricing pass
+    # look profitable when it was not.
+    shipping_cost_cents: int = field(default_factory=lambda: _int_env("SHIPPING_COST_CENTS", 579))
 
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]

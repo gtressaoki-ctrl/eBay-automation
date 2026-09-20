@@ -61,12 +61,17 @@ Claude Code では代行できません。以下を一度だけ手動で行っ�
    作成後、そのストアの Shop ID を確認: `GET https://api.printify.com/v1/shops.json`
    （下の API トークンをBearerで付与）で一覧取得できます。
 3. My Profile > Connections で **API トークン**を発行 → `PRINTIFY_API_KEY`。
-4. 売りたいブランク商品（例: Tシャツ）を決める:
+4. 売りたいブランク商品を決める。**初期設定は11ozセラミックマグ**
+   (`blueprint_id=478` / `print_provider_id=99` / `variant_id=65216`)で、
+   このままなら設定不要です。需要調査の結果、同じ価格帯でもマグの方が
+   グラフィックTシャツより1出品あたりの月間利益が約12倍あったため
+   デフォルト商材にしています。別の商材にする場合のみ:
    ```bash
    PRINTIFY_API_KEY=xxx python scripts/list_printify_catalog.py
    PRINTIFY_API_KEY=xxx python scripts/list_printify_catalog.py --blueprint <id>
    ```
    出力された `blueprint_id` / `print_provider_id` / `variant_id` (複数可)を控える。
+   商材を変えたら `EBAY_CATEGORY_ID` と `SHIPPING_COST_CENTS` も合わせて変更する。
 
 ## 3. GitHub リポジトリの Secrets / Variables を設定
 
@@ -77,10 +82,16 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 - `PRINTIFY_API_KEY`
 
 **Variables**（平文でOK）:
-- `EBAY_MARKETPLACE_ID`（例: `EBAY_US`）, `EBAY_ENV`（`PRODUCTION`）, `EBAY_CATEGORY_ID`
+- `EBAY_MARKETPLACE_ID`（例: `EBAY_US`）, `EBAY_ENV`（`PRODUCTION`）,
+  `EBAY_CATEGORY_ID`（マグは `20675`）
 - `EBAY_MERCHANT_LOCATION_KEY`, `EBAY_FULFILLMENT_POLICY_ID`, `EBAY_PAYMENT_POLICY_ID`, `EBAY_RETURN_POLICY_ID`
-- `PRINTIFY_SHOP_ID`, `PRINTIFY_BLUEPRINT_ID`, `PRINTIFY_PRINT_PROVIDER_ID`, `PRINTIFY_VARIANT_IDS`（カンマ区切り）
-- `DAILY_LISTING_QUOTA`（初期値 `3` 推奨）, `DEFAULT_MARKUP_MULTIPLIER`（初期値 `2.2`）, `DRY_RUN`（`false`）
+- `PRINTIFY_SHOP_ID`, `PRINTIFY_BLUEPRINT_ID`（`478`）,
+  `PRINTIFY_PRINT_PROVIDER_ID`（`99`）, `PRINTIFY_VARIANT_IDS`（`65216`、カンマ区切りで複数可）
+- `DAILY_LISTING_QUOTA`（初期値 `3` 推奨）, `DRY_RUN`（`false`）
+- `MIN_UNIT_PROFIT_CENTS`（初期値 `100`）, `SHIPPING_COST_CENTS`（US国内マグは `579`）
+
+> 未設定の Variable は空文字として渡され、コード側のデフォルト値を
+> **上書きしてしまいます**。使わない項目は「空で登録」ではなく登録しないこと。
 
 ## 4. 動作確認
 

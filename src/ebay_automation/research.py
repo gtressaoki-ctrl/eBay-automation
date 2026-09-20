@@ -1,105 +1,199 @@
-"""Niche/keyword research for print-on-demand products.
+"""Measure real demand per niche from eBay's live marketplace.
 
-Since we hold no inventory and generate designs on demand, "research"
-here means: which niche phrases have healthy buyer search activity on
-eBay without being oversaturated, and what price ceiling the market
-supports. We use the public Buy Browse API (item_summary/search) to get
-a live signal, scored with a simple heuristic. This is intentionally
-simple for v1 — swap in eBay Marketplace Insights (sold-item data,
-requires separate application approval) or a paid trend tool later for
-a stronger signal.
+eBay's official sold-item feeds are closed to us: the Marketplace Insights
+API is a limited release not open to new applicants, and the Finding API's
+findCompletedItems was decommissioned in February 2025. What remains — and
+what this module uses — is the free Browse API's getItem call, which
+reports `estimatedSoldQuantity` per listing. Combined with
+`itemCreationDate` that yields a real sales-rate signal:
+
+    units sold / days listed  ->  units per listing per month
+
+That is the number that decides whether a niche is worth listing into.
+Active-listing counts alone measure competition, not demand, and ranking
+on them (as this module used to) is why the first batch of listings went
+into niches where comparable listings had sat unsold for years.
+
+Known bias: listings that sell out drop out of the active index, so a
+fast-moving niche is under-counted here. Treat every figure as a
+conservative floor.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import datetime
+import logging
+import statistics
+import urllib.parse
+from dataclasses import dataclass, field
 
 import requests
 
 from .config import Config
 from .ebay_auth import get_app_access_token
 
-_BROWSE_SEARCH_URL_TMPL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+log = logging.getLogger(__name__)
 
-# Curated, safe starter niches for text/graphic-based POD designs
-# (t-shirts, mugs, hoodies). Extend this list over time based on
-# state/ledger.json performance data. Deliberately generic/hobby-based
-# to avoid trademark or IP risk in the generated designs.
-SEED_NICHES: list[str] = [
-    "cat mom shirt",
-    "dog dad shirt",
-    "nurse life shirt",
-    "teacher appreciation shirt",
-    "plant lady shirt",
-    "coffee lover mug",
-    "retired and loving it shirt",
-    "gym motivation shirt",
-    "dinosaur lover shirt",
-    "camping life shirt",
-    "yoga instructor shirt",
-    "software engineer funny shirt",
-    "gardening grandma shirt",
-    "running mom shirt",
-    "birdwatching gift shirt",
-]
+_BROWSE_BASE = "https://api.ebay.com/buy/browse/v1"
+
+# eBay's final value fee on most categories, plus the per-order fixed fee.
+EBAY_FEE_RATE = 0.1325
+EBAY_FEE_FIXED_CENTS = 40
 
 
 @dataclass
-class NicheScore:
+class NicheDemand:
+    """Live demand measurement for one search phrase."""
+
     keyword: str
-    total_listings: int
-    avg_price: float
-    score: float
+    active_listings: int
+    sampled: int
+    listings_with_sales: int
+    units_sold: int
+    units_per_listing_per_month: float
+    median_price_selling_cents: int | None
+    median_price_all_cents: int | None
+    expected_monthly_profit_cents: int = 0
+    unit_profit_cents: int = 0
+
+    @property
+    def sell_through_rate(self) -> float:
+        return self.listings_with_sales / self.sampled if self.sampled else 0.0
 
 
-def _search_summary(keyword: str, config: Config, limit: int = 20) -> dict:
-    token = get_app_access_token(config)
+@dataclass
+class DemandReport:
+    """Ranked demand measurements plus the ones that failed the profit floor."""
+
+    ranked: list[NicheDemand] = field(default_factory=list)
+    rejected: list[NicheDemand] = field(default_factory=list)
+
+
+def _browse_get(path: str, config: Config, params: dict | None = None) -> dict:
     resp = requests.get(
-        _BROWSE_SEARCH_URL_TMPL,
+        f"{_BROWSE_BASE}{path}",
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {get_app_access_token(config)}",
             "X-EBAY-C-MARKETPLACE-ID": config.ebay_marketplace_id,
         },
-        params={"q": keyword, "limit": limit},
+        params=params,
         timeout=30,
     )
     resp.raise_for_status()
     return resp.json()
 
 
-def _score(total_listings: int, avg_price: float) -> float:
-    # No price signal at all means we can't confirm the niche is
-    # profitable, regardless of how much demand-side activity there is.
-    if total_listings <= 0 or avg_price <= 0:
-        return 0.0
-
-    import math
-
-    # Peaks around ~3000 listings, decays for both very low and very high counts.
-    demand_score = math.exp(-((math.log10(total_listings) - math.log10(3000)) ** 2) / 2)
-    # Sweet spot: price in a POD-friendly $15-$35 range.
-    price_score = max(0.0, 1 - abs(avg_price - 24) / 24)
-
-    return round(demand_score * 0.6 + price_score * 0.4, 4)
+def _listing_age_days(created: str | None) -> int:
+    if not created:
+        return 1
+    stamp = datetime.datetime.fromisoformat(created.replace("Z", "+00:00"))
+    return max(1, (datetime.datetime.now(datetime.timezone.utc) - stamp).days)
 
 
-def score_niche(keyword: str, config: Config) -> NicheScore:
-    data = _search_summary(keyword, config)
-    total = int(data.get("total", 0))
-    items = data.get("itemSummaries", []) or []
-    prices = [
-        float(i["price"]["value"])
-        for i in items
-        if i.get("price") and i["price"].get("currency") == "USD"
-    ]
-    avg_price = sum(prices) / len(prices) if prices else 0.0
-    return NicheScore(keyword=keyword, total_listings=total, avg_price=round(avg_price, 2), score=_score(total, avg_price))
+def measure_niche(keyword: str, config: Config, sample_size: int = 12) -> NicheDemand | None:
+    """Sample live listings for `keyword` and measure how fast they actually sell."""
+    search = _browse_get(
+        "/item_summary/search",
+        config,
+        {"q": keyword, "limit": sample_size, "filter": "buyingOptions:{FIXED_PRICE}"},
+    )
+
+    prices_all: list[float] = []
+    prices_selling: list[float] = []
+    units_sold = 0
+    monthly_rates: list[float] = []
+
+    for summary in search.get("itemSummaries", []) or []:
+        item_id = urllib.parse.quote(summary["itemId"], safe="")
+        try:
+            item = _browse_get(f"/item/{item_id}", config)
+        except requests.HTTPError:
+            log.warning("Could not fetch item %s while measuring %r", summary["itemId"], keyword)
+            continue
+
+        availability = (item.get("estimatedAvailabilities") or [{}])[0]
+        sold = availability.get("estimatedSoldQuantity")
+        if sold is None:
+            continue
+
+        price = float(item.get("price", {}).get("value", 0) or 0)
+        if price <= 0:
+            continue
+
+        prices_all.append(price)
+        units_sold += sold
+        monthly_rates.append(sold / _listing_age_days(item.get("itemCreationDate")) * 30)
+        if sold > 0:
+            prices_selling.append(price)
+
+    if not prices_all:
+        log.warning("No usable sold-quantity data for %r", keyword)
+        return None
+
+    return NicheDemand(
+        keyword=keyword,
+        active_listings=int(search.get("total", 0)),
+        sampled=len(prices_all),
+        listings_with_sales=len(prices_selling),
+        units_sold=units_sold,
+        units_per_listing_per_month=round(statistics.mean(monthly_rates), 3),
+        median_price_selling_cents=round(statistics.median(prices_selling) * 100) if prices_selling else None,
+        median_price_all_cents=round(statistics.median(prices_all) * 100),
+    )
 
 
-def rank_niches(config: Config, keywords: list[str] | None = None) -> list[NicheScore]:
-    keywords = keywords or SEED_NICHES
-    scored = [score_niche(k, config) for k in keywords]
-    return sorted(scored, key=lambda s: s.score, reverse=True)
+def target_price_cents(demand: NicheDemand) -> int | None:
+    """The price buyers in this niche actually pay, not a markup on our cost.
+
+    Listings that have sold tell us what converts; listings that never sold
+    tell us nothing except what sellers hoped for. Fall back to the overall
+    median only when nothing in the sample has sold.
+    """
+    return demand.median_price_selling_cents or demand.median_price_all_cents
 
 
-def pick_candidates(config: Config, count: int, keywords: list[str] | None = None) -> list[NicheScore]:
-    return rank_niches(config, keywords)[:count]
+def unit_profit_cents(price_cents: int, product_cost_cents: int) -> int:
+    """Net per unit after eBay's cut, given what the item costs us landed."""
+    fees = round(price_cents * EBAY_FEE_RATE) + EBAY_FEE_FIXED_CENTS
+    return price_cents - fees - product_cost_cents
+
+
+def rank_niches(
+    keywords: list[str],
+    config: Config,
+    product_cost_cents: int,
+    min_unit_profit_cents: int = 100,
+    sample_size: int = 12,
+) -> DemandReport:
+    """Measure every keyword and order them by expected profit per listing per month.
+
+    A niche is rejected outright when a unit sold at the going market price
+    would not clear `min_unit_profit_cents` — volume cannot rescue a product
+    that loses money on every sale.
+    """
+    report = DemandReport()
+
+    for keyword in keywords:
+        try:
+            demand = measure_niche(keyword, config, sample_size=sample_size)
+        except requests.HTTPError:
+            log.exception("Demand measurement failed for %r; skipping.", keyword)
+            continue
+        if demand is None:
+            continue
+
+        price = target_price_cents(demand)
+        if price is None:
+            continue
+
+        demand.unit_profit_cents = unit_profit_cents(price, product_cost_cents)
+        demand.expected_monthly_profit_cents = round(
+            demand.unit_profit_cents * demand.units_per_listing_per_month
+        )
+
+        if demand.unit_profit_cents < min_unit_profit_cents:
+            report.rejected.append(demand)
+        else:
+            report.ranked.append(demand)
+
+    report.ranked.sort(key=lambda d: d.expected_monthly_profit_cents, reverse=True)
+    return report
