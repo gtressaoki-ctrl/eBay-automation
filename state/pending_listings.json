@@ -1,1 +1,28 @@
-{}
+{
+  "POD-birdwatching-gift-shirt-abc9e28b": {
+    "sku": "POD-birdwatching-gift-shirt-abc9e28b",
+    "keyword": "birdwatching gift shirt",
+    "phrase": "BIRDWATCHING",
+    "printify_product_id": "6aaf758287a9454a780979b2",
+    "ebay_offer_id": "270493250011",
+    "price_cents": 3344,
+    "cost_cents": 1520,
+    "image_url": "https://images-api.printify.com/mockup/6aaf758287a9454a780979b2/38178/97992/birdwatching-unisex-graphic-tee.jpg?camera_label=front",
+    "status": "pending_approval",
+    "printify_variant_id": 38178,
+    "issue_number": 3
+  },
+  "POD-camping-life-shirt-9df77d55": {
+    "sku": "POD-camping-life-shirt-9df77d55",
+    "keyword": "camping life shirt",
+    "phrase": "CAMPING LIFE",
+    "printify_product_id": "6aaf75884a1b2a92f109b997",
+    "ebay_offer_id": "270493259011",
+    "price_cents": 3344,
+    "cost_cents": 1520,
+    "image_url": "https://images-api.printify.com/mockup/6aaf75884a1b2a92f109b997/38178/97992/camping-life-unisex-graphic-tee.jpg?camera_label=front",
+    "status": "pending_approval",
+    "printify_variant_id": 38178,
+    "issue_number": 4
+  }
+}
