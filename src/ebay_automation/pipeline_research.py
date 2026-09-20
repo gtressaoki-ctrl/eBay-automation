@@ -208,7 +208,19 @@ def run() -> None:
     github = GithubClient(config)
 
     product_colour, print_area = product_profile(config, printify)
-    log.info("Printing on %r, print area %dx%d", product_colour, *print_area)
+    # Printed in full because repository variables silently override the
+    # defaults here: a stale value from a previous product shows up as a
+    # mismatch on this line rather than as a batch of wrong listings.
+    log.info(
+        "Product: blueprint %s / provider %s / variant %s, %r, print area %dx%d, "
+        "eBay category %s",
+        config.printify_blueprint_id,
+        config.printify_print_provider_id,
+        config.printify_variant_ids[0],
+        product_colour,
+        *print_area,
+        config.ebay_category_id,
+    )
 
     # Cost floor for ranking. The exact production cost is only known once
     # Printify has the product, so rank on a conservative estimate and

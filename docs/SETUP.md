@@ -90,8 +90,14 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 - `DAILY_LISTING_QUOTA`（初期値 `3` 推奨）, `DRY_RUN`（`false`）
 - `MIN_UNIT_PROFIT_CENTS`（初期値 `100`）, `SHIPPING_COST_CENTS`（US国内マグは `579`）
 
-> 未設定の Variable は空文字として渡され、コード側のデフォルト値を
-> **上書きしてしまいます**。使わない項目は「空で登録」ではなく登録しないこと。
+> 上表のうち `EBAY_*_POLICY_ID` / `EBAY_MERCHANT_LOCATION_KEY` / `PRINTIFY_SHOP_ID`
+> は必須です。それ以外（商材・利益フロア等）は**登録しなければコード側の
+> デフォルト（マグ）が使われる**ので、変更したいときだけ登録してください。
+> 空文字で登録した場合もデフォルトにフォールバックします。
+>
+> **商材を変えたのに古い値が Variables に残っていると、そちらが優先されます。**
+> 実行ログ冒頭の `Product: blueprint ... / eBay category ...` の行で、
+> 実際に何を出品しようとしているか確認できます。
 
 ## 4. 動作確認
 
