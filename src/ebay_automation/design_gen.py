@@ -10,7 +10,6 @@ for more visual variety once the pipeline is proven.
 from __future__ import annotations
 
 import re
-import textwrap
 from pathlib import Path
 
 import requests
@@ -62,12 +61,21 @@ def _fit_font(draw: ImageDraw.ImageDraw, lines: list[str], font_path: Path, max_
     return ImageFont.truetype(str(font_path), 20)
 
 
+def _wrap_into_lines(phrase: str) -> list[str]:
+    """Split into at most two roughly-balanced lines, never breaking a word."""
+    words = phrase.split()
+    if len(words) <= 2:
+        return [phrase]
+    mid = (len(words) + 1) // 2
+    return [" ".join(words[:mid]), " ".join(words[mid:])]
+
+
 def render_design(phrase: str, output_path: str | Path, color: str, width: int = 3000, height: int = 3600) -> Path:
     font_path = ensure_font()
     image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
 
-    lines = textwrap.wrap(phrase, width=max(6, len(phrase) // 2)) or [phrase]
+    lines = _wrap_into_lines(phrase)
     padding = int(width * 0.1)
     font = _fit_font(draw, lines, font_path, width - 2 * padding, height - 2 * padding)
 
