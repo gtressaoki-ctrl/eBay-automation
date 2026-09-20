@@ -44,6 +44,7 @@ def build_listing_for_niche(config, printify: PrintifyClient, ebay: EbayClient, 
                 "directly from our print partner. Please allow standard production time "
                 "before shipment."
             ),
+            image_id=image_id,
             blueprint_id=config.printify_blueprint_id,
             print_provider_id=config.printify_print_provider_id,
             variant_ids=config.printify_variant_ids,
