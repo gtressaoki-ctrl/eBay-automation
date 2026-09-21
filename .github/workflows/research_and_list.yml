@@ -47,6 +47,8 @@ jobs:
           DAILY_LISTING_QUOTA: ${{ vars.DAILY_LISTING_QUOTA }}
           MIN_UNIT_PROFIT_CENTS: ${{ vars.MIN_UNIT_PROFIT_CENTS }}
           SHIPPING_COST_CENTS: ${{ vars.SHIPPING_COST_CENTS }}
+          BRAND_LOCK_MIN_PUBLISHED: ${{ vars.BRAND_LOCK_MIN_PUBLISHED }}
+          BRAND_TAGLINE: ${{ vars.BRAND_TAGLINE }}
           DRY_RUN: ${{ vars.DRY_RUN }}
           AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

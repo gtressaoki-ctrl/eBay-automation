@@ -74,6 +74,40 @@ def used_design_keys() -> set[str]:
     }
 
 
+def select_active_themes(all_themes: tuple[Theme, ...], config: Config) -> tuple[Theme, ...]:
+    """Which themes today's run researches: everything, or one committed brand.
+
+    Running four unrelated themes forever never becomes a brand a buyer
+    recognizes and comes back to — it stays four random side-hustles. Once
+    a theme has enough published, profitable listings to have proven
+    itself, research locks onto it exclusively and stops spinning up
+    unrelated ones; until then every theme is explored to find which one
+    earns that commitment.
+
+    Locking is a floor, not a ceiling: it only fires once real profit
+    exists, so a theme that merely got published first without selling
+    cannot lock in ahead of one that is actually working.
+    """
+    stats = ledger.theme_stats()
+    qualified = [
+        theme
+        for theme in all_themes
+        if stats.get(theme.slug, {}).get("published", 0) >= config.brand_lock_min_published
+        and stats.get(theme.slug, {}).get("profit_cents", 0) > 0
+    ]
+    if not qualified:
+        return all_themes
+
+    winner = max(qualified, key=lambda t: stats[t.slug]["profit_cents"])
+    log.info(
+        "Brand locked onto %r (%d published, $%.2f profit so far); other themes paused.",
+        winner.slug,
+        stats[winner.slug]["published"],
+        stats[winner.slug]["profit_cents"] / 100,
+    )
+    return (winner,)
+
+
 def build_listing(
     config: Config,
     printify: PrintifyClient,
@@ -117,6 +151,10 @@ def build_listing(
 
     sku = f"POD-{theme.slug}-{design.slug}-{uuid.uuid4().hex[:6]}"
     title = theme.title_template.format(design=headline)[:80]
+    # Blank until a shop name is chosen (that choice belongs to the
+    # seller); once set, the same line goes on every listing so the shop
+    # reads as one brand rather than as unrelated one-off products.
+    tagline_html = f"<p><em>{config.brand_tagline}</em></p>" if config.brand_tagline else ""
 
     ebay.create_or_replace_inventory_item(
         sku,
@@ -128,9 +166,14 @@ def build_listing(
                     "<p>Ceramic mug, 11oz. Printed to order and shipped by our production "
                     "partner. Dishwasher and microwave safe.</p>"
                     "<p>Please allow a few days for production before dispatch.</p>"
+                    f"{tagline_html}"
                 ),
                 "imageUrls": images,
-                "aspects": {"Brand": ["Unbranded"], "Material": ["Ceramic"], "Capacity": ["11 oz"]},
+                "aspects": {
+                    "Brand": [config.brand_tagline or "Unbranded"],
+                    "Material": ["Ceramic"],
+                    "Capacity": ["11 oz"],
+                },
             },
             "condition": "NEW",
             "availability": {"shipToLocationAvailability": {"quantity": 50}},
@@ -229,12 +272,14 @@ def run() -> None:
         config.ebay_category_id,
     )
 
+    active_themes = select_active_themes(themes.THEMES, config)
+
     # Cost floor for ranking. The exact production cost is only known once
     # Printify has the product, so rank on a conservative estimate and
     # re-check the real figure before the listing is drafted.
     estimated_cost = DEFAULT_PRODUCTION_COST_CENTS + config.shipping_cost_cents
     report = research.rank_niches(
-        [theme.search_keyword for theme in themes.THEMES],
+        [theme.search_keyword for theme in active_themes],
         config,
         product_cost_cents=estimated_cost,
         min_unit_profit_cents=config.min_unit_profit_cents,
@@ -259,7 +304,7 @@ def run() -> None:
         log.error("No niche cleared the profit floor; nothing listed.")
         return
 
-    by_keyword = {theme.search_keyword: theme for theme in themes.THEMES}
+    by_keyword = {theme.search_keyword: theme for theme in active_themes}
     used = used_design_keys()
     created = 0
 

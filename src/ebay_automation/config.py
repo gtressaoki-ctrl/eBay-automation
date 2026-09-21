@@ -91,6 +91,19 @@ class Config:
     # both, and ignoring shipping is what made the first pricing pass
     # look profitable when it was not.
     shipping_cost_cents: int = field(default_factory=lambda: _int_env("SHIPPING_COST_CENTS", 579))
+    # Scattering listings across unrelated themes forever never becomes a
+    # brand a buyer recognizes and returns to. Once one theme has this many
+    # published, profitable listings, research locks onto it exclusively;
+    # below that, every theme is still explored to find which one deserves
+    # the commitment. See pipeline_research.select_active_themes().
+    brand_lock_min_published: int = field(
+        default_factory=lambda: _int_env("BRAND_LOCK_MIN_PUBLISHED", 3)
+    )
+    # Optional line appended to every listing description's footer, e.g. a
+    # shop name/tagline. Choosing one is a business decision (trademark,
+    # what it signals) that belongs to the seller, not this pipeline — this
+    # only wires it through once chosen. Blank changes nothing.
+    brand_tagline: str = field(default_factory=lambda: _str_env("BRAND_TAGLINE"))
 
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]
