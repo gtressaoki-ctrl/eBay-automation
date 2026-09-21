@@ -146,7 +146,51 @@ JAPANESE_KANJI = Theme(
 )
 
 
-THEMES: tuple[Theme, ...] = (SARCASTIC_COFFEE, JAPANESE_KANJI)
+DOG_MOM = Theme(
+    slug="dog-mom",
+    search_keyword="dog mom mug gift",
+    title_template="{design} - Dog Mom Ceramic Coffee Mug 11oz Gift",
+    keywords=("dog mom", "dog lover gift", "pet mom", "dog owner gift"),
+    designs=(
+        Design(slug="dog-mom-life", lines=("DOG MOM", "LIFE"), accent_line=0),
+        Design(
+            slug="ruled-by-dog",
+            lines=("THIS HOUSE IS", "RUN BY", "MY DOG"),
+            accent_line=2,
+        ),
+        Design(
+            slug="more-dog-people",
+            lines=("THE MORE PEOPLE", "I MEET THE MORE", "I LOVE MY DOG"),
+            accent_line=2,
+        ),
+        Design(slug="dog-hair-dont-care", lines=("DOG HAIR,", "DON'T CARE"), accent_line=1),
+    ),
+)
+
+
+TEACHER = Theme(
+    slug="teacher-gift",
+    search_keyword="teacher appreciation mug gift",
+    title_template="{design} - Teacher Appreciation Ceramic Coffee Mug 11oz Gift",
+    keywords=("teacher gift", "teacher appreciation", "world's best teacher", "teacher life"),
+    designs=(
+        Design(slug="shaping-minds", lines=("SHAPING MINDS,", "ONE COFFEE", "AT A TIME"), accent_line=1),
+        Design(
+            slug="patience-of-a-teacher",
+            lines=("TEACHING:", "WHERE PATIENCE", "MEETS PURPOSE"),
+            accent_line=0,
+        ),
+        Design(slug="teacher-mode", lines=("TEACHER MODE:", "ACTIVATED"), accent_line=1),
+        Design(
+            slug="best-part-of-my-day",
+            lines=("MY STUDENTS ARE", "THE BEST PART", "OF MY DAY"),
+            accent_line=1,
+        ),
+    ),
+)
+
+
+THEMES: tuple[Theme, ...] = (SARCASTIC_COFFEE, JAPANESE_KANJI, DOG_MOM, TEACHER)
 
 
 def all_designs() -> list[tuple[Theme, Design]]:
