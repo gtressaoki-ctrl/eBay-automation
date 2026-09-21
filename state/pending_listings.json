@@ -60,7 +60,7 @@
     "price_cents": 3344,
     "cost_cents": 1520,
     "image_url": "https://images-api.printify.com/mockup/6aaf7bd6a1d0942cd3002247/38178/97992/camping-life-unisex-graphic-tee.jpg?camera_label=front",
-    "status": "pending_approval",
+    "status": "rejected",
     "printify_variant_id": 38178,
     "issue_number": 10
   },
