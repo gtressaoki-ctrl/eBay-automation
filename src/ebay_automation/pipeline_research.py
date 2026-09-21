@@ -29,13 +29,17 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 # What Printify actually bills to produce one 11oz mug (blueprint 478,
-# provider 99, variant 65216), measured by creating a probe product and
-# reading back its variant cost. Only an estimate for ranking — the real
+# provider 99, variant 65216). Only an estimate for ranking — the real
 # figure comes back with the product and is re-checked before listing —
 # but it has to be close, because a padded estimate rejects niches that
-# would in fact clear the profit floor. At $6.00 it put the sarcastic-mug
-# niche at $0.81 per unit when the true figure was $1.78.
-DEFAULT_PRODUCTION_COST_CENTS = 503
+# would in fact clear the profit floor.
+#
+# A one-off probe product put this at $5.03, but the first live research
+# run built real products in two different niches and both landed on
+# $6.13 exactly (backed out from realized unit_profit_cents at a known
+# market price in both cases — not a rounding coincidence). Trusting two
+# live builds over one probe.
+DEFAULT_PRODUCTION_COST_CENTS = 613
 
 
 def _slugify(text: str) -> str:
@@ -64,6 +68,20 @@ def product_profile(config: Config, printify: PrintifyClient) -> tuple[str, tupl
         f"Variant {target_id} not found for blueprint {config.printify_blueprint_id}; "
         "check PRINTIFY_VARIANT_IDS against scripts/list_printify_catalog.py"
     )
+
+
+def _sku_for(theme: Theme, design: Design) -> str:
+    """eBay rejects SKUs over 50 characters. A 6-hex uniqueness suffix is
+    non-negotiable (it's what stops two runs colliding on the same slug),
+    so the theme/design portion is truncated to make room for it instead
+    — this is an internal identifier, not shown to buyers, so a truncated
+    slug costs nothing. Three long design slugs hit this in the first live
+    run (e.g. "should-have-been-an-email" pushed the SKU to 54 chars) and
+    every one of them failed outright with eBay's inventory API.
+    """
+    suffix = uuid.uuid4().hex[:6]
+    base = f"POD-{theme.slug}-{design.slug}"
+    return f"{base[: 50 - len(suffix) - 1]}-{suffix}"
 
 
 def used_design_keys() -> set[str]:
@@ -141,62 +159,76 @@ def build_listing(
         )
 
     product_id = product["id"]
-    variants = product.get("variants", [])
-    production_cost = max((v.get("cost", 0) for v in variants), default=0) or DEFAULT_PRODUCTION_COST_CENTS
-    landed_cost = production_cost + config.shipping_cost_cents
 
-    price_cents = research.target_price_cents(demand)
-    unit_profit = research.unit_profit_cents(price_cents, landed_cost)
-    images = [img["src"] for img in product.get("images", [])][:12]
+    # Everything past this point can fail independently (an invalid SKU, a
+    # transient 500 from eBay) after the Printify product already exists.
+    # Left alone that orphans a product with no listing and no record in
+    # pending_listings.json — invisible clutter that just accumulates. Any
+    # failure here deletes the product it just created before re-raising,
+    # same cleanup pipeline_approve does on an explicit /reject.
+    try:
+        variants = product.get("variants", [])
+        production_cost = max((v.get("cost", 0) for v in variants), default=0) or DEFAULT_PRODUCTION_COST_CENTS
+        landed_cost = production_cost + config.shipping_cost_cents
 
-    sku = f"POD-{theme.slug}-{design.slug}-{uuid.uuid4().hex[:6]}"
-    title = theme.title_template.format(design=headline)[:80]
-    # Blank until a shop name is chosen (that choice belongs to the
-    # seller); once set, the same line goes on every listing so the shop
-    # reads as one brand rather than as unrelated one-off products.
-    tagline_html = f"<p><em>{config.brand_tagline}</em></p>" if config.brand_tagline else ""
+        price_cents = research.target_price_cents(demand)
+        unit_profit = research.unit_profit_cents(price_cents, landed_cost)
+        images = [img["src"] for img in product.get("images", [])][:12]
 
-    ebay.create_or_replace_inventory_item(
-        sku,
-        {
-            "product": {
-                "title": title,
-                "description": (
-                    f"<p><strong>{headline}</strong></p>"
-                    "<p>Ceramic mug, 11oz. Printed to order and shipped by our production "
-                    "partner. Dishwasher and microwave safe.</p>"
-                    "<p>Please allow a few days for production before dispatch.</p>"
-                    f"{tagline_html}"
-                ),
-                "imageUrls": images,
-                "aspects": {
-                    "Brand": [config.brand_tagline or "Unbranded"],
-                    "Material": ["Ceramic"],
-                    "Capacity": ["11 oz"],
+        sku = _sku_for(theme, design)
+        title = theme.title_template.format(design=headline)[:80]
+        # Blank until a shop name is chosen (that choice belongs to the
+        # seller); once set, the same line goes on every listing so the
+        # shop reads as one brand rather than as unrelated one-off products.
+        tagline_html = f"<p><em>{config.brand_tagline}</em></p>" if config.brand_tagline else ""
+
+        ebay.create_or_replace_inventory_item(
+            sku,
+            {
+                "product": {
+                    "title": title,
+                    "description": (
+                        f"<p><strong>{headline}</strong></p>"
+                        "<p>Ceramic mug, 11oz. Printed to order and shipped by our production "
+                        "partner. Dishwasher and microwave safe.</p>"
+                        "<p>Please allow a few days for production before dispatch.</p>"
+                        f"{tagline_html}"
+                    ),
+                    "imageUrls": images,
+                    "aspects": {
+                        "Brand": [config.brand_tagline or "Unbranded"],
+                        "Material": ["Ceramic"],
+                        "Capacity": ["11 oz"],
+                    },
                 },
+                "condition": "NEW",
+                "availability": {"shipToLocationAvailability": {"quantity": 50}},
             },
-            "condition": "NEW",
-            "availability": {"shipToLocationAvailability": {"quantity": 50}},
-        },
-    )
+        )
 
-    offer_id = ebay.create_offer(
-        {
-            "sku": sku,
-            "marketplaceId": config.ebay_marketplace_id,
-            "format": "FIXED_PRICE",
-            "availableQuantity": 50,
-            "categoryId": config.ebay_category_id,
-            "listingDescription": f"{headline} - ceramic mug, printed to order.",
-            "pricingSummary": {"price": {"value": f"{price_cents / 100:.2f}", "currency": "USD"}},
-            "merchantLocationKey": config.ebay_merchant_location_key,
-            "listingPolicies": {
-                "fulfillmentPolicyId": config.ebay_fulfillment_policy_id,
-                "paymentPolicyId": config.ebay_payment_policy_id,
-                "returnPolicyId": config.ebay_return_policy_id,
-            },
-        }
-    )
+        offer_id = ebay.create_offer(
+            {
+                "sku": sku,
+                "marketplaceId": config.ebay_marketplace_id,
+                "format": "FIXED_PRICE",
+                "availableQuantity": 50,
+                "categoryId": config.ebay_category_id,
+                "listingDescription": f"{headline} - ceramic mug, printed to order.",
+                "pricingSummary": {"price": {"value": f"{price_cents / 100:.2f}", "currency": "USD"}},
+                "merchantLocationKey": config.ebay_merchant_location_key,
+                "listingPolicies": {
+                    "fulfillmentPolicyId": config.ebay_fulfillment_policy_id,
+                    "paymentPolicyId": config.ebay_payment_policy_id,
+                    "returnPolicyId": config.ebay_return_policy_id,
+                },
+            }
+        )
+    except Exception:
+        try:
+            printify.delete_product(product_id)
+        except Exception:
+            log.exception("Failed to clean up orphaned Printify product %s", product_id)
+        raise
 
     return {
         "sku": sku,
@@ -342,6 +374,18 @@ def run() -> None:
                     entry["sku"],
                     entry["unit_profit_cents"] / 100,
                 )
+                # build_listing already created the Printify product and
+                # the eBay inventory item/offer before this margin check
+                # ran — same cleanup as an explicit /reject, so a rejected
+                # niche doesn't just pile up as clutter in both accounts.
+                try:
+                    printify.delete_product(entry["printify_product_id"])
+                except Exception:
+                    log.exception("Failed to clean up Printify product for dropped %s", entry["sku"])
+                try:
+                    ebay.delete_inventory_item(entry["sku"])
+                except Exception:
+                    log.exception("Failed to clean up eBay inventory item for dropped %s", entry["sku"])
                 continue
 
             if config.dry_run:
