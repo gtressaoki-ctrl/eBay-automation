@@ -197,3 +197,92 @@ def test_used_design_keys_reads_pending_listings(monkeypatch):
     )
 
     assert pipeline_research.used_design_keys() == {"test-theme/one"}
+
+
+DOG_THEME = Theme(
+    slug="dog-mom",
+    search_keyword="dog mom mug gift",
+    title_template="{design} - Ceramic Mug 11oz",
+    keywords=(),
+    designs=(Design(slug="only", lines=("DOG", "MOM")),),
+)
+
+
+def test_select_active_themes_explores_everything_with_no_track_record(monkeypatch):
+    monkeypatch.setattr(pipeline_research.ledger, "theme_stats", lambda: {})
+
+    result = pipeline_research.select_active_themes((THEME, DOG_THEME), _config())
+
+    assert result == (THEME, DOG_THEME)
+
+
+def test_select_active_themes_ignores_a_theme_published_but_never_sold(monkeypatch):
+    monkeypatch.setattr(
+        pipeline_research.ledger,
+        "theme_stats",
+        lambda: {"test-theme": {"published": 5, "profit_cents": 0}},
+    )
+
+    result = pipeline_research.select_active_themes((THEME, DOG_THEME), _config(brand_lock_min_published=3))
+
+    assert result == (THEME, DOG_THEME)
+
+
+def test_select_active_themes_locks_onto_a_theme_that_has_proven_itself(monkeypatch):
+    monkeypatch.setattr(
+        pipeline_research.ledger,
+        "theme_stats",
+        lambda: {
+            "test-theme": {"published": 3, "profit_cents": 500},
+            "dog-mom": {"published": 1, "profit_cents": 0},
+        },
+    )
+
+    result = pipeline_research.select_active_themes(
+        (THEME, DOG_THEME), _config(brand_lock_min_published=3)
+    )
+
+    assert result == (THEME,)
+
+
+def test_select_active_themes_picks_the_most_profitable_qualified_theme(monkeypatch):
+    monkeypatch.setattr(
+        pipeline_research.ledger,
+        "theme_stats",
+        lambda: {
+            "test-theme": {"published": 3, "profit_cents": 500},
+            "dog-mom": {"published": 4, "profit_cents": 1500},
+        },
+    )
+
+    result = pipeline_research.select_active_themes(
+        (THEME, DOG_THEME), _config(brand_lock_min_published=3)
+    )
+
+    assert result == (DOG_THEME,)
+
+
+def test_brand_tagline_is_appended_to_the_listing_when_set(fake_render, printify, ebay):
+    entry = pipeline_research.build_listing(
+        _config(brand_tagline="Maple & Co."),
+        printify,
+        ebay,
+        THEME,
+        THEME.designs[0],
+        _demand(),
+        "White",
+        (2000, 800),
+    )
+
+    item = ebay.create_or_replace_inventory_item.call_args[0][1]
+    assert "Maple &amp; Co." in item["product"]["description"] or "Maple & Co." in item["product"]["description"]
+    assert item["product"]["aspects"]["Brand"] == ["Maple & Co."]
+
+
+def test_brand_tagline_defaults_to_unbranded_when_unset(fake_render, printify, ebay):
+    entry = pipeline_research.build_listing(
+        _config(), printify, ebay, THEME, THEME.designs[0], _demand(), "White", (2000, 800)
+    )
+
+    item = ebay.create_or_replace_inventory_item.call_args[0][1]
+    assert item["product"]["aspects"]["Brand"] == ["Unbranded"]

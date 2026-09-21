@@ -60,3 +60,31 @@ def test_order_state_roundtrip():
     assert ledger.get_order_record("ORDER1") is None
     ledger.set_order_record("ORDER1", {"status": "submitted"})
     assert ledger.get_order_record("ORDER1") == {"status": "submitted"}
+
+
+def test_theme_stats_counts_published_listings_per_theme():
+    ledger.add_pending_listing("SKU-1", {"theme": "dog-mom", "status": "published"})
+    ledger.add_pending_listing("SKU-2", {"theme": "dog-mom", "status": "published"})
+    ledger.add_pending_listing("SKU-3", {"theme": "teacher-gift", "status": "published"})
+    ledger.add_pending_listing("SKU-4", {"theme": "dog-mom", "status": "pending_approval"})
+
+    stats = ledger.theme_stats()
+
+    assert stats["dog-mom"]["published"] == 2
+    assert stats["teacher-gift"]["published"] == 1
+
+
+def test_theme_stats_attributes_order_profit_to_the_skus_theme():
+    ledger.add_pending_listing("SKU-1", {"theme": "dog-mom", "status": "published"})
+    ledger.record_order_fulfilled("order-1", "SKU-1", revenue_cents=2000, cost_cents=1200, tracking_number="TRK1")
+    ledger.record_order_fulfilled("order-2", "SKU-1", revenue_cents=1800, cost_cents=1200, tracking_number="TRK2")
+
+    stats = ledger.theme_stats()
+
+    assert stats["dog-mom"]["profit_cents"] == 800 + 600
+
+
+def test_theme_stats_ignores_orders_for_unknown_skus():
+    ledger.record_order_fulfilled("order-1", "SKU-GONE", revenue_cents=2000, cost_cents=1200, tracking_number="TRK1")
+
+    assert ledger.theme_stats() == {}

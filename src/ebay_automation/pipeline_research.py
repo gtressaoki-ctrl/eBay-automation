@@ -28,7 +28,14 @@ from .themes import Design, Theme
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-DEFAULT_PRODUCTION_COST_CENTS = 600
+# What Printify actually bills to produce one 11oz mug (blueprint 478,
+# provider 99, variant 65216), measured by creating a probe product and
+# reading back its variant cost. Only an estimate for ranking — the real
+# figure comes back with the product and is re-checked before listing —
+# but it has to be close, because a padded estimate rejects niches that
+# would in fact clear the profit floor. At $6.00 it put the sarcastic-mug
+# niche at $0.81 per unit when the true figure was $1.78.
+DEFAULT_PRODUCTION_COST_CENTS = 503
 
 
 def _slugify(text: str) -> str:
@@ -65,6 +72,40 @@ def used_design_keys() -> set[str]:
         for entry in ledger.load_pending_listings().values()
         if entry.get("design_key")
     }
+
+
+def select_active_themes(all_themes: tuple[Theme, ...], config: Config) -> tuple[Theme, ...]:
+    """Which themes today's run researches: everything, or one committed brand.
+
+    Running four unrelated themes forever never becomes a brand a buyer
+    recognizes and comes back to — it stays four random side-hustles. Once
+    a theme has enough published, profitable listings to have proven
+    itself, research locks onto it exclusively and stops spinning up
+    unrelated ones; until then every theme is explored to find which one
+    earns that commitment.
+
+    Locking is a floor, not a ceiling: it only fires once real profit
+    exists, so a theme that merely got published first without selling
+    cannot lock in ahead of one that is actually working.
+    """
+    stats = ledger.theme_stats()
+    qualified = [
+        theme
+        for theme in all_themes
+        if stats.get(theme.slug, {}).get("published", 0) >= config.brand_lock_min_published
+        and stats.get(theme.slug, {}).get("profit_cents", 0) > 0
+    ]
+    if not qualified:
+        return all_themes
+
+    winner = max(qualified, key=lambda t: stats[t.slug]["profit_cents"])
+    log.info(
+        "Brand locked onto %r (%d published, $%.2f profit so far); other themes paused.",
+        winner.slug,
+        stats[winner.slug]["published"],
+        stats[winner.slug]["profit_cents"] / 100,
+    )
+    return (winner,)
 
 
 def build_listing(
@@ -110,6 +151,10 @@ def build_listing(
 
     sku = f"POD-{theme.slug}-{design.slug}-{uuid.uuid4().hex[:6]}"
     title = theme.title_template.format(design=headline)[:80]
+    # Blank until a shop name is chosen (that choice belongs to the
+    # seller); once set, the same line goes on every listing so the shop
+    # reads as one brand rather than as unrelated one-off products.
+    tagline_html = f"<p><em>{config.brand_tagline}</em></p>" if config.brand_tagline else ""
 
     ebay.create_or_replace_inventory_item(
         sku,
@@ -121,9 +166,14 @@ def build_listing(
                     "<p>Ceramic mug, 11oz. Printed to order and shipped by our production "
                     "partner. Dishwasher and microwave safe.</p>"
                     "<p>Please allow a few days for production before dispatch.</p>"
+                    f"{tagline_html}"
                 ),
                 "imageUrls": images,
-                "aspects": {"Brand": ["Unbranded"], "Material": ["Ceramic"], "Capacity": ["11 oz"]},
+                "aspects": {
+                    "Brand": [config.brand_tagline or "Unbranded"],
+                    "Material": ["Ceramic"],
+                    "Capacity": ["11 oz"],
+                },
             },
             "condition": "NEW",
             "availability": {"shipToLocationAvailability": {"quantity": 50}},
@@ -222,29 +272,39 @@ def run() -> None:
         config.ebay_category_id,
     )
 
+    active_themes = select_active_themes(themes.THEMES, config)
+
     # Cost floor for ranking. The exact production cost is only known once
     # Printify has the product, so rank on a conservative estimate and
     # re-check the real figure before the listing is drafted.
     estimated_cost = DEFAULT_PRODUCTION_COST_CENTS + config.shipping_cost_cents
     report = research.rank_niches(
-        [theme.search_keyword for theme in themes.THEMES],
+        [theme.search_keyword for theme in active_themes],
         config,
         product_cost_cents=estimated_cost,
         min_unit_profit_cents=config.min_unit_profit_cents,
     )
 
     for rejected in report.rejected:
+        # The demand figures go out with the rejection: a niche that sells
+        # well and still fails the floor is a costing problem worth acting
+        # on, while one that fails on both counts is simply not a market.
         log.warning(
-            "Niche %r rejected: unit profit $%.2f at market price $%.2f is below the floor.",
+            "Niche %r rejected: unit profit $%.2f at market price $%.2f is below the "
+            "$%.2f floor (%d active, %.0f%% sell-through, %.2f units/listing/month).",
             rejected.keyword,
             rejected.unit_profit_cents / 100,
             (research.target_price_cents(rejected) or 0) / 100,
+            config.min_unit_profit_cents / 100,
+            rejected.active_listings,
+            rejected.sell_through_rate * 100,
+            rejected.units_per_listing_per_month,
         )
     if not report.ranked:
         log.error("No niche cleared the profit floor; nothing listed.")
         return
 
-    by_keyword = {theme.search_keyword: theme for theme in themes.THEMES}
+    by_keyword = {theme.search_keyword: theme for theme in active_themes}
     used = used_design_keys()
     created = 0
 

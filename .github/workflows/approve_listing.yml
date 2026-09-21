@@ -5,7 +5,14 @@ on:
     types: [created]
 
 concurrency:
-  group: ebay-automation-state
+  # Scoped per issue, not shared with the other workflows. GitHub Actions
+  # only keeps one run queued per concurrency group — a third comment
+  # arriving while one is already queued silently cancels the queued one,
+  # which is how three /reject comments sent back-to-back left two issues
+  # never processed. Different issues touch different keys in
+  # pending_listings.json, so they can run in parallel; the git push retry
+  # below (fetch+rebase) still handles the case where two land at once.
+  group: ebay-automation-approve-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 permissions:
@@ -39,6 +46,9 @@ jobs:
           EBAY_ENV: ${{ vars.EBAY_ENV }}
           PRINTIFY_API_KEY: ${{ secrets.PRINTIFY_API_KEY }}
           PRINTIFY_SHOP_ID: ${{ vars.PRINTIFY_SHOP_ID }}
+          PROMOTED_LISTINGS_ENABLED: ${{ vars.PROMOTED_LISTINGS_ENABLED }}
+          PROMOTED_LISTINGS_BID_PERCENTAGE: ${{ vars.PROMOTED_LISTINGS_BID_PERCENTAGE }}
+          PROMOTED_LISTINGS_CAMPAIGN_NAME: ${{ vars.PROMOTED_LISTINGS_CAMPAIGN_NAME }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}

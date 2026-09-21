@@ -151,6 +151,36 @@ def set_order_record(order_id: str, record: dict) -> None:
     save_order_state(data)
 
 
+def theme_stats() -> dict[str, dict]:
+    """Published-listing and profit counts per design theme.
+
+    Used to decide whether research should keep exploring every theme or
+    lock onto whichever one has proven itself — see
+    pipeline_research.select_active_themes(). Profit is only known once an
+    order ships, so a theme with published-but-unsold listings shows 0
+    profit here, same as one that has sold nothing at a loss; only actual
+    fulfilled orders distinguish the two.
+    """
+    pending = load_pending_listings()
+    theme_by_sku = {sku: entry.get("theme") for sku, entry in pending.items() if entry.get("theme")}
+
+    stats: dict[str, dict] = {}
+    for entry in pending.values():
+        theme = entry.get("theme")
+        if theme and entry.get("status") == "published":
+            stats.setdefault(theme, {"published": 0, "profit_cents": 0})
+            stats[theme]["published"] += 1
+
+    for order in load_ledger().get("orders", []):
+        theme = theme_by_sku.get(order.get("sku"))
+        if theme is None:
+            continue
+        stats.setdefault(theme, {"published": 0, "profit_cents": 0})
+        stats[theme]["profit_cents"] += order.get("profit_cents", 0)
+
+    return stats
+
+
 def pause(reason: str) -> None:
     ledger = load_ledger()
     ledger["paused"] = True

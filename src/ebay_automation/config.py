@@ -21,6 +21,11 @@ def _int_env(name: str, default: int) -> int:
     return int(val) if val else default
 
 
+def _float_env(name: str, default: float) -> float:
+    val = os.environ.get(name)
+    return float(val) if val else default
+
+
 def _str_env(name: str, default: str = "") -> str:
     """Read a string setting, treating an empty value as unset.
 
@@ -91,6 +96,38 @@ class Config:
     # both, and ignoring shipping is what made the first pricing pass
     # look profitable when it was not.
     shipping_cost_cents: int = field(default_factory=lambda: _int_env("SHIPPING_COST_CENTS", 579))
+    # Scattering listings across unrelated themes forever never becomes a
+    # brand a buyer recognizes and returns to. Once one theme has this many
+    # published, profitable listings, research locks onto it exclusively;
+    # below that, every theme is still explored to find which one deserves
+    # the commitment. See pipeline_research.select_active_themes().
+    brand_lock_min_published: int = field(
+        default_factory=lambda: _int_env("BRAND_LOCK_MIN_PUBLISHED", 3)
+    )
+    # Optional line appended to every listing description's footer, e.g. a
+    # shop name/tagline. Choosing one is a business decision (trademark,
+    # what it signals) that belongs to the seller, not this pipeline — this
+    # only wires it through once chosen. Blank changes nothing.
+    brand_tagline: str = field(default_factory=lambda: _str_env("BRAND_TAGLINE"))
+
+    # A brand-new seller with zero feedback is ranked far down eBay's own
+    # search regardless of listing quality — Promoted Listings Standard
+    # (cost-per-sale) is the one paid lever that fits near-zero effort/idle
+    # cost: eBay only takes its cut when an ad click leads to an actual
+    # sale, nothing if it doesn't. Off by default, like auto_publish, since
+    # it is still a real (if bounded) spend decision.
+    promoted_listings_enabled: bool = field(
+        default_factory=lambda: _bool_env("PROMOTED_LISTINGS_ENABLED", False)
+    )
+    # eBay requires 2.0-100.0. Defaults high enough to plausibly absorb the
+    # entire per-unit margin on today's best niche — the point right now is
+    # buying the first sales and feedback, not preserving profit on them.
+    promoted_listings_bid_percentage: float = field(
+        default_factory=lambda: _float_env("PROMOTED_LISTINGS_BID_PERCENTAGE", 10.0)
+    )
+    promoted_listings_campaign_name: str = field(
+        default_factory=lambda: _str_env("PROMOTED_LISTINGS_CAMPAIGN_NAME", "ebay-automation-cps")
+    )
 
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]

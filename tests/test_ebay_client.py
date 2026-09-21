@@ -81,3 +81,75 @@ def test_error_response_raises_ebay_api_error(monkeypatch, client):
     )
     with pytest.raises(EbayApiError):
         client.create_offer({"sku": "SKU1"})
+
+
+def test_find_campaign_returns_id_of_an_active_campaign(monkeypatch, client):
+    monkeypatch.setattr(
+        ebay_client_module.requests,
+        "request",
+        lambda *a, **k: FakeResponse(
+            200,
+            {
+                "campaigns": [
+                    {"campaignId": "old-1", "campaignStatus": "ENDED"},
+                    {"campaignId": "cur-1", "campaignStatus": "RUNNING"},
+                ]
+            },
+        ),
+    )
+    assert client.find_campaign("ebay-automation-cps") == "cur-1"
+
+
+def test_find_campaign_returns_none_when_nothing_active(monkeypatch, client):
+    monkeypatch.setattr(
+        ebay_client_module.requests,
+        "request",
+        lambda *a, **k: FakeResponse(200, {"campaigns": [{"campaignId": "old-1", "campaignStatus": "ENDED"}]}),
+    )
+    assert client.find_campaign("ebay-automation-cps") is None
+
+
+def test_create_cost_per_sale_campaign_sends_funding_strategy(monkeypatch, client):
+    captured = {}
+
+    def fake_request(method, url, headers=None, timeout=None, **kwargs):
+        captured["json"] = kwargs.get("json")
+        return FakeResponse(201, {}, headers={"Location": "https://api.ebay.com/.../ad_campaign/camp-1"})
+
+    monkeypatch.setattr(ebay_client_module.requests, "request", fake_request)
+
+    campaign_id = client.create_cost_per_sale_campaign("ebay-automation-cps", 10.0)
+
+    assert campaign_id == "camp-1"
+    assert captured["json"]["fundingStrategy"] == {"fundingModel": "COST_PER_SALE", "bidPercentage": "10.0"}
+    assert captured["json"]["campaignName"] == "ebay-automation-cps"
+
+
+def test_get_or_create_cost_per_sale_campaign_reuses_an_existing_one(monkeypatch, client):
+    monkeypatch.setattr(client, "find_campaign", lambda name: "existing-1")
+    monkeypatch.setattr(
+        client, "create_cost_per_sale_campaign", lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not create"))
+    )
+
+    assert client.get_or_create_cost_per_sale_campaign("ebay-automation-cps", 10.0) == "existing-1"
+
+
+def test_promote_listing_sends_inventory_reference(monkeypatch, client):
+    captured = {}
+
+    def fake_request(method, url, headers=None, timeout=None, **kwargs):
+        captured["method"] = method
+        captured["url"] = url
+        captured["json"] = kwargs.get("json")
+        return FakeResponse(201, {})
+
+    monkeypatch.setattr(ebay_client_module.requests, "request", fake_request)
+
+    client.promote_listing("camp-1", "SKU-1", 10.0)
+
+    assert captured["url"].endswith("/sell/marketing/v1/ad_campaign/camp-1/create_ads_by_inventory_reference")
+    assert captured["json"] == {
+        "bidPercentage": "10.0",
+        "inventoryReferenceId": "SKU-1",
+        "inventoryReferenceType": "INVENTORY_ITEM",
+    }
