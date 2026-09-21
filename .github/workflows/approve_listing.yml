@@ -46,6 +46,9 @@ jobs:
           EBAY_ENV: ${{ vars.EBAY_ENV }}
           PRINTIFY_API_KEY: ${{ secrets.PRINTIFY_API_KEY }}
           PRINTIFY_SHOP_ID: ${{ vars.PRINTIFY_SHOP_ID }}
+          PROMOTED_LISTINGS_ENABLED: ${{ vars.PROMOTED_LISTINGS_ENABLED }}
+          PROMOTED_LISTINGS_BID_PERCENTAGE: ${{ vars.PROMOTED_LISTINGS_BID_PERCENTAGE }}
+          PROMOTED_LISTINGS_CAMPAIGN_NAME: ${{ vars.PROMOTED_LISTINGS_CAMPAIGN_NAME }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}

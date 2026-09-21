@@ -1,8 +1,9 @@
-"""Thin wrapper around eBay's Sell Inventory API and Sell Fulfillment API.
+"""Thin wrapper around eBay's Sell Inventory, Fulfillment and Marketing APIs.
 
 Reference:
 - Inventory API: https://developer.ebay.com/api-docs/sell/inventory/resources/methods
 - Fulfillment API: https://developer.ebay.com/api-docs/sell/fulfillment/resources/methods
+- Marketing API (Promoted Listings): https://developer.ebay.com/api-docs/sell/marketing/resources/methods
 
 Only the subset of calls this pipeline needs is implemented. Every call
 uses a fresh user access token (see ebay_auth.py) — eBay access tokens
@@ -10,6 +11,7 @@ expire in ~2h so we do not cache HTTP sessions across long-running jobs.
 """
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 import requests
@@ -107,3 +109,61 @@ class EbayClient:
         )
         location = resp.headers.get("Location", "")
         return location.rstrip("/").rsplit("/", 1)[-1] if location else ""
+
+    # ---- Marketing API (Promoted Listings, cost-per-sale) --------------------
+    #
+    # A brand-new seller with no feedback is ranked far down eBay's own search
+    # (Cassini) regardless of how good the listing is — that's the actual
+    # bottleneck, not the automation. Cost-per-sale Promoted Listings is the
+    # one lever that fits a near-zero-effort, near-zero-idle-cost pipeline:
+    # eBay only takes its cut of the sale price when an ad click leads to an
+    # actual sale, nothing if it doesn't sell, so turning it on never spends
+    # money the pipeline hasn't already earned.
+
+    def find_campaign(self, campaign_name: str) -> str | None:
+        """An existing, still-active campaign with this name, if any."""
+        resp = self._request(
+            "GET", "/sell/marketing/v1/ad_campaign", params={"campaign_name": campaign_name, "limit": 10}
+        )
+        for campaign in resp.json().get("campaigns", []):
+            if campaign.get("campaignStatus") in ("RUNNING", "SCHEDULED", "PAUSED"):
+                return campaign["campaignId"]
+        return None
+
+    def create_cost_per_sale_campaign(self, campaign_name: str, bid_percentage: float) -> str:
+        resp = self._request(
+            "POST",
+            "/sell/marketing/v1/ad_campaign",
+            json={
+                "marketplaceId": self.config.ebay_marketplace_id,
+                "campaignName": campaign_name,
+                "fundingStrategy": {
+                    "fundingModel": "COST_PER_SALE",
+                    "bidPercentage": f"{bid_percentage:.1f}",
+                },
+                "startDate": datetime.datetime.now(datetime.timezone.utc)
+                .isoformat(timespec="seconds")
+                .replace("+00:00", "Z"),
+            },
+        )
+        location = resp.headers.get("Location", "")
+        return location.rstrip("/").rsplit("/", 1)[-1]
+
+    def get_or_create_cost_per_sale_campaign(self, campaign_name: str, bid_percentage: float) -> str:
+        """One long-running campaign is reused across runs rather than
+        creating a fresh one every day."""
+        return self.find_campaign(campaign_name) or self.create_cost_per_sale_campaign(
+            campaign_name, bid_percentage
+        )
+
+    def promote_listing(self, campaign_id: str, sku: str, bid_percentage: float) -> None:
+        """Add one SKU to a cost-per-sale campaign. bidPercentage must be 2.0-100.0."""
+        self._request(
+            "POST",
+            f"/sell/marketing/v1/ad_campaign/{campaign_id}/create_ads_by_inventory_reference",
+            json={
+                "bidPercentage": f"{bid_percentage:.1f}",
+                "inventoryReferenceId": sku,
+                "inventoryReferenceType": "INVENTORY_ITEM",
+            },
+        )

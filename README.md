@@ -94,6 +94,24 @@ python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確
 - ショップ名を決めたら `BRAND_TAGLINE` に設定すると、以後の全リスティングの説明文と
   eBayの Brand item specific に自動で反映されます
 
+## 新規セラーが誰の目にも留まらない問題
+
+eBayの検索順位（Cassiniアルゴリズム）は、実績のないセラー（Feedback 0件）を構造的に
+検索結果の下位に沈めます。これはリスティングの質やコードのバグとは無関係で、
+どれだけ需要調査を頑張っても最初は誰にも見つけてもらえません。Etsy/Shopifyなど
+他プラットフォームに変えても同じ壁にぶつかるため、対応していません。
+
+**唯一、稼働ゼロ・低リスクで効く打ち手が eBay Promoted Listings（成約課金型広告）**です。
+売れた時だけ売値の指定%が広告費として引かれ、売れなければ広告費もゼロ。
+`PROMOTED_LISTINGS_ENABLED=true` で有効化すると、承認(`/approve`)のたびに自動で
+出稿されます（利益より先に実績とレビューを作るのが目的なので、初期設定の入札率は
+利益のほとんどを吸収する水準にしてあります。`PROMOTED_LISTINGS_BID_PERCENTAGE`で調整可）。
+
+`sell.marketing` という別のOAuthスコープが必要です。既存の`EBAY_REFRESH_TOKEN`に
+含まれていない場合、広告出稿だけ失敗します（**出品自体は成功したまま**——広告失敗で
+出品を巻き戻すことはしません）。失敗したら承認Issueのコメントに理由が出るので、
+その場合はeBay Developer Programでスコープを追加してOAuth認可をやり直してください。
+
 ## 既知の制約（v1）
 
 - 1出品につきサイズ/カラーは1バリアントのみ（eBayのバリエーション出品は未対応）
