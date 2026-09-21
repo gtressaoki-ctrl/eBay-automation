@@ -28,7 +28,14 @@ from .themes import Design, Theme
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-DEFAULT_PRODUCTION_COST_CENTS = 600
+# What Printify actually bills to produce one 11oz mug (blueprint 478,
+# provider 99, variant 65216), measured by creating a probe product and
+# reading back its variant cost. Only an estimate for ranking — the real
+# figure comes back with the product and is re-checked before listing —
+# but it has to be close, because a padded estimate rejects niches that
+# would in fact clear the profit floor. At $6.00 it put the sarcastic-mug
+# niche at $0.81 per unit when the true figure was $1.78.
+DEFAULT_PRODUCTION_COST_CENTS = 503
 
 
 def _slugify(text: str) -> str:
@@ -234,11 +241,19 @@ def run() -> None:
     )
 
     for rejected in report.rejected:
+        # The demand figures go out with the rejection: a niche that sells
+        # well and still fails the floor is a costing problem worth acting
+        # on, while one that fails on both counts is simply not a market.
         log.warning(
-            "Niche %r rejected: unit profit $%.2f at market price $%.2f is below the floor.",
+            "Niche %r rejected: unit profit $%.2f at market price $%.2f is below the "
+            "$%.2f floor (%d active, %.0f%% sell-through, %.2f units/listing/month).",
             rejected.keyword,
             rejected.unit_profit_cents / 100,
             (research.target_price_cents(rejected) or 0) / 100,
+            config.min_unit_profit_cents / 100,
+            rejected.active_listings,
+            rejected.sell_through_rate * 100,
+            rejected.units_per_listing_per_month,
         )
     if not report.ranked:
         log.error("No niche cleared the profit floor; nothing listed.")
