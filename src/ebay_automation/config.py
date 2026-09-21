@@ -21,53 +21,76 @@ def _int_env(name: str, default: int) -> int:
     return int(val) if val else default
 
 
+def _str_env(name: str, default: str = "") -> str:
+    """Read a string setting, treating an empty value as unset.
+
+    GitHub Actions substitutes an unset repository variable as the empty
+    string, so `${{ vars.EBAY_CATEGORY_ID }}` arrives as "" rather than
+    being absent. os.environ.get(name, default) then returns "" and
+    silently overrides the default — which is how a run once went out
+    with no category at all. Anything blank falls back here instead.
+    """
+    return os.environ.get(name, "").strip() or default
+
+
+def _int_list_env(name: str, default: list[int]) -> list[int]:
+    values = [int(v) for v in os.environ.get(name, "").split(",") if v.strip()]
+    return values or default
+
+
 @dataclass(frozen=True)
 class Config:
     # eBay
-    ebay_app_id: str = field(default_factory=lambda: os.environ.get("EBAY_APP_ID", ""))
-    ebay_cert_id: str = field(default_factory=lambda: os.environ.get("EBAY_CERT_ID", ""))
-    ebay_dev_id: str = field(default_factory=lambda: os.environ.get("EBAY_DEV_ID", ""))
-    ebay_refresh_token: str = field(default_factory=lambda: os.environ.get("EBAY_REFRESH_TOKEN", ""))
-    ebay_marketplace_id: str = field(default_factory=lambda: os.environ.get("EBAY_MARKETPLACE_ID", "EBAY_US"))
+    ebay_app_id: str = field(default_factory=lambda: _str_env("EBAY_APP_ID"))
+    ebay_cert_id: str = field(default_factory=lambda: _str_env("EBAY_CERT_ID"))
+    ebay_dev_id: str = field(default_factory=lambda: _str_env("EBAY_DEV_ID"))
+    ebay_refresh_token: str = field(default_factory=lambda: _str_env("EBAY_REFRESH_TOKEN"))
+    ebay_marketplace_id: str = field(default_factory=lambda: _str_env("EBAY_MARKETPLACE_ID", "EBAY_US"))
     ebay_merchant_location_key: str = field(
-        default_factory=lambda: os.environ.get("EBAY_MERCHANT_LOCATION_KEY", "")
+        default_factory=lambda: _str_env("EBAY_MERCHANT_LOCATION_KEY")
     )
     ebay_fulfillment_policy_id: str = field(
-        default_factory=lambda: os.environ.get("EBAY_FULFILLMENT_POLICY_ID", "")
+        default_factory=lambda: _str_env("EBAY_FULFILLMENT_POLICY_ID")
     )
-    ebay_payment_policy_id: str = field(default_factory=lambda: os.environ.get("EBAY_PAYMENT_POLICY_ID", ""))
-    ebay_return_policy_id: str = field(default_factory=lambda: os.environ.get("EBAY_RETURN_POLICY_ID", ""))
-    ebay_env: str = field(default_factory=lambda: os.environ.get("EBAY_ENV", "PRODUCTION"))  # or SANDBOX
-    # eBay US "T-Shirts" category as of this writing; verify with the
-    # Taxonomy API (getCategorySuggestions) before relying on it, eBay
-    # category IDs occasionally change.
-    ebay_category_id: str = field(default_factory=lambda: os.environ.get("EBAY_CATEGORY_ID", "15687"))
+    ebay_payment_policy_id: str = field(default_factory=lambda: _str_env("EBAY_PAYMENT_POLICY_ID"))
+    ebay_return_policy_id: str = field(default_factory=lambda: _str_env("EBAY_RETURN_POLICY_ID"))
+    ebay_env: str = field(default_factory=lambda: _str_env("EBAY_ENV", "PRODUCTION"))  # or SANDBOX
+    # eBay US "Mugs" category as of this writing; verify with the Taxonomy
+    # API (getCategorySuggestions) before relying on it, eBay category IDs
+    # occasionally change. Change this alongside the Printify blueprint —
+    # listing a mug under the old T-Shirts category (15687) is how a run
+    # ends up in front of the wrong buyers.
+    ebay_category_id: str = field(default_factory=lambda: _str_env("EBAY_CATEGORY_ID", "20675"))
 
     # Printify
-    printify_api_key: str = field(default_factory=lambda: os.environ.get("PRINTIFY_API_KEY", ""))
-    printify_shop_id: str = field(default_factory=lambda: os.environ.get("PRINTIFY_SHOP_ID", ""))
-    # Look these up once with scripts/list_printify_catalog.py for the
-    # blank product you want to sell (e.g. a specific t-shirt blueprint
-    # from a specific print provider) and set them as repo secrets.
-    printify_blueprint_id: int = field(default_factory=lambda: _int_env("PRINTIFY_BLUEPRINT_ID", 0))
-    printify_print_provider_id: int = field(default_factory=lambda: _int_env("PRINTIFY_PRINT_PROVIDER_ID", 0))
+    printify_api_key: str = field(default_factory=lambda: _str_env("PRINTIFY_API_KEY"))
+    printify_shop_id: str = field(default_factory=lambda: _str_env("PRINTIFY_SHOP_ID"))
+    # Defaults are the 11oz ceramic mug from Printify Choice. Demand
+    # measurement put mug niches at roughly twelve times the monthly
+    # profit per listing of graphic tees, which is why this is the
+    # default product rather than apparel. Override via repo variables to
+    # sell something else; scripts/list_printify_catalog.py lists IDs.
+    printify_blueprint_id: int = field(default_factory=lambda: _int_env("PRINTIFY_BLUEPRINT_ID", 478))
+    printify_print_provider_id: int = field(default_factory=lambda: _int_env("PRINTIFY_PRINT_PROVIDER_ID", 99))
     printify_variant_ids: list[int] = field(
-        default_factory=lambda: [
-            int(v) for v in os.environ.get("PRINTIFY_VARIANT_IDS", "").split(",") if v.strip()
-        ]
+        default_factory=lambda: _int_list_env("PRINTIFY_VARIANT_IDS", [65216])
     )
 
     # GitHub (for opening approval issues)
-    github_token: str = field(default_factory=lambda: os.environ.get("GITHUB_TOKEN", ""))
-    github_repository: str = field(default_factory=lambda: os.environ.get("GITHUB_REPOSITORY", ""))
+    github_token: str = field(default_factory=lambda: _str_env("GITHUB_TOKEN"))
+    github_repository: str = field(default_factory=lambda: _str_env("GITHUB_REPOSITORY"))
 
     # Pipeline behavior
     daily_listing_quota: int = field(default_factory=lambda: _int_env("DAILY_LISTING_QUOTA", 3))
     auto_publish: bool = field(default_factory=lambda: _bool_env("AUTO_PUBLISH", False))
     dry_run: bool = field(default_factory=lambda: _bool_env("DRY_RUN", False))
-    default_markup_multiplier: float = field(
-        default_factory=lambda: float(os.environ.get("DEFAULT_MARKUP_MULTIPLIER", "2.2"))
-    )
+    # Never list a design whose unit economics at the going market price
+    # come in under this, however well the niche sells.
+    min_unit_profit_cents: int = field(default_factory=lambda: _int_env("MIN_UNIT_PROFIT_CENTS", 100))
+    # Landed cost per unit is production plus shipping; Printify bills
+    # both, and ignoring shipping is what made the first pricing pass
+    # look profitable when it was not.
+    shipping_cost_cents: int = field(default_factory=lambda: _int_env("SHIPPING_COST_CENTS", 579))
 
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]

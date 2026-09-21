@@ -19,3 +19,28 @@ def test_defaults_are_sane():
     assert cfg.ebay_marketplace_id == "EBAY_US"
     assert cfg.daily_listing_quota == 3
     assert cfg.auto_publish is False
+
+
+def test_blank_repository_variable_does_not_override_the_default(monkeypatch):
+    """GitHub substitutes an unset repo variable as "", not as absent."""
+    monkeypatch.setenv("EBAY_CATEGORY_ID", "")
+    monkeypatch.setenv("EBAY_MARKETPLACE_ID", "")
+    monkeypatch.setenv("PRINTIFY_VARIANT_IDS", "")
+    monkeypatch.setenv("PRINTIFY_BLUEPRINT_ID", "")
+
+    config = Config()
+
+    assert config.ebay_category_id == "20675"
+    assert config.ebay_marketplace_id == "EBAY_US"
+    assert config.printify_variant_ids == [65216]
+    assert config.printify_blueprint_id == 478
+
+
+def test_repository_variables_still_win_when_actually_set(monkeypatch):
+    monkeypatch.setenv("EBAY_CATEGORY_ID", "15687")
+    monkeypatch.setenv("PRINTIFY_VARIANT_IDS", "1, 2 ,3")
+
+    config = Config()
+
+    assert config.ebay_category_id == "15687"
+    assert config.printify_variant_ids == [1, 2, 3]

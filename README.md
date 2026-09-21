@@ -6,6 +6,16 @@
 
 ## 仕組み
 
+- **商材**: 11ozセラミックマグ（Printify Choice）。後述の需要計測で、同じ手間でも
+  グラフィックTシャツの約12倍の「1出品あたり月間利益」が見込めたため選定しています。
+- **需要リサーチ**: eBay Browse APIの `estimatedSoldQuantity`（出品ごとの推定販売数）
+  と `itemCreationDate` から **「1出品が1ヶ月に何個売れているか」を実測**します。
+  出品件数＝競合の数であって需要ではないため、件数ベースのスコアリングは使いません。
+  販売価格も「実際に売れている出品の中央値」から決めます（原価×倍率ではない）。
+  eBay公式の落札データは入手できません（Marketplace Insights APIは新規申請不可、
+  Finding APIの `findCompletedItems` は2025年2月に廃止）。
+- **利益フィルタ**: 市場価格 − eBay手数料(13.25%+$0.40) − 製造原価 − 送料 が
+  `MIN_UNIT_PROFIT_CENTS` を下回るニッチは、どれだけ売れていても出品しません。
 - **仕入れモデル**: Print-on-Demand（Printify）。買い手が注文するまで在庫を作らず、
   Printifyが製造パートナーとして買い手に直送します。eBayのドロップシッピング
   ポリシー上、**卸/製造パートナー経由は許可**されており、他マーケットプレイスから
@@ -22,7 +32,8 @@
 
 ```
 [毎日] research_and_list.yml
-  → ニッチ調査 → デザイン生成 → Printify商品作成 → eBay下書き出品 → 承認Issue作成
+  → 需要実測(販売数/出品/月) → 利益フィルタ → デザイン生成
+  → Printify商品作成 → eBay下書き出品 → 承認Issue作成（根拠の数字つき）
 
 [Issueコメント] approve_listing.yml
   → /approve で実際にeBayへ公開 / /reject で破棄
@@ -50,6 +61,9 @@ python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確
 ## ディレクトリ構成
 
 - `src/ebay_automation/` — パイプライン本体（Pythonパッケージ）
+  - `research.py` — 需要実測（販売数・売れている価格帯・利益フィルタ）
+  - `themes.py` — 実際にプリントするデザイン内容（検索キーワードとは別物）
+  - `design_gen.py` — プリント領域いっぱいに組版してPNG出力
 - `.github/workflows/` — 定期実行・承認処理・受注同期のGitHub Actions
 - `state/` — 実行状態（承認待ちリスト・注文台帳）。ワークフローが自動コミット
 - `docs/SETUP.md` — 初期セットアップ手順（eBay/Printify/GitHub Secrets）
@@ -58,6 +72,9 @@ python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確
 ## 既知の制約（v1）
 
 - 1出品につきサイズ/カラーは1バリアントのみ（eBayのバリエーション出品は未対応）
-- デザインはテンプレートベースのタイポグラフィのみ（画像生成モデルは未統合）
+- デザインはテンプレートベースのタイポグラフィのみ（画像生成モデルは未統合）。
+  `themes.py` のデザインを使い切ると、その日は新規出品が止まります
+- 需要計測は「現在出品中」の商品しか見られないため、売り切れた出品は
+  サンプルから抜けます。出てくる数字は**常に実態より控えめ**の下限値です
 - eBayカテゴリID・必須Item Specificsはデフォルト値のみで、カテゴリごとの詳細な
   必須項目チェックは未実装（実運用前にTaxonomy APIでの検証を推奨）
