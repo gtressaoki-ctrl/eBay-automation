@@ -122,3 +122,32 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 最初は Issue 承認を挟む設計です。安定して運用できたら、GitHub Variables で
 `AUTO_PUBLISH=true` に切り替えるだけで、承認ステップを飛ばして即座にeBayへ
 公開するモードになります（コード変更不要）。
+
+## 6. Pinterest Idea Pin でのブランド化・アフィリエイト導線（任意）
+
+eBay出品とは別に、`EQUINOX` ブランドでPinterestのIdea Pinを使って認知を作り、
+アフィリエイト（またはショップ）リンクへ流したい場合の手順です。
+
+**このパイプラインが自動化できない部分**（Pinterest側の制約）:
+
+- Idea Pinの投稿自体を行う公開APIはサードパーティ自動化向けに提供されていません
+  （Pinterest Businessアカウントでの個別承認が必要な範囲）。そのため
+  `scripts/generate_idea_pin.py` は**タイトル・説明文を生成するだけ**の
+  半自動ツールです。生成結果はご自身でPinterestアプリのIdea Pin作成画面に
+  貼り付けてください。
+- Idea Pinの説明文はURLをクリック可能にしません。そのため生成される文章は
+  「プロフィールのリンクから」のような導線の文言になり、生 URLはそのまま
+  貼り込みません。
+
+**セットアップ**:
+
+1. https://console.anthropic.com でAPIキーを発行 → `ANTHROPIC_API_KEY`。
+2. `IDEA_PIN_BRAND_NAME=EQUINOX`（デフォルトのままでOK）。
+3. Pinterestプロフィールに設定したショップ/アフィリエイトリンクを
+   `IDEA_PIN_AFFILIATE_URL` に控える（生成文には出力されず、文脈としてのみ使われます）。
+4. 手元で実行:
+   ```bash
+   ANTHROPIC_API_KEY=... python scripts/generate_idea_pin.py path/to/photo.jpg \
+     --context "11oz ceramic mug, sarcastic-coffee theme"
+   ```
+   出力されたタイトル・説明文をPinterestのIdea Pin作成画面に貼り付けて投稿してください。
