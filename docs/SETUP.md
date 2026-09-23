@@ -30,8 +30,13 @@ Claude Code では代行できません。以下を一度だけ手動で行っ�
    - `https://api.ebay.com/oauth/api_scope/sell.inventory`
    - `https://api.ebay.com/oauth/api_scope/sell.fulfillment`
    - `https://api.ebay.com/oauth/api_scope/sell.account`
-   発行される **refresh token**（有効期限約18ヶ月）を控える。期限が切れたら
-   同じ手順で再取得してください。
+   - `https://api.ebay.com/oauth/api_scope/sell.marketing`（Promoted Listings用。
+     `PROMOTED_LISTINGS_ENABLED`を使わないなら省略可だが、後から有効化する時に
+     このトークンだと失敗するだけなので、取れるなら今のうちに含めておく）
+   発行される **refresh token**（有効期限約18ヶ月）を控える。期限が切れたら、
+   あるいは `invalid_grant`（"issued to another client" 等)エラーで全リクエストが
+   失敗するようになったら、同じ手順で再取得してください。後者はキーセットの
+   再生成やトークンの取り消しでも起こり得ます。
 5. eBay Seller Hub で **Business Policies** を有効化（Account settings >
    Business policies）。送料・支払い・返品ポリシーを1つずつ作成。
 6. 各ポリシーの ID を取得（Seller Hub の画面には出ないため、一度だけ Account API を叩く）:
