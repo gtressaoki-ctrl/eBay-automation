@@ -286,3 +286,84 @@ def test_brand_tagline_defaults_to_unbranded_when_unset(fake_render, printify, e
 
     item = ebay.create_or_replace_inventory_item.call_args[0][1]
     assert item["product"]["aspects"]["Brand"] == ["Unbranded"]
+
+
+def test_sku_never_exceeds_ebays_50_character_limit():
+    long_theme = Theme(
+        slug="sarcastic-coffee",
+        search_keyword="k",
+        title_template="{design}",
+        keywords=(),
+        designs=(Design(slug="should-have-been-an-email", lines=("X",)),),
+    )
+    sku = pipeline_research._sku_for(long_theme, long_theme.designs[0])
+    assert len(sku) <= 50
+
+
+def test_sku_keeps_the_uniqueness_suffix_even_when_truncated():
+    long_theme = Theme(
+        slug="sarcastic-coffee", search_keyword="k", title_template="{design}", keywords=(),
+        designs=(Design(slug="professional-overthinker", lines=("X",)),),
+    )
+    a = pipeline_research._sku_for(long_theme, long_theme.designs[0])
+    b = pipeline_research._sku_for(long_theme, long_theme.designs[0])
+    assert a != b
+    assert len(a) <= 50 and len(b) <= 50
+
+
+def test_build_listing_cleans_up_the_printify_product_if_ebay_rejects_it(
+    fake_render, printify
+):
+    ebay = MagicMock()
+    ebay.create_or_replace_inventory_item.side_effect = RuntimeError("400: invalid SKU")
+
+    with pytest.raises(RuntimeError):
+        pipeline_research.build_listing(
+            _config(), printify, ebay, THEME, THEME.designs[0], _demand(), "White", (2000, 800)
+        )
+
+    printify.delete_product.assert_called_once_with("prod-1")
+
+
+def test_dropped_listing_is_cleaned_up_from_both_printify_and_ebay(monkeypatch):
+    # A theme with exactly one design: pick_unused_design (the real
+    # implementation, not mocked) naturally returns None on the second
+    # pass once that one design is marked used, ending the inner loop
+    # after a single drop+cleanup instead of spinning until quota.
+    one_design_theme = Theme(
+        slug="test-theme", search_keyword="japanese kanji mug", title_template="{design}",
+        keywords=(), designs=(Design(slug="one", lines=("FIRST", "COFFEE")),),
+    )
+    printify = MagicMock()
+    ebay = MagicMock()
+    config = _config(min_unit_profit_cents=100)
+
+    monkeypatch.setattr(pipeline_research, "product_profile", lambda c, p: ("White", (2000, 800)))
+    monkeypatch.setattr(
+        pipeline_research,
+        "build_listing",
+        lambda *a, **k: {
+            "sku": "POD-x-1",
+            "design_key": "test-theme/one",
+            "printify_product_id": "prod-1",
+            "unit_profit_cents": 5,  # below the floor
+        },
+    )
+    monkeypatch.setattr(pipeline_research, "select_active_themes", lambda themes_, cfg: (one_design_theme,))
+    monkeypatch.setattr(
+        pipeline_research.research,
+        "rank_niches",
+        lambda *a, **k: pipeline_research.research.DemandReport(ranked=[_demand()], rejected=[]),
+    )
+    monkeypatch.setattr(pipeline_research.ledger, "load_ledger", lambda: {})
+    monkeypatch.setattr(pipeline_research.ledger, "adjust_daily_quota", lambda: 3)
+    monkeypatch.setattr(pipeline_research, "used_design_keys", lambda: set())
+    monkeypatch.setattr(pipeline_research, "PrintifyClient", lambda config: printify)
+    monkeypatch.setattr(pipeline_research, "EbayClient", lambda config: ebay)
+    monkeypatch.setattr(pipeline_research, "GithubClient", lambda config: MagicMock())
+    monkeypatch.setattr(pipeline_research, "load_config", lambda: config)
+
+    pipeline_research.run()
+
+    printify.delete_product.assert_called_once_with("prod-1")
+    ebay.delete_inventory_item.assert_called_once_with("POD-x-1")

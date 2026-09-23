@@ -88,7 +88,8 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 - `PRINTIFY_SHOP_ID`, `PRINTIFY_BLUEPRINT_ID`（`478`）,
   `PRINTIFY_PRINT_PROVIDER_ID`（`99`）, `PRINTIFY_VARIANT_IDS`（`65216`、カンマ区切りで複数可）
 - `DAILY_LISTING_QUOTA`（初期値 `3` 推奨）, `DRY_RUN`（`false`）
-- `MIN_UNIT_PROFIT_CENTS`（初期値 `100`）, `SHIPPING_COST_CENTS`（US国内マグは `579`）
+- `MIN_UNIT_PROFIT_CENTS`（初期値 `10`。新規セラーは実績づくり優先のため低め。
+  黒字化したら引き上げる）, `SHIPPING_COST_CENTS`（US国内マグは `579`）
 - `BRAND_LOCK_MIN_PUBLISHED`（初期値 `3`）, `BRAND_TAGLINE`（ショップ名を決めたら設定、未設定でOK）
 - `PROMOTED_LISTINGS_ENABLED`（`true`で成約課金広告を有効化。README「新規セラーが
   誰の目にも留まらない問題」参照）, `PROMOTED_LISTINGS_BID_PERCENTAGE`（初期値 `10.0`）,

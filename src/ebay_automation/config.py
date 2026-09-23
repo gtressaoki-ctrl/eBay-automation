@@ -90,8 +90,15 @@ class Config:
     auto_publish: bool = field(default_factory=lambda: _bool_env("AUTO_PUBLISH", False))
     dry_run: bool = field(default_factory=lambda: _bool_env("DRY_RUN", False))
     # Never list a design whose unit economics at the going market price
-    # come in under this, however well the niche sells.
-    min_unit_profit_cents: int = field(default_factory=lambda: _int_env("MIN_UNIT_PROFIT_CENTS", 100))
+    # come in under this, however well the niche sells. Kept low (not
+    # zero) on purpose: a brand-new seller with no Feedback gets almost no
+    # organic visibility regardless of listing quality (see README), so
+    # the near-term goal is real sales and reviews rather than protecting
+    # margin on them — but a listing still has to not lose money outright
+    # before any ad spend. $1.00 rejected every niche the first live run
+    # found (best case $0.68/unit); $0.10 is the floor that says "must be
+    # profitable" without pretending today's mug economics support more.
+    min_unit_profit_cents: int = field(default_factory=lambda: _int_env("MIN_UNIT_PROFIT_CENTS", 10))
     # Landed cost per unit is production plus shipping; Printify bills
     # both, and ignoring shipping is what made the first pricing pass
     # look profitable when it was not.
