@@ -136,6 +136,22 @@ class Config:
         default_factory=lambda: _str_env("PROMOTED_LISTINGS_CAMPAIGN_NAME", "ebay-automation-cps")
     )
 
+    # Pinterest Idea Pin content generation (scripts/generate_idea_pin.py).
+    # Pinterest has no public API for creating Idea Pins under third-party
+    # automation, so this only drafts the copy for a human to paste into the
+    # composer — the API key is Claude's (vision), not Pinterest's.
+    anthropic_api_key: str = field(default_factory=lambda: _str_env("ANTHROPIC_API_KEY"))
+    anthropic_model: str = field(default_factory=lambda: _str_env("ANTHROPIC_MODEL", "claude-sonnet-5"))
+    # The Pinterest account/brand these pins are written for. Kept separate
+    # from brand_tagline (an eBay listing footer) since the eBay store name
+    # and the Pinterest brand identity are two different business decisions.
+    idea_pin_brand_name: str = field(default_factory=lambda: _str_env("IDEA_PIN_BRAND_NAME", "EQUINOX"))
+    # Shop/affiliate link the generated description nudges readers toward.
+    # Idea Pin descriptions don't render URLs as clickable, so this is only
+    # used to tell the model a link exists (it writes "link in bio"-style
+    # copy) — never printed verbatim into the description.
+    idea_pin_affiliate_url: str = field(default_factory=lambda: _str_env("IDEA_PIN_AFFILIATE_URL"))
+
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]
         if missing:
