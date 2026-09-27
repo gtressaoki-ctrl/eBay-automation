@@ -102,5 +102,71 @@
     "status": "rejected",
     "printify_variant_id": 38178,
     "issue_number": 14
+  },
+  "POD-sarcastic-coffee-caffeine-and-spite-af7372": {
+    "sku": "POD-sarcastic-coffee-caffeine-and-spite-af7372",
+    "design_key": "sarcastic-coffee/caffeine-and-spite",
+    "theme": "sarcastic-coffee",
+    "headline": "RUNNING ON CAFFEINE AND SPITE",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ab8a57ec2b97b96540c2a3f",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "279136758011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6ab8a57ec2b97b96540c2a3f/65216/6310/running-on-caffeine-and-spite-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2221,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 3.62,
+      "expected_monthly_profit_cents": 246
+    },
+    "status": "pending_approval",
+    "issue_number": 19
+  },
+  "POD-sarcastic-coffee-technically-awake-32f646": {
+    "sku": "POD-sarcastic-coffee-technically-awake-32f646",
+    "design_key": "sarcastic-coffee/technically-awake",
+    "theme": "sarcastic-coffee",
+    "headline": "TECHNICALLY I'M AWAKE",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ab8a5868e1ddfa43908541e",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "279136780011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6ab8a5868e1ddfa43908541e/65216/6310/technically-im-awake-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2221,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 3.62,
+      "expected_monthly_profit_cents": 246
+    },
+    "status": "pending_approval",
+    "issue_number": 20
+  },
+  "POD-sarcastic-coffee-should-have-been-an-em-4641f8": {
+    "sku": "POD-sarcastic-coffee-should-have-been-an-em-4641f8",
+    "design_key": "sarcastic-coffee/should-have-been-an-email",
+    "theme": "sarcastic-coffee",
+    "headline": "I SURVIVED ANOTHER MEETING THAT SHOULD HAVE BEEN AN EMAIL",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ab8a58a4e29991eb2012577",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "279136987011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6ab8a58a4e29991eb2012577/65216/6310/i-survived-another-meeting-that-should-have-been-an-email-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2221,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 3.62,
+      "expected_monthly_profit_cents": 246
+    },
+    "status": "pending_approval",
+    "issue_number": 21
   }
 }
