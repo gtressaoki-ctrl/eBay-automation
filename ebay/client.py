@@ -210,6 +210,11 @@ class EbayClient:
     def create_fulfillment_policy(self, payload: dict) -> dict:
         return self._user_request("POST", "/sell/account/v1/fulfillment_policy", json=payload)
 
+    def update_fulfillment_policy(self, fulfillment_policy_id: str, payload: dict) -> dict:
+        return self._user_request(
+            "PUT", f"/sell/account/v1/fulfillment_policy/{fulfillment_policy_id}", json=payload
+        )
+
     def create_payment_policy(self, payload: dict) -> dict:
         return self._user_request("POST", "/sell/account/v1/payment_policy", json=payload)
 

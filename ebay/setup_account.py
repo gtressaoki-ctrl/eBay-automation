@@ -108,6 +108,10 @@ def ensure_fulfillment_policy(ebay: EbayClient, marketplace_id: str) -> str:
         "marketplaceId": marketplace_id,
         "categoryTypes": [{"name": "ALL_EXCLUDING_MOTORS_VEHICLES"}],
         "handlingTime": {"value": handling_days, "unit": "DAY"},
+        # Required whenever an INTERNATIONAL shipping option is present, or
+        # eBay 400s with "Global shipping field is null" - unrelated to
+        # eBay's separate (opt-in, GSP-branded) Global Shipping Program.
+        "globalShipping": False,
         "shippingOptions": shipping_options,
     }
     result = ebay.create_fulfillment_policy(payload)
