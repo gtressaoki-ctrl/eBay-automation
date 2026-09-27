@@ -29,6 +29,7 @@ SELL_SCOPES = " ".join(
         "https://api.ebay.com/oauth/api_scope/sell.inventory",
         "https://api.ebay.com/oauth/api_scope/sell.account",
         "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
+        "https://api.ebay.com/oauth/api_scope/sell.marketing",
     ]
 )
 
@@ -278,3 +279,20 @@ class EbayClient:
 
     def delete_inventory_item(self, sku: str) -> None:
         self._user_request("DELETE", f"/sell/inventory/v1/inventory_item/{sku}")
+
+    # -- Sell Marketing API (user token) ---------------------------------
+    def create_item_promotion(self, payload: dict) -> dict:
+        return self._user_request("POST", "/sell/marketing/v1/item_promotion", json=payload)
+
+    def get_item_promotion(self, promotion_id: str) -> dict:
+        return self._user_request("GET", f"/sell/marketing/v1/item_promotion/{promotion_id}")
+
+    def list_item_promotions(self, marketplace_id: str, status: str | None = None) -> list[dict]:
+        params = {"marketplace_id": marketplace_id}
+        if status:
+            params["promotion_status"] = status
+        result = self._user_request("GET", "/sell/marketing/v1/item_promotion", params=params)
+        return result.get("promotions", []) if result else []
+
+    def publish_item_promotion(self, promotion_id: str) -> dict:
+        return self._user_request("POST", f"/sell/marketing/v1/item_promotion/{promotion_id}/publish")
