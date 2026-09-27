@@ -75,6 +75,7 @@ def ensure_fulfillment_policy(ebay: EbayClient, marketplace_id: str) -> str:
                     "shippingCarrierCode": os.environ.get("EBAY_DOMESTIC_SHIPPING_CARRIER", "USPS"),
                     "shippingServiceCode": os.environ.get("EBAY_DOMESTIC_SHIPPING_SERVICE", "USPSParcel"),
                     "shippingCost": {"value": os.environ.get("EBAY_DOMESTIC_SHIPPING_COST", "0.00"), "currency": "USD"},
+                    "additionalShippingCost": {"value": os.environ.get("EBAY_DOMESTIC_ADDITIONAL_SHIPPING_COST", "0.00"), "currency": "USD"},
                     "freeShipping": os.environ.get("EBAY_DOMESTIC_SHIPPING_COST", "0.00") == "0.00",
                 }
             ],
@@ -95,7 +96,13 @@ def ensure_fulfillment_policy(ebay: EbayClient, marketplace_id: str) -> str:
                         # the actual carrier used to fulfill (e.g. Japan Post)
                         # doesn't need to be declared here.
                         "shippingServiceCode": os.environ.get("EBAY_INTERNATIONAL_SHIPPING_SERVICE", "StandardInternational"),
-                        "shippingCost": {"value": os.environ.get("EBAY_SHIPPING_COST", "25.00"), "currency": "USD"},
+                        "shippingCost": {"value": os.environ.get("EBAY_SHIPPING_COST", "14.99"), "currency": "USD"},
+                        # eBay defaults this to match shippingCost if omitted,
+                        # meaning every extra item costs full price to ship -
+                        # set it to Printify's real per-item marginal cost
+                        # (shipping.json's additional_items) so buying more
+                        # actually gets cheaper per item, like it should.
+                        "additionalShippingCost": {"value": os.environ.get("EBAY_ADDITIONAL_SHIPPING_COST", "0.99"), "currency": "USD"},
                         "freeShipping": False,
                         "shipToLocations": {"regionIncluded": [{"regionName": ship_to_region}]},
                     }
