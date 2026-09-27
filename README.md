@@ -118,13 +118,27 @@ python -m ebay.setup_account
 再利用します。出力された ID を `.env` の `EBAY_MERCHANT_LOCATION_KEY` / `EBAY_FULFILLMENT_POLICY_ID` /
 `EBAY_PAYMENT_POLICY_ID` / `EBAY_RETURN_POLICY_ID` に設定してください。
 
-**配送ポリシーについて**: eBay の仕様上、発送元が海外(例: 日本)でも `DOMESTIC` の配送オプションが
-1つ必須です(`SHIPELIG_ERROR_CODE_NAME: DOMESTIC_SHIPPING_REQUIRED`)。実際には使われない前提のダミー
-として `EBAY_DOMESTIC_SHIPPING_*` を設定し、実際に使う海外発送は `EBAY_INTERNATIONAL_SHIPPING_SERVICE`
-(既定: `StandardInternational`、eBay 側で自動的に `shippingCarrierCode=GENERIC` が割り当てられる、
-特定キャリア非依存の国際配送クラス)側で設定します。配送キャリア/サービスコードは REST API から一覧取得
-できないため(Metadata API に該当エンドポイントなし)、レガシー Trading API の `GeteBayDetails`
-(`DetailName=ShippingServiceDetails`)で実在するコードを確認して使っています。
+**配送ポリシーについて**: eBay の仕様上、`DOMESTIC` の配送オプションが1つ必須です
+(`SHIPELIG_ERROR_CODE_NAME: DOMESTIC_SHIPPING_REQUIRED`)。配送キャリア/サービスコードは REST API
+から一覧取得できないため(Metadata API に該当エンドポイントなし)、レガシー Trading API の
+`GeteBayDetails`(`DetailName=ShippingServiceDetails`)で実在するコードを確認して使っています。
+
+**発送元は自分の登録住所ではなく、Printify の印刷パートナーの拠点になる点に注意**: 無在庫(Print-on-Demand)
+モデルのため、実際に印刷・梱包・発送するのは各ブループリント/プリントプロバイダーごとに割り当てられた
+Printify の提携先です。例えば EQUINOX のステッカー(Kiss-Cut Stickers × SPOKE Custom Products)は、
+出品者の登録住所(日本)ではなく **米国ジョージア州ノークロス** から発送されます。つまり
+`EBAY_DOMESTIC_SHIPPING_*` は「使わないダミー」ではなく、米国内バイヤー向けの実際の配送区分になります。
+プリントプロバイダーの所在地と実際の配送コストは、商品ごとに以下で確認できます。
+
+```bash
+# プリントプロバイダーの所在地
+GET https://api.printify.com/v1/catalog/print_providers/{provider_id}.json
+# ハンドリング日数と国別の実コスト(国コード or REST_OF_THE_WORLD でグループ化)
+GET https://api.printify.com/v1/catalog/blueprints/{blueprint_id}/print_providers/{provider_id}/shipping.json
+```
+
+`EBAY_HANDLING_DAYS` / `EBAY_SHIPPING_COST` は、この実コストに合わせて商品ごとに調整してください
+(既定値は EQUINOX ステッカーの実測値: ハンドリング10日、海外配送 $14.99 でEU圏までカバー)。
 
 ### 出品実行
 

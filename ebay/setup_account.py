@@ -55,7 +55,7 @@ def ensure_fulfillment_policy(ebay: EbayClient, marketplace_id: str) -> str:
             print(f"   fulfillment policy '{name}' already exists.", file=sys.stderr)
             return policy["fulfillmentPolicyId"]
 
-    handling_days = int(os.environ.get("EBAY_HANDLING_DAYS", "3"))
+    handling_days = int(os.environ.get("EBAY_HANDLING_DAYS", "10"))
 
     # eBay's fulfillment policy schema requires a DOMESTIC shipping option to
     # be present even when the seller never actually ships domestically
