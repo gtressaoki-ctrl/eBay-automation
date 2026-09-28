@@ -288,6 +288,20 @@ def test_brand_tagline_defaults_to_unbranded_when_unset(fake_render, printify, e
     assert item["product"]["aspects"]["Brand"] == ["Unbranded"]
 
 
+def test_model_aspect_is_set_from_the_design_slug(fake_render, printify, ebay):
+    pipeline_research.build_listing(
+        _config(), printify, ebay, THEME, THEME.designs[0], _demand(), "White", (2000, 800)
+    )
+
+    item = ebay.create_or_replace_inventory_item.call_args[0][1]
+    # Category 20675 (Mugs) rejects publishOffer with errorId 25002 ("Model
+    # is missing") unless this aspect is present — createOrReplaceInventoryItem
+    # itself accepts its absence, which is why this only surfaced at publish
+    # time in production. The design slug is unique per listing and stands
+    # in for a real model number.
+    assert item["product"]["aspects"]["Model"] == [THEME.designs[0].slug]
+
+
 def test_sku_never_exceeds_ebays_50_character_limit():
     long_theme = Theme(
         slug="sarcastic-coffee",
@@ -364,6 +378,53 @@ def test_dropped_listing_is_cleaned_up_from_both_printify_and_ebay(monkeypatch):
     monkeypatch.setattr(pipeline_research, "load_config", lambda: config)
 
     pipeline_research.run()
+
+    printify.delete_product.assert_called_once_with("prod-1")
+    ebay.delete_inventory_item.assert_called_once_with("POD-x-1")
+
+
+def test_auto_publish_failure_cleans_up_and_does_not_crash_the_run(monkeypatch):
+    # publishOffer failing (e.g. a category rule 400) used to be the one
+    # eBay call in run() with no try/except around it, which crashed the
+    # whole process mid-quota and orphaned the Printify product/eBay
+    # inventory item it had just created. Same one-design-theme trick as
+    # the dropped-listing test above to end the loop after one attempt.
+    one_design_theme = Theme(
+        slug="test-theme", search_keyword="japanese kanji mug", title_template="{design}",
+        keywords=(), designs=(Design(slug="one", lines=("FIRST", "COFFEE")),),
+    )
+    printify = MagicMock()
+    ebay = MagicMock()
+    ebay.publish_offer.side_effect = RuntimeError("400: item specific Model is missing")
+    config = _config(min_unit_profit_cents=10, auto_publish=True)
+
+    monkeypatch.setattr(pipeline_research, "product_profile", lambda c, p: ("White", (2000, 800)))
+    monkeypatch.setattr(
+        pipeline_research,
+        "build_listing",
+        lambda *a, **k: {
+            "sku": "POD-x-1",
+            "design_key": "test-theme/one",
+            "printify_product_id": "prod-1",
+            "ebay_offer_id": "offer-1",
+            "unit_profit_cents": 500,  # clears the floor
+        },
+    )
+    monkeypatch.setattr(pipeline_research, "select_active_themes", lambda themes_, cfg: (one_design_theme,))
+    monkeypatch.setattr(
+        pipeline_research.research,
+        "rank_niches",
+        lambda *a, **k: pipeline_research.research.DemandReport(ranked=[_demand()], rejected=[]),
+    )
+    monkeypatch.setattr(pipeline_research.ledger, "load_ledger", lambda: {})
+    monkeypatch.setattr(pipeline_research.ledger, "adjust_daily_quota", lambda: 3)
+    monkeypatch.setattr(pipeline_research, "used_design_keys", lambda: set())
+    monkeypatch.setattr(pipeline_research, "PrintifyClient", lambda config: printify)
+    monkeypatch.setattr(pipeline_research, "EbayClient", lambda config: ebay)
+    monkeypatch.setattr(pipeline_research, "GithubClient", lambda config: MagicMock())
+    monkeypatch.setattr(pipeline_research, "load_config", lambda: config)
+
+    pipeline_research.run()  # must not raise
 
     printify.delete_product.assert_called_once_with("prod-1")
     ebay.delete_inventory_item.assert_called_once_with("POD-x-1")
