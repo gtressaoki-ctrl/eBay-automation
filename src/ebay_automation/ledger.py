@@ -16,6 +16,7 @@ _STATE_DIR = Path(__file__).resolve().parent.parent.parent / "state"
 _PENDING_PATH = _STATE_DIR / "pending_listings.json"
 _LEDGER_PATH = _STATE_DIR / "ledger.json"
 _ORDER_STATE_PATH = _STATE_DIR / "order_fulfillment.json"
+_TRAFFIC_PATH = _STATE_DIR / "traffic.json"
 
 _EMPTY_LEDGER = {
     "daily_listing_quota": 3,
@@ -179,6 +180,10 @@ def theme_stats() -> dict[str, dict]:
         stats[theme]["profit_cents"] += order.get("profit_cents", 0)
 
     return stats
+
+
+def save_traffic(snapshot: dict) -> None:
+    _write_json(_TRAFFIC_PATH, snapshot)
 
 
 def pause(reason: str) -> None:

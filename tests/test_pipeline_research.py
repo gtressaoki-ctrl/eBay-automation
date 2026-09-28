@@ -19,6 +19,17 @@ THEME = Theme(
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_state(tmp_path, monkeypatch):
+    ledger = pipeline_research.ledger
+    monkeypatch.setattr(ledger, "_STATE_DIR", tmp_path)
+    monkeypatch.setattr(ledger, "_PENDING_PATH", tmp_path / "pending_listings.json")
+    monkeypatch.setattr(ledger, "_LEDGER_PATH", tmp_path / "ledger.json")
+    monkeypatch.setattr(ledger, "_ORDER_STATE_PATH", tmp_path / "order_fulfillment.json")
+    monkeypatch.setattr(ledger, "_TRAFFIC_PATH", tmp_path / "traffic.json")
+    return tmp_path
+
+
 def _config(**overrides) -> Config:
     defaults = dict(
         printify_blueprint_id=478,
@@ -509,6 +520,52 @@ def test_no_ad_when_even_the_minimum_bid_would_lose_money():
 def test_ad_bid_never_exceeds_the_configured_bid():
     config = _config(min_unit_profit_cents=10, promoted_listings_bid_percentage=5.0)
     assert pipeline_research.profitable_bid_percentage(config, {"price_cents": 1499, "unit_profit_cents": 900}) == 5.0
+
+
+def test_traffic_snapshot_is_saved_for_live_listings(isolated_state):
+    import json
+
+    pipeline_research.ledger.save_pending_listings(
+        {
+            "A": {"status": "published", "ebay_listing_id": "111", "headline": "BLOOD TYPE: COFFEE"},
+            "B": {"status": "pending_approval"},
+        }
+    )
+    ebay = MagicMock()
+    ebay.get_traffic_report.return_value = {
+        "111": {"LISTING_IMPRESSION_TOTAL": 340, "LISTING_VIEWS_TOTAL": 12, "TRANSACTION": 0}
+    }
+
+    pipeline_research.record_traffic(ebay)
+
+    ebay.get_traffic_report.assert_called_once_with(["111"])
+    saved = json.loads((isolated_state / "traffic.json").read_text())
+    assert saved == {"111": {"headline": "BLOOD TYPE: COFFEE", "impressions": 340, "views": 12, "sales": 0}}
+
+
+def test_traffic_failure_never_breaks_the_run(isolated_state):
+    pipeline_research.ledger.save_pending_listings({"A": {"status": "published", "ebay_listing_id": "111"}})
+    ebay = MagicMock()
+    ebay.get_traffic_report.side_effect = RuntimeError("403 insufficient scope")
+
+    pipeline_research.record_traffic(ebay)  # must not raise
+
+    assert not (isolated_state / "traffic.json").exists()
+
+
+def test_low_demand_niches_are_not_given_a_listing_slot(monkeypatch):
+    _, _, builds = _auto_publish_run_fixture(monkeypatch, THEME, None)
+    monkeypatch.setattr(
+        pipeline_research.research,
+        "rank_niches",
+        lambda *a, **k: pipeline_research.research.DemandReport(
+            ranked=[_demand(units_per_listing_per_month=0.08)], rejected=[]
+        ),
+    )
+
+    pipeline_research.run()
+
+    assert builds == []
 
 
 def test_listing_quantity_comes_from_config(fake_render, printify, ebay):

@@ -21,11 +21,20 @@ from .config import Config
 _PROD_TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 _SANDBOX_TOKEN_URL = "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
 
-SCOPES = " ".join(
-    [
-        "https://api.ebay.com/oauth/api_scope/sell.inventory",
-        "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
-        "https://api.ebay.com/oauth/api_scope/sell.account",
+_BASE_SCOPES = [
+    "https://api.ebay.com/oauth/api_scope/sell.inventory",
+    "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
+    "https://api.ebay.com/oauth/api_scope/sell.account",
+]
+SCOPES = " ".join(_BASE_SCOPES)
+# Promoted Listings and traffic reports need these too. Asking a refresh
+# grant for a scope the seller never consented to fails the whole token
+# request (invalid_scope), so they are tried first and dropped on refusal.
+FULL_SCOPES = " ".join(
+    _BASE_SCOPES
+    + [
+        "https://api.ebay.com/oauth/api_scope/sell.marketing",
+        "https://api.ebay.com/oauth/api_scope/sell.analytics.readonly",
     ]
 )
 
@@ -57,19 +66,25 @@ def get_user_access_token(config: Config, force_refresh: bool = False) -> str:
         return cached.access_token
 
     config.require("ebay_refresh_token")
-    resp = requests.post(
-        token_url(config),
-        headers={
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Basic {_basic_auth_header(config)}",
-        },
-        data={
-            "grant_type": "refresh_token",
-            "refresh_token": config.ebay_refresh_token,
-            "scope": SCOPES,
-        },
-        timeout=30,
-    )
+
+    def _refresh(scope: str) -> requests.Response:
+        return requests.post(
+            token_url(config),
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": f"Basic {_basic_auth_header(config)}",
+            },
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": config.ebay_refresh_token,
+                "scope": scope,
+            },
+            timeout=30,
+        )
+
+    resp = _refresh(FULL_SCOPES)
+    if resp.status_code == 400 and "invalid_scope" in resp.text:
+        resp = _refresh(SCOPES)
     if not resp.ok:
         raise RuntimeError(f"eBay token refresh failed ({resp.status_code}): {resp.text}")
     payload = resp.json()
