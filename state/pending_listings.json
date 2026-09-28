@@ -168,5 +168,71 @@
     },
     "status": "pending_approval",
     "issue_number": 21
+  },
+  "POD-sarcastic-coffee-until-this-is-empty-ff37cb": {
+    "sku": "POD-sarcastic-coffee-until-this-is-empty-ff37cb",
+    "design_key": "sarcastic-coffee/until-this-is-empty",
+    "theme": "sarcastic-coffee",
+    "headline": "DON'T TALK TO ME UNTIL THIS IS EMPTY",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ab9b1cad8dca326ab03ae07",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "281139480011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6ab9b1cad8dca326ab03ae07/65216/6310/dont-talk-to-me-until-this-is-empty-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2227,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 3.072,
+      "expected_monthly_profit_cents": 209
+    },
+    "status": "pending_approval",
+    "issue_number": 23
+  },
+  "POD-sarcastic-coffee-professional-overthink-98f7e1": {
+    "sku": "POD-sarcastic-coffee-professional-overthink-98f7e1",
+    "design_key": "sarcastic-coffee/professional-overthinker",
+    "theme": "sarcastic-coffee",
+    "headline": "PROFESSIONAL OVERTHINKER",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ab9b1ce21c7665cbf093ae4",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "281139621011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6ab9b1ce21c7665cbf093ae4/65216/6310/professional-overthinker-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2227,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 3.072,
+      "expected_monthly_profit_cents": 209
+    },
+    "status": "pending_approval",
+    "issue_number": 24
+  },
+  "POD-sarcastic-coffee-explaining-why-im-righ-d43845": {
+    "sku": "POD-sarcastic-coffee-explaining-why-im-righ-d43845",
+    "design_key": "sarcastic-coffee/explaining-why-im-right",
+    "theme": "sarcastic-coffee",
+    "headline": "I'M NOT ARGUING I'M EXPLAINING WHY I'M RIGHT",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ab9b1d17c646f746b082b70",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "281139700011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6ab9b1d17c646f746b082b70/65216/6310/im-not-arguing-im-explaining-why-im-right-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2227,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 3.072,
+      "expected_monthly_profit_cents": 209
+    },
+    "status": "pending_approval",
+    "issue_number": 25
   }
 }
