@@ -31,7 +31,7 @@ python pinterest/posture-pins/generate_pins.py 1 9 15                  # only so
 
 ## Before posting
 
-- **Affiliate IDs**: until `AMAZON_TAG` is set, Amazon links carry the placeholder `YOURTAG-20`. Replace the Udemy (via Impact), FlexiSpot (Awin/CJ) and UPRIGHT links with the tracking links from each program's dashboard.
+- **Affiliate IDs**: until `AMAZON_TAG` is set, Amazon links carry the placeholder `deskpostureat-20` (default). Replace the Udemy (via Impact), FlexiSpot (Awin/CJ) and UPRIGHT links with the tracking links from each program's dashboard.
 - **Disclosure**: add `#affiliate` or `#ad` to the pin description. This is an FTC requirement and Amazon Associates policy.
 - **Availability**: the ASINs were checked against amazon.com listings in Sept 2026. Stock and prices change, so open each link once before posting.
 - **Health wording**: the images avoid claims of cure or medical effect. Keep product copy, especially for posture correctors, to "supports" or "helps".
