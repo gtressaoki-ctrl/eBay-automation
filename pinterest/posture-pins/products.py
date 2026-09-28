@@ -11,8 +11,8 @@ import os
 
 AMAZON_TAG = os.environ.get("AMAZON_TAG", "deskpostureat-20")
 # Separate tracking IDs for the A/B test so clicks and sales can be attributed per variant
-AMAZON_TAG_A = os.environ.get("AMAZON_TAG_A", "YOURTAG-pina-20")
-AMAZON_TAG_B = os.environ.get("AMAZON_TAG_B", "YOURTAG-pinb-20")
+AMAZON_TAG_A = os.environ.get("AMAZON_TAG_A", "deskpostureat-20")
+AMAZON_TAG_B = os.environ.get("AMAZON_TAG_B", "deskpostureb-20")
 
 PRODUCTS = {
     # ---- chair add-ons
