@@ -1,959 +1,848 @@
-"""Scene illustrations for each posture pin.  Every scene draws inside a
-bounding box (x0, y0, x1, y1) on the 2x canvas."""
+"""Plumb Line scenes — one function per illustration type.
 
-from pinlib import *  # noqa: F401,F403
+Each scene receives (pin, top) where top is the y where the illustration
+field starts (below the headline block) and returns an SVG fragment.
+The field ends at ART_BOTTOM.
+"""
 
-LBL = lambda s=46: font("SemiBold", s)  # noqa: E731
+from plate import ART_BOTTOM, MARGIN, W
+from svgkit import (GHOST, INK, INK_FAR, INK_SOFT, LINE, MONO, PAPER, PAPER_DEEP, SAGE, SAGE_SOFT, SERIF,
+                    TERRA, TERRA_SOFT, add, angle_arc, arc_arrow, arrow, callout, capsule, chair_side, check,
+                    circle, cross, desk_side, dimension, floor, fmt, front_figure, keyboard_side, laptop_side,
+                    lerp, line, marker, monitor_side, path, plumb, polyline, rect, side_figure, smooth_closed,
+                    strain, text, top_figure)
 
-GOOD = dict(lumbar=2, thoracic=-2, neck=6)
-SLOUCH = dict(lumbar=-14, thoracic=30, neck=52)
-TYPE_GOOD = dict(uarm=176, farm=96)
-STAND = dict(thigh=180, shin=180, fthigh=180, fshin=180, uarm=182, farm=178)
-STAND_BAD = dict(lumbar=-8, thoracic=26, neck=42, thigh=176, shin=184, fthigh=176, fshin=184,
-                 uarm=196, farm=190)
+L, R = MARGIN, W - MARGIN
+BODY = "#4E5260"
 
-
-def fit_u(box, w_units, h_units):
-    x0, y0, x1, y1 = box
-    return min((x1 - x0) / w_units, (y1 - y0) / h_units)
-
-
-def panel(img, box, col, r=44):
-    rrect(img, box, r, fill=col)
-
-
-def panel_bg(bg):
-    return shade(bg, 0.955)
+# ---------------------------------------------------------------- poses
+SIT = dict(lumbar=2, thoracic=-2, neck=4, uarm=178, farm=97, hand=-8, fuarm=176, ffarm=97, fhand=-8)
+SLUMP = dict(lumbar=-16, thoracic=30, neck=48, head=6, uarm=150, farm=100, hand=-4, fuarm=152, ffarm=100, fhand=-4)
+STAND = dict(thigh=180, shin=180, fthigh=180, fshin=180, lumbar=0, thoracic=-1, neck=3,
+             uarm=182, farm=178, hand=2, fuarm=178, ffarm=176, fhand=2)
+STAND_BAD = dict(thigh=176, shin=184, fthigh=176, fshin=184, lumbar=-10, thoracic=24, neck=40, head=8,
+                 uarm=192, farm=186, hand=4, fuarm=190, ffarm=184, fhand=4)
 
 
-# ------------------------------------------------------------ desk scene
-def desk_scene(img, box, pal, u=None, posture=GOOD, arms=TYPE_GOOD, monitor="good",
-               lumbar=None, footrest=False, chair_arm=False, cx=None, legs=(1, 1), laptop=None,
-               desk_top_off=0.0, book=False, lamp=False, floor_col=None, show_floor=True, extra_kw=None):
-    """Seated person facing right at a desk.  Returns joints + geometry."""
-    x0, y0, x1, y1 = box
-    if u is None:
-        u = fit_u(box, 7.2, 8.2)
-    floor = y1 - 0.25 * u
-    leg_len = 2.05 * u * legs[1]
-    hip = ((cx if cx is not None else x0 + 1.7 * u), floor - leg_len - 0.35 * u)
-    if footrest:
-        hip = (hip[0], hip[1])
-    kw = dict(posture)
-    kw.update(arms)
-    if extra_kw:
-        kw.update(extra_kw)
+def pose(base, **kw):
+    p = dict(base)
+    p.update(kw)
+    return p
+
+
+def hair(y, x0=L, x1=R, op=0.45):
+    return line((x0, y), (x1, y), sw=0.9, extra=f'opacity="{op}"')
+
+
+# ---------------------------------------------------------------- composites
+def seated(hip, u, p, col=INK, far=INK_FAR, legs=1.0):
+    return side_figure(hip, u, col=col, far=far, legs=legs, **p)
+
+
+def standing(cx, floor_y, u, p, col=INK, far=INK_FAR, f=1):
+    hip = (cx, floor_y - 3.85 * u - 0.2 * u)
+    return side_figure(hip, u, f=f, col=col, far=far, **p)
+
+
+def seated_desk(u, hipx, floor_y, fig_pose=SIT, monitor="eye", laptop=None, lumbar=None, footrest=False,
+                legs=1.0, chair_arm=False, desk_x1=None, desk_raise=0.0, show_floor=True, keyboard=True,
+                book=False, lamp=False):
+    """Person seated facing right at a desk.  Returns (svg, joints, geom)."""
+    out = []
+    hip = (hipx, floor_y - 1.9 * u * legs - 0.2 * u)
     if show_floor:
-        floor_line(img, x0 + 0.1 * u, x1 - 0.1 * u, floor, floor_col or shade(STEEL_LIGHT, 1.2))
-    side_chair(img, hip, u, floor, arm=chair_arm, lumbar=lumbar)
-    # desk height from a neutral typing elbow
-    sh_y = hip[1] - 2.8 * u
-    desk_top = sh_y + 1.45 * u + 0.12 * u + desk_top_off * u
-    desk_x0 = hip[0] + 1.25 * u
-    desk_x1 = min(x1 - 0.05 * u, hip[0] + 5.2 * u)
-    side_desk(img, desk_x0, desk_x1, desk_top, floor, u)
-    eye_y = sh_y - 0.32 * u - 0.66 * u
-    mx = hip[0] + 3.75 * u
-    mon = None
-    if monitor == "good":
-        mon = side_monitor(img, mx, desk_top, u, eye_y - 0.05 * u)
-    elif monitor == "low":
-        mon = side_monitor(img, mx, desk_top, u, desk_top - 1.95 * u)
-    lap = None
+        out.append(floor(L, R, floor_y))
+    out.append(chair_side(hip, u, floor_y, lumbar=lumbar, arm=chair_arm))
+    desk_top = hip[1] - 0.82 * u - desk_raise * u
+    dx0 = hip[0] + 1.25 * u
+    dx1 = desk_x1 if desk_x1 is not None else min(R, hip[0] + 5.1 * u)
+    out.append(desk_side(dx0, dx1, desk_top, floor_y, u))
+    fig, j = seated(hip, u, fig_pose, legs=legs)
+    geom = dict(desk_top=desk_top, dx0=dx0, dx1=dx1, floor=floor_y, hip=hip)
+    if monitor in ("eye", "low"):
+        top_y = j["eye"][1] - 0.05 * u if monitor == "eye" else desk_top - 1.75 * u
+        m, st, sb = monitor_side(hip[0] + 4.0 * u, desk_top, u, top_y)
+        out.append(m)
+        geom.update(screen_top=st, screen_bot=sb)
     if laptop == "desk":
-        lap = side_laptop(img, hip[0] + 2.35 * u, desk_top - 0.05 * u, u)
+        s, hinge, top = laptop_side(hip[0] + 2.9 * u, desk_top - 1, u)
+        out.append(s)
+        geom.update(laptop_hinge=hinge, laptop_top=top)
     elif laptop == "stand":
-        sx = hip[0] + 3.3 * u
-        polygon(img, [(sx - 0.6 * u, desk_top), (sx + 0.7 * u, desk_top), (sx + 0.7 * u, desk_top - 1.05 * u)], STEEL_LIGHT)
-        seg(img, (sx - 0.6 * u, desk_top - 0.05 * u), (sx + 0.75 * u, desk_top - 1.1 * u), 0.1 * u, STEEL)
-        lap = side_laptop(img, sx + 0.05 * u, desk_top - 0.62 * u, u, open_angle=100)
-    if monitor in ("good", "low") or laptop == "stand":
-        # keyboard
-        rrect(img, (hip[0] + 1.35 * u, desk_top - 0.14 * u, hip[0] + 2.25 * u, desk_top + 0.02 * u), 0.05 * u, fill=STEEL)
+        sx = hip[0] + 3.1 * u
+        out.append(path(f"M{fmt(sx - 0.9*u)},{fmt(desk_top)} L{fmt(sx + 0.35*u)},{fmt(desk_top)} "
+                        f"L{fmt(sx + 0.35*u)},{fmt(desk_top - 1.05*u)}Z", fill=PAPER, stroke=LINE, sw=2))
+        s, hinge, top = laptop_side(sx + 0.4 * u, desk_top - 1.1 * u, u, open_deg=100, base_len=1.25)
+        out.append(s)
+        geom.update(laptop_hinge=hinge, laptop_top=top)
+    if keyboard and (monitor in ("eye", "low") or laptop == "stand"):
+        out.append(keyboard_side(hip[0] + 1.5 * u, hip[0] + 2.35 * u, desk_top, u))
     if book:
-        bx = hip[0] + 2.1 * u
-        polygon(img, [(bx, desk_top), (bx + 0.25 * u, desk_top), (bx + 0.95 * u, desk_top - 1.2 * u), (bx + 0.72 * u, desk_top - 1.25 * u)], STEEL_LIGHT)
-        polygon(img, [(bx + 0.05 * u, desk_top - 0.25 * u), (bx + 0.72 * u, desk_top - 1.22 * u), (bx + 0.2 * u, desk_top - 1.55 * u), (bx - 0.45 * u, desk_top - 0.6 * u)], CORAL)
+        bx = hip[0] + 2.2 * u
+        out.append(path(f"M{fmt(bx)},{fmt(desk_top)} L{fmt(bx + 0.9*u)},{fmt(desk_top - 1.2*u)} "
+                        f"L{fmt(bx + 1.05*u)},{fmt(desk_top - 1.1*u)} L{fmt(bx + 0.3*u)},{fmt(desk_top)}Z",
+                        fill=PAPER, stroke=LINE, sw=2))
+        out.append(path(f"M{fmt(bx + 0.05*u)},{fmt(desk_top - 0.35*u)} L{fmt(bx + 0.75*u)},{fmt(desk_top - 1.3*u)} "
+                        f"L{fmt(bx + 0.25*u)},{fmt(desk_top - 1.62*u)} L{fmt(bx - 0.45*u)},{fmt(desk_top - 0.66*u)}Z",
+                        fill=TERRA_SOFT, stroke=LINE, sw=2))
     if lamp:
-        lx = desk_x1 - 0.6 * u
-        seg(img, (lx - 0.35 * u, desk_top - 0.05 * u), (lx + 0.35 * u, desk_top - 0.05 * u), 0.14 * u, NAVY)
-        seg(img, (lx, desk_top), (lx - 0.3 * u, desk_top - 1.6 * u), 0.1 * u, NAVY)
-        seg(img, (lx - 0.3 * u, desk_top - 1.6 * u), (lx - 0.9 * u, desk_top - 1.9 * u), 0.1 * u, NAVY)
-        polygon(img, [(lx - 0.8 * u, desk_top - 2.1 * u), (lx - 1.35 * u, desk_top - 1.55 * u), (lx - 0.7 * u, desk_top - 1.6 * u)], MUSTARD)
+        lx = dx1 - 0.55 * u
+        out.append(line((lx - 0.3 * u, desk_top - 1), (lx + 0.3 * u, desk_top - 1), sw=3.2))
+        out.append(polyline([(lx, desk_top), (lx - 0.25 * u, desk_top - 1.5 * u), (lx - 0.85 * u, desk_top - 1.85 * u)], sw=2))
+        out.append(path(f"M{fmt(lx - 0.7*u)},{fmt(desk_top - 2.1*u)} L{fmt(lx - 1.3*u)},{fmt(desk_top - 1.55*u)} "
+                        f"Q{fmt(lx - 0.9*u)},{fmt(desk_top - 1.5*u)} {fmt(lx - 0.62*u)},{fmt(desk_top - 1.7*u)}Z",
+                        fill=PAPER, stroke=LINE, sw=2))
     if footrest:
-        fx = hip[0] + 2.05 * u
-        polygon(img, [(fx - 0.55 * u, floor), (fx + 0.75 * u, floor), (fx + 0.75 * u, floor - 0.45 * u), (fx - 0.55 * u, floor - 0.2 * u)], SAND)
-    j = side_figure(img, hip, u, pal, legs=legs, **kw)
-    j.update(desk_top=desk_top, floor=floor, monitor=mon, laptop=lap, desk_x0=desk_x0, desk_x1=desk_x1)
-    return j
+        fx = hip[0] + 1.75 * u
+        out.append(path(f"M{fmt(fx - 0.2*u)},{fmt(floor_y)} L{fmt(fx + 1.2*u)},{fmt(floor_y)} "
+                        f"L{fmt(fx + 1.2*u)},{fmt(floor_y - 0.42*u)} L{fmt(fx - 0.2*u)},{fmt(floor_y - 0.2*u)}Z",
+                        fill=PAPER, stroke=LINE, sw=2))
+    out.append(fig)
+    return "".join(out), j, geom
 
 
-def standing_scene(img, cx, floor, u, pal, pose, f=1, show_floor=True, floor_w=2.6, floor_col=None):
-    hip = (cx, floor - 4.15 * u - 0.28 * u)
-    if show_floor:
-        floor_line(img, cx - floor_w * u, cx + floor_w * u, floor, floor_col or shade(STEEL_LIGHT, 1.2))
-    return side_figure(img, hip, u, pal, f=f, **pose)
+def caption(x, y, tag, s, tag_col=TERRA, anchor="start", size=24):
+    """Mono tag above a short sans caption."""
+    return (text(x, y, tag.upper(), size=14, family=MONO, fill=tag_col, ls=3, anchor=anchor)
+            + text(x, y + 34, s, size=size, fill=INK, anchor=anchor))
 
 
-def plumb(img, j, col, top_pad=0.9):
-    u = j["u"]
-    x = j["ankle"][0] - 0.05 * u
-    dashed(img, (x, j["head"][1] - j["head_r"] - top_pad * u * 0.3), (x, j["ankle"][1] + 0.3 * u), col, w=0.06 * u)
+def _rows(x, y, w, items, num_col, size, gap, start):
+    out = [hair(y, x, x + w, 0.5)]
+    for i, s in enumerate(items):
+        yy = y + gap * (i + 1)
+        out.append(text(x, yy - gap / 2 + 6, f"{start + i + 1:02d}", size=15, family=MONO, fill=num_col, ls=1))
+        out.append(text(x + 44, yy - gap / 2 + 8, s, size=size, fill=INK))
+        out.append(hair(yy, x, x + w, 0.5))
+    return "".join(out)
 
 
-def two_up(box, gap=40):
+def rows(x, y, w, items, num_col=TERRA, size=24, gap=58, two_col=False, start=0):
+    """Editorial numbered list with hairline separators."""
+    if two_col:
+        half = (len(items) + 1) // 2
+        colw = (w - 48) / 2
+        return (_rows(x, y, colw, items[:half], num_col, size, gap, start)
+                + _rows(x + colw + 48, y, colw, items[half:], num_col, size, gap, start + half))
+    return _rows(x, y, w, items, num_col, size, gap, start)
+
+
+def inline_list(x, y, title, items):
+    out = [text(x, y, title, size=14, family=MONO, fill=TERRA, ls=3)]
+    xx = x
+    for i, fx in enumerate(items):
+        out.append(text(xx, y + 40, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA))
+        out.append(text(xx + 34, y + 42, fx, size=24, fill=INK))
+        xx += 34 + len(fx) * 11.5 + 52
+    return "".join(out)
+
+
+def verdict_mark(x, y, good, s, anchor="start"):
+    c = (x + 13, y - 8)
+    mark = check(c) if good else cross(c)
+    return mark + text(x + 36, y, s, size=23, fill=INK, anchor=anchor)
+
+
+# ================================================================ scenes
+def sc_desk_guide(pin, top):
+    u = 124
+    floor_y = ART_BOTTOM - 30
+    s, j, g = seated_desk(u, 280, floor_y)
+    out = [s]
+    ex = j["ear"][0]
+    out.append(plumb((ex, j["top"] - 36), (ex, j["hip"][1] + 34), ticks=[(ex, j["shoulder"][1])]))
+    st = g["screen_top"]
+    out.append(line((j["eye"][0] + 8, j["eye"][1]), (st[0] - 4, j["eye"][1]), stroke=TERRA, sw=1.2, dash="1 7"))
+    out.append(callout(j["ear"], (L, top + 40), "Ears stacked over shoulders", num=1))
+    out.append(callout(st, (R - 290, top + 40), "Screen top at eye level", num=2))
+    out.append(callout(j["back"], (L, top + 100), "Lower back supported", num=3))
+    out.append(callout(j["elbow"], (R - 270, j["elbow"][1] + 90), "Elbows open to ~90°", num=4))
+    out.append(callout(j["knee"], (R - 270, j["knee"][1] + 75), "Knees level with hips", num=5))
+    out.append(callout(j["toe"], (R - 270, floor_y - 40), "Feet flat on the floor", num=6))
+    return "".join(out)
+
+
+def sc_signs(pin, top):
+    out = []
+    u = 70
+    floor_y = top + 480
+    hip = (300, floor_y - 1.9 * u - 0.2 * u)
+    out.append(floor(L, R, floor_y))
+    out.append(chair_side(hip, u, floor_y))
+    desk_top = hip[1] - 0.82 * u
+    out.append(desk_side(hip[0] + 1.25 * u, R - 40, desk_top, floor_y, u))
+    m, st, sb = monitor_side(hip[0] + 4.6 * u, desk_top, u, desk_top - 2.5 * u)
+    out.append(m)
+    ghost, jg = seated(hip, u, SIT, col=GHOST, far=GHOST)
+    out.append(ghost)
+    fig, jb = seated(hip, u, SLUMP)
+    out.append(fig)
+    out.append(strain(jb["neck"], 30))
+    out.append(strain(jb["upper_back"], 26))
+    out.append(callout(jb["ear"], (R - 300, top + 40), "Head drifts forward", num=1))
+    out.append(callout(jb["upper_back"], (L, top + 40), "Upper back rounds", num=2))
+    items = ["Head juts forward of the shoulders", "Shoulders roll in and round",
+             "Upper back hunches over the desk", "Neck and traps tight by noon",
+             "Tension headaches after screen time", "Low back aches when you sit",
+             "You tire after short sits"]
+    out.append(rows(L, floor_y + 56, R - L, items, gap=54, size=25))
+    return "".join(out)
+
+
+def sc_forward_head(pin, top):
+    out = []
+    u = 88
+    floor_y = ART_BOTTOM - 130
+    cx1, cx2 = 300, 700
+    out.append(floor(L, R, floor_y))
+    gb, jb = standing(cx1, floor_y, u, pose(STAND, lumbar=-4, thoracic=12, neck=44, head=4))
+    gg, jg = standing(cx2, floor_y, u, STAND)
+    out += [gb, gg]
+    for j, good in ((jb, False), (jg, True)):
+        x = j["ankle"][0] + 4
+        out.append(line((x, j["top"] - 50), (x, floor_y - 4), stroke=SAGE if good else INK_SOFT, sw=1.3,
+                        dash=None if good else "4 6"))
+        out.append(marker(j["ear"], SAGE if good else TERRA))
+    out.append(dimension((jb["ankle"][0] + 4, jb["top"] - 24), (jb["ear"][0], jb["top"] - 24), None, col=TERRA))
+    out.append(verdict_mark(cx1 - 120, top + 40, False, "Head forward"))
+    out.append(verdict_mark(cx2 - 120, top + 40, True, "Ear over shoulder"))
+    out.append(inline_list(L, floor_y + 64, "DAILY FIXES", ["Chin tucks", "Raise the screen", "Strengthen upper back"]))
+    return "".join(out)
+
+
+# ---- exercise library (small figures in cells)
+SEATED_FRONT = ("side_neck", "shoulder_rolls", "overhead_reach", "side_bend", "neck_turn")
+
+
+def ex_figure(kind, box):
     x0, y0, x1, y1 = box
-    mid = (x0 + x1) / 2
-    return (x0, y0, mid - gap / 2, y1), (mid + gap / 2, y0, x1, y1)
-
-
-def chips_grid(img, box, items, cols=2, fnt=None, bg=WHITE, fg=NAVY, num_col=TEAL, row_h=None, numbered=True):
-    x0, y0, x1, y1 = box
-    fnt = fnt or LBL(44)
-    rows = (len(items) + cols - 1) // cols
-    gap = 26
-    cw = (x1 - x0 - gap * (cols - 1)) / cols
-    rh = row_h or min(130, (y1 - y0 - gap * (rows - 1)) / rows)
-    for i, t in enumerate(items):
-        r, c = divmod(i, cols)
-        bx = x0 + c * (cw + gap)
-        by = y0 + r * (rh + gap)
-        rrect(img, (bx, by, bx + cw, by + rh), rh / 2 if rh < 110 else 36, fill=bg)
-        if numbered:
-            num_badge(img, (bx + rh / 2, by + rh / 2), rh * 0.32, i + 1, col=num_col)
-            tx = bx + rh * 0.92
-        else:
-            check_badge(img, (bx + rh / 2, by + rh / 2), rh * 0.3, col=num_col)
-            tx = bx + rh * 0.92
-        lines = wrap(t, fnt, cw - (tx - bx) - 30)
-        asc, desc = fnt.getmetrics()
-        lh = (asc + desc) * 1.02
-        ty = by + rh / 2 - lh * len(lines) / 2
-        d = ImageDraw.Draw(img)
-        for k, ln in enumerate(lines):
-            d.text((tx, ty + k * lh), ln, font=fnt, fill=fg, anchor="la")
-    return y0 + rows * rh + (rows - 1) * gap
-
-
-def verdict(img, c, good, text, fnt=None):
-    fnt = fnt or LBL(46)
-    col = TEAL if good else CORAL
-    b = pill(img, c, text, fnt, bg=col, pad=(34, 14))
-    if good:
-        check_badge(img, (b[0] - 10, (b[1] + b[3]) / 2), (b[3] - b[1]) * 0.55, col=NAVY)
-    else:
-        cross_badge(img, (b[0] - 10, (b[1] + b[3]) / 2), (b[3] - b[1]) * 0.55, col=NAVY)
-    return b
-
-
-# ------------------------------------------------------------ scenes
-def sc_desk_guide(img, box, pin):
-    """Pin 1: correct desk sitting posture, annotated head to toe."""
-    x0, y0, x1, y1 = box
-    pal = person(shirt=TEAL, pants=NAVY, skin=0, hair=0)
-    u = fit_u(box, 8.2, 8.0)
-    j = desk_scene(img, box, pal, u=u, cx=x0 + 2.3 * u)
-    f = LBL(42)
-    # ear-shoulder-hip line
-    dashed(img, (j["ear"][0], j["ear"][1] - 0.5 * u), (j["hip"][0], j["hip"][1] + 0.2 * u), CORAL, w=8)
-    top_mon = j["monitor"][0]
-    dashed(img, j["eye"], (top_mon[0], j["eye"][1]), TEAL, w=7)
-    callout(img, (top_mon[0] + 0.1 * u, top_mon[1] + 0.1 * u), (x1 - 3.0 * u, y0 + 0.35 * u), "Screen top at eye level", f, col=TEAL)
-    callout(img, j["ear"], (x0 + 1.6 * u, y0 + 0.35 * u), "Ears over shoulders", f)
-    callout(img, j["elbow"], (j["elbow"][0] + 1.2 * u, j["elbow"][1] + 0.75 * u), "Elbows ~90°", f)
-    back = (j["mid"][0] - 0.5 * u, j["mid"][1] - 0.2 * u)
-    callout(img, back, (x0 + 1.2 * u, j["mid"][1] - 1.3 * u), "Back supported", f)
-    callout(img, j["knee"], (j["knee"][0] + 1.5 * u, j["knee"][1] + 0.95 * u), "Knees at hip level", f)
-    callout(img, j["toe"], (j["toe"][0] + 1.6 * u, j["floor"] - 0.55 * u), "Feet flat", f, col=TEAL)
-
-
-def sc_signs_compare(img, box, pin):
-    """Pin 2: slouched vs aligned at a desk + seven signs."""
-    x0, y0, x1, y1 = box
-    top = (x0, y0, x1, y0 + (y1 - y0) * 0.62)
-    bl, br = two_up(top)
-    panel(img, bl, CORAL_LIGHT)
-    panel(img, br, TEAL_LIGHT)
-    for b, good in ((bl, False), (br, True)):
-        inner = (b[0] + 20, b[1] + 150, b[2] - 10, b[3] - 20)
-        u = fit_u(inner, 5.6, 7.6)
-        pal = person(shirt=CORAL if not good else TEAL, pants=NAVY, skin=1 if good else 1, hair=1)
-        j = desk_scene(img, inner, pal, u=u, posture=GOOD if good else SLOUCH,
-                       arms=TYPE_GOOD if good else dict(uarm=150, farm=100), cx=inner[0] + 1.3 * u,
-                       show_floor=False, extra_kw=None)
-        if not good:
-            glow(img, j["neck"], 0.8 * u)
-        verdict(img, ((b[0] + b[2]) / 2 + 20, b[1] + 80), good, "Aligned" if good else "Slouched")
-    items = ["Head juts forward", "Rounded shoulders", "Hunched upper back", "Tight neck & traps",
-             "Tension headaches", "Low back ache when sitting", "Tired after short sits"]
-    chips_grid(img, (x0 + 10, top[3] + 50, x1 - 10, y1), items, cols=2, fnt=LBL(42), num_col=CORAL, row_h=132)
-
-
-def sc_forward_head(img, box, pin):
-    """Pin 3: forward head vs neutral with plumb line + fixes."""
-    x0, y0, x1, y1 = box
-    top = (x0, y0, x1, y1 - 260)
-    bl, br = two_up(top)
-    panel(img, bl, CORAL_LIGHT)
-    panel(img, br, TEAL_LIGHT)
-    for b, good in ((bl, False), (br, True)):
-        inner = (b[0], b[1] + 160, b[2], b[3] - 40)
-        u = fit_u(inner, 4.6, 9.0)
-        cx = (b[0] + b[2]) / 2 - 0.2 * u
-        pal = person(shirt=SAND if not good else TEAL, pants=NAVY, skin=2, hair=1)
-        pose = dict(STAND_BAD) if not good else dict(STAND, neck=4)
-        if not good:
-            pose.update(lumbar=-4, thoracic=12, neck=44, uarm=188, farm=182)
-        j = standing_scene(img, cx, inner[3], u, pal, pose, floor_w=1.8)
-        x = j["ankle"][0]
-        dashed(img, (x, j["head"][1] - 1.0 * u), (x, j["ankle"][1] + 0.3 * u), TEAL if good else STEEL_LIGHT, w=8)
-        circle(img, j["ear"], 0.2 * u, outline=NAVY if good else CORAL, width=10)
-        if not good:
-            arrow(img, (x, j["ear"][1]), (j["ear"][0] - 0.22 * u, j["ear"][1]), CORAL, w=12, head=36)
-        verdict(img, ((b[0] + b[2]) / 2 + 20, b[1] + 80), good, "Ear over shoulder" if good else "Head forward", fnt=LBL(40))
-    chips = ["Chin tucks", "Raise your screen", "Strengthen upper back"]
-    cw = (x1 - x0 - 40) / 3
-    for i, t in enumerate(chips):
-        cx = x0 + cw / 2 + i * (cw + 20)
-        pill(img, (cx, y1 - 110), t, LBL(40), fg=NAVY, bg=WHITE, pad=(28, 22))
-    ImageDraw.Draw(img).text(((x0 + x1) / 2, y1 - 215), "DAILY FIXES", font=font("Bold", 40), fill=TEAL, anchor="mm")
-
-
-# ---- exercise grids
-def grid4(box, gap=36):
-    x0, y0, x1, y1 = box
-    w = (x1 - x0 - gap) / 2
-    h = (y1 - y0 - gap) / 2
-    return [(x0 + c * (w + gap), y0 + r * (h + gap), x0 + c * (w + gap) + w, y0 + r * (h + gap) + h)
-            for r in range(2) for c in range(2)]
-
-
-def ex_panel(img, b, n, title, tag=None, col=WHITE, num_col=TEAL):
-    panel(img, b, col, r=40)
-    num_badge(img, (b[0] + 62, b[1] + 62), 38, n, col=num_col)
-    ImageDraw.Draw(img).text((b[0] + 118, b[1] + 62), title, font=LBL(44), fill=NAVY, anchor="lm")
-    if tag:
-        pill(img, ((b[0] + b[2]) / 2, b[3] - 52), tag, font("Medium", 36), fg=NAVY, bg=shade(col, 0.93), pad=(22, 8))
-    return (b[0] + 20, b[1] + 120, b[2] - 20, b[3] - (100 if tag else 30))
-
-
-def seated_side(img, inner, pal, pose, arrows=None):
-    u = fit_u(inner, 4.2, 7.2)
-    cx = (inner[0] + inner[2]) / 2 - 0.4 * u
-    floor = inner[3] - 0.05 * u
-    hip = (cx, floor - 2.05 * u - 0.35 * u)
-    side_chair(img, hip, u, floor, col=STEEL_LIGHT)
-    return side_figure(img, hip, u, pal, **pose)
-
-
-def seated_front(img, inner, pal, **kw):
-    u = fit_u(inner, 4.6, 8.3)
-    cx = (inner[0] + inner[2]) / 2
-    hipy = inner[3] - 2.45 * u
-    return front_figure(img, cx, hipy, u, pal, seated=True, chair=STEEL_LIGHT, **kw)
-
-
-def standing_front(img, inner, pal, **kw):
-    u = fit_u(inner, 4.6, 10.2)
-    cx = (inner[0] + inner[2]) / 2
-    hipy = inner[3] - 4.35 * u
-    return front_figure(img, cx, hipy, u, pal, seated=False, **kw)
-
-
-def standing_side(img, inner, pal, pose):
-    u = fit_u(inner, 4.6, 9.2)
-    cx = (inner[0] + inner[2]) / 2 - 0.2 * u
-    return standing_scene(img, cx, inner[3], u, pal, pose, show_floor=False)
-
-
-def draw_exercise(img, inner, pal, kind):
-    """Library of small exercise illustrations."""
-    if kind == "chin_tuck_seated":
-        j = seated_side(img, inner, pal, dict(GOOD, neck=-4, uarm=170, farm=120))
-        u = j["u"]
-        arrow(img, (j["head"][0] + 1.45 * u, j["head"][1]), (j["head"][0] + 0.85 * u, j["head"][1]), CORAL, w=0.14 * u, head=0.4 * u)
-    elif kind == "chin_tuck_standing":
-        j = standing_side(img, inner, pal, dict(STAND, neck=-4))
-        u = j["u"]
-        arrow(img, (j["head"][0] + 1.5 * u, j["head"][1]), (j["head"][0] + 0.9 * u, j["head"][1]), CORAL, w=0.14 * u, head=0.4 * u)
-    elif kind == "side_neck":
-        j = seated_front(img, inner, pal, tilt=24, la=(188, 182), ra=(20, 300))
-    elif kind == "side_neck_stand":
-        j = standing_front(img, inner, pal, tilt=24, la=(188, 182), ra=(20, 300))
-    elif kind == "upper_back_ext":
-        j = seated_side(img, inner, pal, dict(lumbar=-4, thoracic=-16, neck=-14, uarm=150, farm=345, fuarm=150, ffarm=345))
-    elif kind == "shoulder_rolls":
-        j = seated_front(img, inner, pal)
-        u = j["u"]
-        for s, c in ((-1, j["shl"]), (1, j["shr"])):
-            cc = (c[0] + s * 0.25 * u, c[1] - 0.55 * u)
-            curved_arrow(img, cc, 0.5 * u, 200 if s < 0 else -20, 470 if s < 0 else 250, CORAL, w=0.12 * u, head=0.35 * u)
-    elif kind == "overhead_reach":
-        j = seated_front(img, inner, pal, la=(12, 20), ra=(348, 340))
-    elif kind == "overhead_reach_stand":
-        j = standing_front(img, inner, pal, la=(12, 20), ra=(348, 340))
-    elif kind == "side_bend":
-        j = seated_front(img, inner, pal, lean=-16, la=(200, 185), ra=(338, 300))
-    elif kind == "side_bend_stand":
-        j = standing_front(img, inner, pal, lean=-14, la=(200, 185), ra=(338, 300))
-    elif kind == "wall_angels":
-        x0, y0, x1, y1 = inner
-        rrect(img, (x0 + 30, y0, x1 - 30, y1), 20, fill=shade(WHITE, 0.94))
-        j = standing_front(img, inner, pal, back=True, la=(270, 330), ra=(90, 30))
-        u = j["u"]
-        for s, e in ((-1, j["el"]), (1, j["er"])):
-            arrow(img, (e[0], e[1] - 0.3 * u), (e[0], e[1] - 1.2 * u), CORAL, w=0.12 * u, head=0.35 * u)
-    elif kind == "scap_squeeze":
-        j = standing_front(img, inner, pal, back=True, la=(250, 350), ra=(110, 10))
-        u = j["u"]
-        c = ((j["shl"][0] + j["shr"][0]) / 2, j["shl"][1] + 0.9 * u)
-        arrow(img, (c[0] - 1.1 * u, c[1]), (c[0] - 0.2 * u, c[1]), CORAL, w=0.12 * u, head=0.32 * u)
-        arrow(img, (c[0] + 1.1 * u, c[1]), (c[0] + 0.2 * u, c[1]), CORAL, w=0.12 * u, head=0.32 * u)
-    elif kind == "chest_opener_stand":
-        j = standing_side(img, inner, pal, dict(STAND, thoracic=-8, neck=-2, uarm=208, farm=196, fuarm=208, ffarm=196))
-    elif kind == "chest_opener_seated":
-        j = seated_side(img, inner, pal, dict(GOOD, thoracic=-8, neck=0, uarm=208, farm=196, fuarm=208, ffarm=196))
-    elif kind == "neck_turn":
-        j = seated_front(img, inner, pal)
-        u = j["u"]
-        curved_arrow(img, j["head"], j["head_r"] * 1.55, 200, 340, CORAL, w=0.12 * u, head=0.35 * u)
-    elif kind == "stand_up":
-        j = standing_side(img, inner, pal, dict(STAND, uarm=182, farm=178))
-    else:
-        raise ValueError(kind)
-    return j
-
-
-def sc_exercise_grid(img, box, pin):
-    x0, y0, x1, y1 = box
-    ex = pin["exercises"]
-    top_pad = pin.get("grid_top", 0)
-    if top_pad:
-        pill(img, ((x0 + x1) / 2, y0 + top_pad / 2 - 10), pin["grid_badge"], LBL(42), fg=WHITE, bg=pin.get("badge_col", NAVY), pad=(34, 16))
-    cells = grid4((x0, y0 + top_pad, x1, y1))
-    pals = [person(shirt=TEAL, skin=0, hair=0), person(shirt=CORAL, skin=1, hair=1),
-            person(shirt=MUSTARD, pants=STEEL, skin=2, hair=1), person(shirt=NAVY, pants=STEEL, skin=3, hair=2)]
-    who = pin.get("who", 0)
-    for i, (b, (kind, title, tag)) in enumerate(zip(cells, ex)):
-        inner = ex_panel(img, b, i + 1, title, tag, num_col=pin.get("num_col", TEAL))
-        draw_exercise(img, inner, pals[(who) % 4], kind)
-
-
-def sc_pain(img, box, pin):
-    """Pins 5 & 17: seated person with an aching back / neck."""
-    x0, y0, x1, y1 = box
-    area = pin["area"]
-    illo = (x0, y0, x1, y1 - 270)
-    pal = person(shirt=pin.get("shirt", SAND), pants=NAVY, skin=pin.get("skin", 0), hair=pin.get("hair", 0))
-    u = fit_u(illo, 7.4, 8.2)
-    if area == "upper_back":
-        j = desk_scene(img, illo, pal, u=u, posture=dict(lumbar=-6, thoracic=26, neck=40),
-                       arms=dict(uarm=150, farm=98, fuarm=210, ffarm=320), monitor="good", cx=x0 + 2.6 * u)
-        spot = add(j["mid"], 26 + 180, -0.55 * u)
-        spot = ((j["mid"][0] + j["shoulder"][0]) / 2 - 0.45 * u, (j["mid"][1] + j["shoulder"][1]) / 2)
-        glow(img, spot, 1.0 * u)
-        callout(img, spot, (x0 + 1.4 * u, y0 + 0.4 * u), "Between the shoulder blades", LBL(40), col=CORAL)
-    else:
-        j = desk_scene(img, illo, pal, u=u, posture=dict(lumbar=-4, thoracic=22, neck=50),
-                       arms=dict(uarm=150, farm=100, fuarm=150, ffarm=345), monitor="low", cx=x0 + 2.6 * u)
-        glow(img, j["neck"], 0.9 * u)
-        callout(img, j["neck"], (x0 + 1.4 * u, y0 + 0.4 * u), "Neck strain", LBL(40), col=CORAL)
-        top = j["monitor"][0]
-        dashed(img, j["eye"], (top[0], top[1] + 0.8 * u), CORAL, w=7)
-        callout(img, (top[0] + 0.1 * u, top[1] + 0.2 * u), (x1 - 2.2 * u, top[1] - 1.6 * u), "Screen too low", LBL(40), col=NAVY)
-    items = pin["causes"]
-    ImageDraw.Draw(img).text(((x0 + x1) / 2, y1 - 235), pin.get("causes_title", "COMMON CAUSES"), font=font("Bold", 40), fill=CORAL, anchor="mm")
-    cw = (x1 - x0 - 40) / 3
-    for i, t in enumerate(items):
-        cx = x0 + cw / 2 + i * (cw + 20)
-        b = (cx - cw / 2, y1 - 185, cx + cw / 2, y1 - 25)
-        rrect(img, b, 36, fill=WHITE)
-        text_block(img, cx, b[1] + 30 if len(wrap(t, LBL(40), cw - 50)) > 1 else b[1] + 55, t, LBL(40), NAVY, cw - 50)
-
-
-def sc_headache(img, box, pin):
-    """Pin 27: front view, hands to temples at desk."""
-    x0, y0, x1, y1 = box
-    illo = (x0, y0, x1, y1 - 60)
-    pal = person(shirt=NAVY, pants=STEEL, skin=1, hair=0)
-    u = fit_u(illo, 7.0, 8.4)
     cx = (x0 + x1) / 2
-    hipy = y1 - 2.2 * u
-    j = front_figure(img, cx, hipy, u, pal, seated=True, chair=STEEL_LIGHT, legs_visible=False,
-                     la=(215, 20), ra=(145, 340), tilt=4)
-    glow(img, j["head"], 1.35 * u, alpha=120)
-    glow(img, j["neck"], 0.8 * u, alpha=150)
-    # desk in front
-    dy = hipy - 0.9 * u
-    rrect(img, (x0 + 0.2 * u, dy, x1 - 0.2 * u, dy + 0.35 * u), 0.1 * u, fill=WOOD)
-    rrect(img, (x0 + 0.2 * u, dy + 0.3 * u, x1 - 0.2 * u, y1), 0.1 * u, fill=shade(WOOD, 0.85))
-    rrect(img, (x0 + 0.6 * u, dy - 1.3 * u, x0 + 2.2 * u, dy - 0.02 * u), 0.1 * u, fill=(60, 64, 76))
-    rrect(img, (x0 + 0.7 * u, dy - 1.2 * u, x0 + 2.1 * u, dy - 0.15 * u), 0.06 * u, fill=SCREEN)
-    circle(img, (x1 - 1.2 * u, dy - 0.35 * u), 0.33 * u, fill=CORAL)
-    rrect(img, (x1 - 1.55 * u, dy - 0.68 * u, x1 - 0.85 * u, dy - 0.02 * u), 0.1 * u, fill=CORAL)
-    f = LBL(40)
-    callout(img, (j["head"][0], j["head"][1] - j["head_r"] * 0.9), (cx, y0 + 0.25 * u), "Pressure around the head", f, col=CORAL)
-    callout(img, j["shl"], (x0 + 1.2 * u, j["shl"][1] - 0.2 * u), "Tight neck", f)
-    callout(img, j["shr"], (x1 - 1.3 * u, j["shr"][1] - 0.2 * u), "Raised shoulders", f)
+    fy = y1 - 8
+    out = []
+    h = y1 - y0
+    if kind in ("chin_tuck_seated", "upper_back_ext", "chest_opener_seated"):
+        u = min(62, h / 6.4)
+        hip = (cx - 70, fy - 1.9 * u - 0.2 * u)
+        out.append(chair_side(hip, u, fy, sw=1.6))
+        p = {"chin_tuck_seated": pose(SIT, neck=-2, head=-4, uarm=176, farm=150, fuarm=176, ffarm=150),
+             "upper_back_ext": pose(SIT, lumbar=-4, thoracic=-16, neck=-12, uarm=150, farm=345, fuarm=150, ffarm=345),
+             "chest_opener_seated": pose(SIT, thoracic=-8, neck=0, uarm=206, farm=196, fuarm=206, ffarm=196)}[kind]
+        s, j = seated(hip, u, p)
+        out.append(s)
+        if kind == "chin_tuck_seated":
+            out.append(arrow((j["ear"][0] + 100, j["ear"][1]), (j["ear"][0] + 52, j["ear"][1])))
+        elif kind == "upper_back_ext":
+            out.append(arc_arrow(j["mid"], 2.9 * u, 10, -14))
+        else:
+            out.append(arrow((j["chest"][0] + 26, j["chest"][1]), (j["chest"][0] + 72, j["chest"][1] - 12)))
+    elif kind in ("chin_tuck_standing", "chest_opener_stand"):
+        u = min(52, h / 8.5)
+        p = {"chin_tuck_standing": pose(STAND, neck=-2, head=-4),
+             "chest_opener_stand": pose(STAND, thoracic=-8, neck=-2, uarm=206, farm=196, fuarm=206, ffarm=196)}[kind]
+        s, j = standing(cx - 10, fy, u, p)
+        out.append(s)
+        if kind == "chin_tuck_standing":
+            out.append(arrow((j["ear"][0] + 92, j["ear"][1]), (j["ear"][0] + 46, j["ear"][1])))
+        else:
+            out.append(arrow((j["chest"][0] + 26, j["chest"][1]), (j["chest"][0] + 72, j["chest"][1] - 12)))
+    else:
+        seat = kind in SEATED_FRONT
+        up = kind in ("overhead_reach", "overhead_reach_stand", "side_neck", "side_bend", "side_bend_stand", "wall_angels")
+        u = h / ((8.8 if up else 6.8) if seat else (10.4 if up else 8.8))
+        hipy = fy - 2.3 * u if seat else fy - 4.0 * u
+        kw = {
+            "side_neck": dict(tilt=26, la=(186, 180), ra=(28, 292)),
+            "shoulder_rolls": dict(),
+            "overhead_reach": dict(la=(12, 18), ra=(348, 342)),
+            "side_bend": dict(lean=-15, la=(196, 182), ra=(340, 305)),
+            "neck_turn": dict(),
+            "overhead_reach_stand": dict(la=(12, 18), ra=(348, 342)),
+            "side_bend_stand": dict(lean=-13, la=(196, 182), ra=(340, 305)),
+            "wall_angels": dict(la=(272, 340), ra=(88, 20)),
+            "scap_squeeze": dict(la=(245, 350), ra=(115, 10)),
+        }[kind]
+        if seat:
+            out.append(rect(cx - 1.25 * u, hipy - 2.3 * u, 2.5 * u, 2.4 * u, rx=0.35 * u, fill=PAPER, stroke=LINE, sw=1.6))
+            out.append(rect(cx - 1.35 * u, hipy + 0.1 * u, 2.7 * u, 0.26 * u, rx=0.12 * u, fill=PAPER, stroke=LINE, sw=1.6))
+            out.append(line((cx, hipy + 0.36 * u), (cx, fy - 0.35 * u), sw=1.6))
+            out.append(path(f"M{fmt(cx - 1.1*u)},{fmt(fy - 0.12*u)} Q{fmt(cx)},{fmt(fy - 0.5*u)} {fmt(cx + 1.1*u)},{fmt(fy - 0.12*u)}",
+                            stroke=LINE, sw=1.6))
+        if kind == "wall_angels":
+            out.append(rect(cx - 2.2 * u, y0 + 4, 4.4 * u, fy - y0 - 4, fill=PAPER_DEEP))
+        s, j = front_figure(cx, hipy, u, seated=seat, **kw)
+        out.append(s)
+        if kind == "shoulder_rolls":
+            for sgn, c in ((-1, j["shl"]), (1, j["shr"])):
+                cc = (c[0] + sgn * 0.35 * u, c[1] - 0.5 * u)
+                out.append(arc_arrow(cc, 0.42 * u, 180 + sgn * 60, 180 + sgn * 330, sw=1.6, head=8))
+        elif kind == "neck_turn":
+            out.append(arc_arrow(j["head"], 0.95 * u, -60, 60, sw=1.6, head=8))
+        elif kind == "wall_angels":
+            for e in (j["el"], j["er"]):
+                out.append(arrow((e[0], e[1] - 0.3 * u), (e[0], e[1] - 1.1 * u), sw=1.6, head=8))
+        elif kind == "scap_squeeze":
+            c = ((j["shl"][0] + j["shr"][0]) / 2, j["shl"][1] + 0.55 * u)
+            out.append(arrow((c[0] - 1.7 * u, c[1]), (c[0] - 0.95 * u, c[1]), sw=1.6, head=8))
+            out.append(arrow((c[0] + 1.7 * u, c[1]), (c[0] + 0.95 * u, c[1]), sw=1.6, head=8))
+    return "".join(out)
 
 
-def sc_timeline(img, box, pin):
-    """Pins 14 & 30: posture changes over time."""
-    x0, y0, x1, y1 = box
+def sc_exercise_grid(pin, top):
+    out = []
+    y0 = top + 10
+    if pin.get("badge"):
+        b = pin["badge"].upper()
+        out.append(text(L, y0 + 16, b, size=15, family=MONO, fill=TERRA, ls=4))
+        out.append(line((L + len(b) * 13.2 + 18, y0 + 11), (R, y0 + 11), stroke=TERRA, sw=1))
+        y0 += 44
+    mid_x = (L + R) / 2
+    mid_y = (y0 + ART_BOTTOM) / 2
+    out.append(line((mid_x, y0), (mid_x, ART_BOTTOM), sw=0.9, extra='opacity="0.45"'))
+    out.append(hair(mid_y))
+    cells = [(L, y0, mid_x, mid_y), (mid_x, y0, R, mid_y), (L, mid_y, mid_x, ART_BOTTOM), (mid_x, mid_y, R, ART_BOTTOM)]
+    for i, ((kind, title, dose), c) in enumerate(zip(pin["exercises"], cells)):
+        x0, cy0, x1, cy1 = c
+        px = x0 + (0 if i % 2 == 0 else 32)
+        out.append(text(px, cy0 + 42, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
+        out.append(text(px + 40, cy0 + 46, title, size=33, family=SERIF, fill=INK))
+        out.append(text(px + 40, cy0 + 74, dose.upper(), size=13, family=MONO, fill=INK_SOFT, ls=3))
+        out.append(ex_figure(kind, (x0 + 20, cy0 + 100, x1 - 20, cy1 - 22)))
+    return "".join(out)
+
+
+def sc_pain(pin, top):
+    out = []
+    u = 96
+    floor_y = ART_BOTTOM - 236
+    if pin["area"] == "upper_back":
+        p = pose(SIT, lumbar=-6, thoracic=26, neck=40, head=4, uarm=150, farm=98, fuarm=152, ffarm=98)
+        s, j, g = seated_desk(u, 330, floor_y, p)
+        out.append(s)
+        spot = lerp(j["upper_back"], j["shoulder"], 0.25)
+        out.append(strain(spot, 46))
+        out.append(callout(spot, (L, top + 40), "Between the shoulder blades", num=1))
+        out.append(callout(j["ear"], (R - 290, top + 40), "Head pulled forward", num=2))
+    else:
+        p = pose(SIT, lumbar=-4, thoracic=20, neck=50, head=6, uarm=150, farm=100, fuarm=150, ffarm=340, fhand=-10)
+        s, j, g = seated_desk(u, 330, floor_y, p, monitor="low")
+        out.append(s)
+        out.append(strain(j["neck"], 44))
+        st = g["screen_top"]
+        centre = lerp(g["screen_top"], g["screen_bot"], 0.5)
+        out.append(line(j["eye"], centre, stroke=TERRA, sw=1.2, dash="1 7"))
+        out.append(callout(j["neck"], (L, top + 40), "Neck strain", num=1))
+        out.append(callout(st, (R - 270, top + 40), "Screen too low", num=2))
+    out.append(text(L, floor_y + 62, pin.get("causes_title", "COMMON CAUSES"), size=14, family=MONO, fill=TERRA, ls=3))
+    out.append(rows(L, floor_y + 80, R - L, pin["causes"], gap=48, size=24))
+    return "".join(out)
+
+
+def sc_headache(pin, top):
+    out = []
+    u = 118
+    cx = W / 2
+    desk_y = ART_BOTTOM - 150
+    hipy = desk_y + 0.55 * u
+    out.append(rect(cx - 1.35 * u, hipy - 2.75 * u, 2.7 * u, 2.9 * u, rx=0.4 * u, fill=PAPER, stroke=LINE, sw=2))
+    s, j = front_figure(cx, hipy, u, seated=True, legs=False, la=(212, 22), ra=(148, 338), tilt=3)
+    out.append(s)
+    out.append(rect(L - 10, desk_y, R - L + 20, 0.2 * u, rx=2, fill=PAPER, stroke=LINE, sw=2))
+    out.append(rect(L + 10, desk_y + 0.2 * u, R - L - 20, ART_BOTTOM - desk_y - 0.2 * u, fill=PAPER, stroke=LINE, sw=2))
+    out.append(path(f"M{fmt(L + 50)},{fmt(desk_y)} L{fmt(L + 80)},{fmt(desk_y - 1.2*u)} L{fmt(L + 270)},{fmt(desk_y - 1.2*u)} "
+                    f"L{fmt(L + 300)},{fmt(desk_y)}Z", fill=PAPER, stroke=LINE, sw=2))
+    out.append(rect(R - 150, desk_y - 0.62 * u, 0.62 * u, 0.62 * u, rx=0.08 * u, fill=PAPER, stroke=LINE, sw=2))
+    out.append(path(f"M{fmt(R - 150 + 0.62*u)},{fmt(desk_y - 0.5*u)} q{fmt(0.25*u)},0 {fmt(0.25*u)},{fmt(0.2*u)} "
+                    f"q0,{fmt(0.2*u)} {fmt(-0.25*u)},{fmt(0.2*u)}", stroke=LINE, sw=2))
+    hc = j["head"]
+    for k, op in ((0.95, 0.55), (1.25, 0.32), (1.55, 0.16)):
+        out.append(circle(hc, k * u, stroke=TERRA, sw=1.4, extra=f'opacity="{op}"'))
+    out.append(strain(j["neck"], 30))
+    out.append(callout(j["neck"], (L, top + 40), "Tight neck muscles", num=1))
+    out.append(callout(j["shr"], (R - 280, top + 40), "Shoulders creep up", num=2))
+    return "".join(out)
+
+
+def sc_timeline(pin, top):
+    out = []
     stages = pin["stages"]
     n = len(stages)
-    pal = person(shirt=TEAL, pants=NAVY, skin=pin.get("skin", 0), hair=pin.get("hair", 0))
-    illo_h = (y1 - y0) * 0.56
-    cw = (x1 - x0) / n
-    u = min(cw / 3.1, illo_h / 9.4)
-    floor = y0 + illo_h
-    floor_line(img, x0 + 20, x1 - 20, floor, shade(STEEL_LIGHT, 1.2))
-    for i, st in enumerate(stages):
+    u = 60
+    floor_y = top + 560
+    cw = (R - L) / n
+    out.append(floor(L, R, floor_y))
+    tones = [GHOST, TERRA_SOFT, INK_FAR, INK]
+    for i in range(n):
         t = i / (n - 1)
-        pose = dict(STAND)
-        pose.update(lumbar=-8 * (1 - t), thoracic=26 * (1 - t) - 1 * t, neck=42 * (1 - t) + 4 * t,
-                    uarm=196 * (1 - t) + 182 * t, farm=190 * (1 - t) + 178 * t)
-        cx = x0 + cw * (i + 0.5) - 0.2 * u
-        standing_scene(img, cx, floor, u, pal, pose, show_floor=False)
-    # timeline bar
-    ty = floor + 110
-    seg(img, (x0 + cw / 2, ty), (x1 - cw / 2, ty), 16, shade(TEAL, 1.0))
-    col_text_top = ty + 80
+        p = pose(STAND, lumbar=-9 * (1 - t), thoracic=26 * (1 - t) - t, neck=42 * (1 - t) + 3 * t, head=8 * (1 - t),
+                 uarm=194 * (1 - t) + 182 * t, farm=188 * (1 - t) + 178 * t)
+        cx = L + cw * (i + 0.5) - 0.3 * u
+        col = tones[i] if n == 4 else INK
+        s, j = standing(cx, floor_y, u, p, col=col, far=col)
+        out.append(s)
+        x = j["ankle"][0] + 3
+        out.append(line((x, j["top"] - 30), (x, floor_y - 3), stroke=TERRA, sw=1.1, dash="3 5"))
+    ty = floor_y + 70
+    out.append(line((L + cw / 2, ty), (R - cw / 2, ty), stroke=INK, sw=1.4))
     for i, (when, what) in enumerate(stages):
-        cx = x0 + cw * (i + 0.5)
-        circle(img, (cx, ty), 34, fill=WHITE, outline=TEAL, width=12)
-        pill(img, (cx, col_text_top + 10), when, LBL(38), fg=WHITE, bg=NAVY, pad=(20, 10))
-        text_block(img, cx, col_text_top + 85, what, font("Medium", 38), INK, cw - 24)
+        cx = L + cw * (i + 0.5)
+        out.append(circle((cx, ty), 9, fill=PAPER if i < n - 1 else TERRA, stroke=TERRA, sw=2))
+        out.append(text(cx, ty + 60, when.upper(), size=15, family=MONO, fill=TERRA, anchor="middle", ls=2))
+        lines, cur = [], ""
+        for w_ in what.split():
+            if len(cur + " " + w_) > 14 and cur:
+                lines.append(cur)
+                cur = w_
+            else:
+                cur = (cur + " " + w_).strip()
+        lines.append(cur)
+        for k, ln in enumerate(lines):
+            out.append(text(cx, ty + 102 + k * 32, ln, size=24, fill=INK, anchor="middle"))
+    return "".join(out)
 
 
-def sc_before_after(img, box, pin):
-    """Pin 13 (standing) & 23 (phone)."""
-    x0, y0, x1, y1 = box
-    bl, br = two_up((x0, y0, x1, y1 - pin.get("foot_space", 0)))
-    panel(img, bl, CORAL_LIGHT)
-    panel(img, br, TEAL_LIGHT)
-    labels = pin["labels"]
-    phone = pin.get("phone", False)
-    for b, good in ((bl, False), (br, True)):
-        inner = (b[0], b[1] + 170, b[2], b[3] - 40)
-        u = fit_u(inner, 4.6, 9.4)
-        cx = (b[0] + b[2]) / 2 - 0.2 * u
-        pal = person(shirt=pin.get("shirt", MUSTARD), pants=NAVY, skin=pin.get("skin", 3), hair=pin.get("hair", 2))
-        if phone:
-            pose = dict(STAND_BAD, uarm=176, farm=70, fuarm=176, ffarm=70, neck=58) if not good else dict(STAND, neck=6, uarm=160, farm=30, fuarm=160, ffarm=30)
-        else:
-            pose = dict(STAND_BAD) if not good else dict(STAND)
-        j = standing_scene(img, cx, inner[3], u, pal, pose, floor_w=1.8)
-        if phone:
-            w = j["wrist"]
-            ang = 70 if not good else 30
-            p = add(w, ang - 90, 0.15 * u)
-            rrect(img, (p[0] - 0.12 * u, p[1] - 0.42 * u, p[0] + 0.12 * u, p[1] + 0.42 * u), 0.06 * u, fill=NAVY)
-            dashed(img, j["eye"], (p[0], p[1] - 0.2 * u), CORAL if not good else TEAL, w=6)
+def sc_phone(pin, top):
+    """Pin 23: text neck vs raised phone, side by side."""
+    out = []
+    u = 86
+    floor_y = ART_BOTTOM - 120
+    out.append(floor(L, R, floor_y))
+    pb = pose(STAND_BAD, neck=58, head=12, uarm=172, farm=58, hand=12, fuarm=172, ffarm=58, fhand=12)
+    pg = pose(STAND, neck=4, uarm=164, farm=26, hand=-8, fuarm=164, ffarm=26, fhand=-8)
+    for cx, p, good in ((280, pb, False), (690, pg, True)):
+        s, j = standing(cx, floor_y, u, p)
+        out.append(s)
+        h = j["hand"]
+        out.append(rect(h[0] - 8, h[1] - 32, 16, 42, rx=4, fill=INK, stroke=PAPER, sw=2))
+        out.append(line(j["eye"], (h[0] - 2, h[1] - 18), stroke=SAGE if good else TERRA, sw=1.2, dash="1 6"))
+        x = j["ankle"][0] + 4
+        out.append(line((x, j["top"] - 50), (x, floor_y - 4), stroke=SAGE if good else INK_SOFT, sw=1.3,
+                        dash=None if good else "4 6"))
+        out.append(marker(j["ear"], SAGE if good else TERRA))
         if not good:
-            glow(img, j["neck"], 0.7 * u, alpha=140)
-        x = j["ankle"][0]
-        dashed(img, (x, j["head"][1] - 0.9 * u), (x, j["ankle"][1] + 0.3 * u), TEAL if good else STEEL_LIGHT, w=7)
-        ImageDraw.Draw(img).text(((b[0] + b[2]) / 2, b[1] + 64), labels[1 if good else 0][0], font=font("ExtraBold", 58),
-                                 fill=TEAL if good else CORAL, anchor="mm")
-        text_block(img, (b[0] + b[2]) / 2, b[1] + 104, labels[1 if good else 0][1], font("Medium", 36), INK, b[2] - b[0] - 40)
-    if pin.get("footer_chips"):
-        cw = (x1 - x0 - 40) / 3
-        for i, t in enumerate(pin["footer_chips"]):
-            cx = x0 + cw / 2 + i * (cw + 20)
-            pill(img, (cx, y1 - 70), t, LBL(38), fg=NAVY, bg=WHITE, pad=(24, 20))
+            out.append(strain(j["neck"], 34))
+    la, lb = pin["labels"]
+    out.append(caption(L, top + 36, la[0], la[1], tag_col=TERRA))
+    out.append(caption(R, top + 36, lb[0], lb[1], tag_col=SAGE, anchor="end"))
+    out.append(inline_list(L, floor_y + 62, "WHAT HELPS", pin["fixes"]))
+    return "".join(out)
 
 
-def sc_monitor_height(img, box, pin):
-    """Pin 9: eye line vs monitor top."""
-    x0, y0, x1, y1 = box
-    pal = person(shirt=NAVY, pants=STEEL, skin=2, hair=1)
-    u = fit_u(box, 7.2, 8.0)
-    j = desk_scene(img, box, pal, u=u, cx=x0 + 1.9 * u)
-    top, bot = j["monitor"]
+def sc_before_after(pin, top):
+    out = []
+    u = 88
+    floor_y = ART_BOTTOM - (120 if pin.get("fixes") else 30)
+    cx = W / 2 - 30
+    phone = pin.get("phone")
+    if phone:
+        pb = pose(STAND_BAD, neck=56, head=10, uarm=174, farm=62, hand=10, fuarm=174, ffarm=62, fhand=10)
+        pg = pose(STAND, neck=4, uarm=162, farm=28, hand=-6, fuarm=162, ffarm=28, fhand=-6)
+    else:
+        pb, pg = STAND_BAD, STAND
+    out.append(floor(L, R, floor_y))
+    sb, jb = standing(cx, floor_y, u, pb, col=TERRA_SOFT, far=TERRA_SOFT)
+    sg, jg = standing(cx, floor_y, u, pg)
+    out += [sb, sg]
+    x = jg["ankle"][0] + 4
+    out.append(plumb((x, jg["top"] - 50), (x, floor_y - 16)))
+    out.append(marker(jb["ear"], TERRA))
+    out.append(marker(jg["ear"], SAGE))
+    out.append(dimension((x, jb["top"] - 22), (jb["ear"][0], jb["top"] - 22), None, col=TERRA))
+    if not phone:
+        out.append(callout(jb["shoulder"], (R - 250, jb["shoulder"][1] + 40), "Shoulders roll forward", num=1))
+        out.append(callout(jb["mid"], (R - 250, jb["mid"][1] + 90), "Pelvis tucks under", num=2))
+    else:
+        out.append(callout(jb["neck"], (R - 250, jb["neck"][1] + 60), "Neck bends to the screen", num=1))
+    if phone:
+        for j, col in ((jb, TERRA_SOFT), (jg, INK)):
+            h = j["hand"]
+            out.append(rect(h[0] - 9, h[1] - 34, 18, 44, rx=4, fill=col))
+        out.append(line(jb["eye"], (jb["hand"][0], jb["hand"][1] - 20), stroke=TERRA, sw=1.2, dash="1 6"))
+    la, lb = pin["labels"]
+    out.append(caption(L, top + 36, la[0], la[1], tag_col=TERRA))
+    out.append(caption(R, top + 36, lb[0], lb[1], tag_col=SAGE, anchor="end"))
+    if pin.get("fixes"):
+        out.append(inline_list(L, floor_y + 62, "WHAT HELPS", pin["fixes"]))
+    return "".join(out)
+
+
+def sc_monitor_height(pin, top):
+    out = []
+    u = 112
+    floor_y = ART_BOTTOM - 30
+    s, j, g = seated_desk(u, 260, floor_y)
+    out.append(s)
+    st, sb = g["screen_top"], g["screen_bot"]
     eye = j["eye"]
-    dashed(img, eye, (top[0], eye[1]), TEAL, w=8)
-    centre = (top[0], (top[1] + bot[1]) / 2)
-    dashed(img, eye, centre, CORAL, w=7)
-    angle_arc(img, eye, 1.4 * u, 90, 90 + 18, CORAL, w=8)
-    f = LBL(40)
-    ImageDraw.Draw(img).text((eye[0] + 1.0 * u, eye[1] + 0.75 * u), "15–20° down", font=font("Bold", 40), fill=CORAL, anchor="lm")
-    callout(img, (top[0] + 0.12 * u, top[1]), (top[0] + 0.35 * u, eye[1] - 0.45 * u), "Top at or just below eye level", f, col=TEAL, anchor="rm")
-    ydist = eye[1] - 1.0 * u
-    arrow(img, (eye[0] + 0.3 * u, ydist), (top[0] - 0.25 * u, ydist), NAVY, w=8, head=28)
-    arrow(img, (top[0] - 0.25 * u, ydist), (eye[0] + 0.3 * u, ydist), NAVY, w=8, head=28)
-    pill(img, ((eye[0] + top[0]) / 2, ydist - 60), "About an arm's length", f, fg=NAVY, bg=WHITE)
+    out.append(line(eye, (st[0], eye[1]), stroke=TERRA, sw=1.3, dash="1 7"))
+    centre = lerp(st, sb, 0.45)
+    out.append(line(eye, centre, stroke=INK_SOFT, sw=1.2, dash="1 7"))
+    out.append(angle_arc(eye, 150, 90, 107, value="15–20°", value_off=46))
+    out.append(dimension((eye[0] + 20, eye[1] - 150), (st[0], eye[1] - 150), "ARM'S LENGTH", col=INK))
+    out.append(callout(st, (R - 300, top + 36), "Top at or below eye level", num=1))
+    out.append(callout(centre, (R - 300, centre[1] + 150), "Centre 15–20° below", num=2))
+    return "".join(out)
 
 
-def sc_chair_check(img, box, pin):
-    """Pin 10: ergonomic chair checkpoints."""
-    x0, y0, x1, y1 = box
-    pal = person(shirt=CORAL, pants=NAVY, skin=0, hair=2)
-    u = fit_u(box, 7.2, 8.4)
-    floor = y1 - 0.2 * u
-    hip = (x0 + 3.0 * u, floor - 2.4 * u)
-    floor_line(img, x0 + 0.3 * u, x1 - 0.3 * u, floor, shade(STEEL_LIGHT, 1.2))
-    side_chair(img, hip, u, floor, col=STEEL, arm=True, lumbar=TEAL, back_h=3.9, recline=8)
-    j = side_figure(img, hip, u, pal, lumbar=0, thoracic=-6, neck=2, uarm=178, farm=95)
-    f = LBL(38)
-    pts = [
-        ((hip[0] - 0.95 * u, hip[1] - 1.0 * u), (x0 + 0.1 * u, hip[1] - 1.0 * u), "Lumbar support", "lm"),
-        ((hip[0] - 1.25 * u, hip[1] - 3.4 * u), (x0 + 0.1 * u, hip[1] - 3.9 * u), "Reclines 100–110°", "lm"),
-        ((hip[0] + 0.8 * u, hip[1] - 1.25 * u), (x1 - 0.1 * u, hip[1] - 2.2 * u), "Armrests at elbow height", "rm"),
-        ((hip[0] + 1.75 * u, hip[1] + 0.55 * u), (x1 - 0.1 * u, hip[1] - 0.6 * u), "2–3 finger gap at knees", "rm"),
-        ((hip[0] + 0.5 * u, floor - 1.2 * u), (x1 - 0.1 * u, floor - 1.0 * u), "Height: feet flat", "rm"),
-    ]
-    for i, (p, lab, t, anc) in enumerate(pts):
-        b = callout(img, p, lab, t, f, col=NAVY if i % 2 else TEAL, anchor=anc)
+def sc_chair_check(pin, top):
+    out = []
+    u = 118
+    floor_y = ART_BOTTOM - 30
+    hip = (390, floor_y - 1.9 * u - 0.2 * u)
+    out.append(floor(L, R, floor_y))
+    out.append(chair_side(hip, u, floor_y, lumbar=TERRA_SOFT, arm=True, recline=10, back_h=3.3))
+    s, j = seated(hip, u, pose(SIT, thoracic=-6, neck=2, uarm=180, farm=92))
+    out.append(s)
+    out.append(callout((hip[0] - 0.62 * u, hip[1] - 0.85 * u), (L, top + 40), "Lumbar support that adjusts", num=1))
+    out.append(callout((hip[0] - 1.25 * u, hip[1] - 2.6 * u), (L, top + 100), "Backrest reclines 100–110°", num=2))
+    out.append(callout((hip[0] + 0.8 * u, hip[1] - 0.95 * u), (R - 300, top + 40), "Armrests at elbow height", num=3))
+    out.append(callout((hip[0] + 1.55 * u, hip[1] + 0.55 * u), (R - 300, hip[1] - 20), "2–3 fingers behind knees", num=4))
+    out.append(callout((hip[0] + 0.45 * u, floor_y - 0.9 * u), (R - 300, floor_y - 120), "Height lets feet rest flat", num=5))
+    return "".join(out)
 
 
-def sc_stand_vs_sit(img, box, pin):
-    """Pin 11."""
-    x0, y0, x1, y1 = box
-    bl, br = two_up((x0, y0, x1, y1 - 190))
-    panel(img, bl, panel_bg(BG["sky"]))
-    panel(img, br, panel_bg(BG["sky"]))
-    # sitting
-    inner = (bl[0] + 10, bl[1] + 170, bl[2] - 10, bl[3] - 20)
-    u = fit_u(inner, 5.5, 8.6)
-    pal = person(shirt=TEAL, pants=NAVY, skin=1, hair=0)
-    desk_scene(img, inner, pal, u=u, cx=inner[0] + 1.25 * u, show_floor=True)
-    ImageDraw.Draw(img).text(((bl[0] + bl[2]) / 2, bl[1] + 70), "SITTING", font=font("ExtraBold", 58), fill=NAVY, anchor="mm")
-    text_block(img, (bl[0] + bl[2]) / 2, bl[1] + 110, "Support your lower back", font("Medium", 36), INK, 800)
-    # standing
-    inner = (br[0] + 10, br[1] + 170, br[2] - 10, br[3] - 20)
-    u2 = fit_u(inner, 5.5, 9.6)
-    pal2 = person(shirt=CORAL, pants=NAVY, skin=3, hair=2)
-    floor = inner[3] - 0.2 * u2
-    cx = inner[0] + 1.5 * u2
-    floor_line(img, inner[0] + 0.1 * u2, inner[2] - 0.1 * u2, floor, shade(STEEL_LIGHT, 1.2))
-    hip = (cx, floor - 4.15 * u2 - 0.28 * u2)
-    sh_y = hip[1] - 2.8 * u2
-    dtop = sh_y + 1.45 * u2 + 0.12 * u2
-    side_desk(img, cx + 1.25 * u2, inner[2] - 0.1 * u2, dtop, floor, u2)
-    seg(img, (inner[2] - 0.45 * u2, dtop), (inner[2] - 0.45 * u2, floor), 0.3 * u2, STEEL)
-    side_monitor(img, cx + 3.3 * u2, dtop, u2, sh_y - 1.03 * u2)
-    rrect(img, (cx + 1.35 * u2, dtop - 0.14 * u2, cx + 2.25 * u2, dtop + 0.02 * u2), 0.05 * u2, fill=STEEL)
-    side_figure(img, hip, u2, pal2, **dict(STAND, uarm=176, farm=96, fuarm=176, ffarm=96))
-    ImageDraw.Draw(img).text(((br[0] + br[2]) / 2, br[1] + 70), "STANDING", font=font("ExtraBold", 58), fill=NAVY, anchor="mm")
-    text_block(img, (br[0] + br[2]) / 2, br[1] + 110, "Stack joints, soft knees", font("Medium", 36), INK, 800)
-    b = pill(img, ((x0 + x1) / 2, y1 - 80), "Best: switch every 30–60 minutes", LBL(46), fg=WHITE, bg=TEAL, pad=(40, 24))
+def sc_stand_vs_sit(pin, top):
+    out = []
+    floor_y = ART_BOTTOM - 150
+    u = 74
+    mid = W / 2
+    out.append(line((mid, top + 20), (mid, floor_y + 20), sw=0.9, extra='opacity="0.45"'))
+    out.append(floor(L, mid - 30, floor_y))
+    out.append(floor(mid + 30, R, floor_y))
+    s, j, g = seated_desk(u, L + 1.0 * u, floor_y, desk_x1=mid - 40, show_floor=False)
+    out.append(s)
+    hip = (mid + 1.0 * u + 30, floor_y - 3.85 * u - 0.2 * u)
+    dtop = hip[1] - 0.82 * u
+    out.append(desk_side(hip[0] + 1.25 * u, R, dtop, floor_y, u))
+    fig, j2 = side_figure(hip, u, **pose(STAND, uarm=178, farm=97, hand=-8, fuarm=176, ffarm=97, fhand=-8))
+    m, st, sb = monitor_side(hip[0] + 4.0 * u, dtop, u, j2["eye"][1] - 0.05 * u)
+    out.append(m)
+    out.append(keyboard_side(hip[0] + 1.5 * u, hip[0] + 2.35 * u, dtop, u))
+    out.append(fig)
+    out.append(caption(L, top + 36, "Sitting", "Support the lower back"))
+    out.append(caption(mid + 30, top + 36, "Standing", "Stack joints, soft knees"))
+    out.append(text(W / 2, floor_y + 88, "The best posture is your next posture.", size=38, family=SERIF, fill=INK,
+                    anchor="middle", italic=True))
+    out.append(text(W / 2, floor_y + 126, "SWITCH EVERY 30–60 MINUTES", size=14, family=MONO, fill=TERRA, anchor="middle", ls=3))
+    return "".join(out)
 
 
-def sc_lumbar(img, box, pin):
-    """Pin 12."""
-    x0, y0, x1, y1 = box
-    pal = person(shirt=MUSTARD, pants=NAVY, skin=1, hair=1)
-    u = fit_u(box, 7.2, 8.1)
-    floor = y1 - 0.25 * u
-    hip = (x0 + 2.6 * u, floor - 2.4 * u)
-    floor_line(img, x0 + 0.2 * u, x1 - 0.2 * u, floor, shade(STEEL_LIGHT, 1.2))
-    side_chair(img, hip, u, floor, col=STEEL, lumbar=TEAL, back_h=3.3)
-    j = side_figure(img, hip, u, pal, lumbar=4, thoracic=-4, neck=4, uarm=178, farm=100)
-    lp = (hip[0] - 0.5 * u, hip[1] - 0.95 * u)
-    circle(img, lp, 1.05 * u, outline=TEAL, width=12)
-    f = LBL(40)
-    callout(img, (lp[0] - 1.0 * u, lp[1] - 0.3 * u), (x0 + 1.35 * u, y0 + 0.5 * u), "Fills the curve of your lower back", f, col=TEAL, anchor="lm")
-    callout(img, j["shoulder"], (x1 - 0.2 * u, j["shoulder"][1] - 0.8 * u), "Shoulders stay back", f, anchor="rm")
-    callout(img, (hip[0] + 0.3 * u, hip[1]), (x1 - 0.2 * u, hip[1] - 0.3 * u), "Hips all the way back", f, anchor="rm")
-    callout(img, j["toe"], (x1 - 0.2 * u, floor - 0.65 * u), "Feet flat", f, col=TEAL, anchor="rm")
+def sc_lumbar(pin, top):
+    out = []
+    u = 118
+    floor_y = ART_BOTTOM - 30
+    hip = (390, floor_y - 1.9 * u - 0.2 * u)
+    out.append(floor(L, R, floor_y))
+    out.append(chair_side(hip, u, floor_y, lumbar=TERRA, back_h=3.0))
+    s, j = seated(hip, u, pose(SIT, lumbar=4, thoracic=-4, uarm=180, farm=100))
+    out.append(s)
+    lp = (hip[0] - 0.6 * u, hip[1] - 0.75 * u)
+    out.append(circle(lp, 1.1 * u, stroke=TERRA, sw=1.3))
+    out.append(circle(lp, 1.1 * u + 9, stroke=TERRA, sw=0.8, extra='opacity=".5"'))
+    out.append(callout((lp[0] - 1.1 * u, lp[1]), (L, top + 40), "Fills the curve of the lower back", num=1))
+    out.append(callout(j["shoulder"], (R - 280, top + 40), "Shoulders settle back", num=2))
+    out.append(callout((hip[0] + 0.2 * u, hip[1]), (R - 280, hip[1] - 60), "Hips all the way back", num=3))
+    out.append(callout(j["toe"], (R - 280, floor_y - 60), "Feet flat", num=4))
+    return "".join(out)
 
 
-def sc_laptop(img, box, pin):
-    """Pin 15: laptop flat vs on a stand."""
-    x0, y0, x1, y1 = box
-    mid = (y0 + y1) / 2
-    top = (x0, y0, x1, mid - 20)
-    bot = (x0, mid + 20, x1, y1)
-    panel(img, top, CORAL_LIGHT)
-    panel(img, bot, TEAL_LIGHT)
-    pal = person(shirt=SAND, pants=NAVY, skin=0, hair=1)
-    for b, good in ((top, False), (bot, True)):
-        inner = (b[0] + 40, b[1] + 30, b[2] - 20, b[3] - 10)
-        u = fit_u(inner, 7.4, 7.9)
-        if good:
-            j = desk_scene(img, inner, person(shirt=TEAL, pants=NAVY, skin=0, hair=1), u=u, laptop="stand", monitor=None,
-                           cx=inner[0] + 2.0 * u, show_floor=False)
-            hinge, st = j["laptop"]
-            dashed(img, j["eye"], (st[0] - 0.1 * u, j["eye"][1] + 0.1 * u), TEAL, w=7)
-        else:
-            j = desk_scene(img, inner, pal, u=u, laptop="desk", monitor=None, posture=dict(lumbar=-10, thoracic=30, neck=58),
-                           arms=dict(uarm=150, farm=100), cx=inner[0] + 2.0 * u, show_floor=False)
-            hinge, st = j["laptop"]
-            dashed(img, j["eye"], ((hinge[0] + st[0]) / 2, (hinge[1] + st[1]) / 2), CORAL, w=7)
-            glow(img, j["neck"], 0.7 * u, alpha=140)
-        verdict(img, (b[2] - 360, b[1] + 80), good, "Screen raised + keyboard" if good else "Looking down all day", fnt=LBL(40))
+def sc_laptop(pin, top):
+    out = []
+    mid_y = (top + ART_BOTTOM) / 2
+    u = 70
+    f1 = mid_y - 30
+    s, j, g = seated_desk(u, L + 1.1 * u, f1, pose(SLUMP, neck=58, uarm=150, farm=102), monitor=None,
+                          laptop="desk", desk_x1=R - 40)
+    out.append(s)
+    out.append(line(j["eye"], lerp(g["laptop_hinge"], g["laptop_top"], 0.5), stroke=TERRA, sw=1.2, dash="1 6"))
+    out.append(strain(j["neck"], 26))
+    out.append(caption(R, top + 30, "Flat on the desk", "Eyes and head drop", anchor="end"))
+    out.append(hair(mid_y + 10))
+    f2 = ART_BOTTOM - 20
+    s, j2, g2 = seated_desk(u, L + 1.1 * u, f2, monitor=None, laptop="stand", desk_x1=R - 40)
+    out.append(s)
+    out.append(line(j2["eye"], g2["laptop_top"], stroke=SAGE, sw=1.2, dash="1 6"))
+    out.append(caption(R, mid_y + 60, "Raised + keyboard", "Screen near eye level", anchor="end", tag_col=SAGE))
+    return "".join(out)
 
 
-def sc_wall_test(img, box, pin):
-    """Pin 18."""
-    x0, y0, x1, y1 = box
-    u = fit_u((x0, y0, x0 + (x1 - x0) * 0.5, y1), 3.6, 9.2)
-    floor = y1 - 0.2 * u
-    wall_x = x0 + 0.9 * u
-    rrect(img, (x0, y0, wall_x, floor), 20, fill=shade(BG["sage"], 0.88))
-    floor_line(img, x0, x0 + 4.6 * u, floor, shade(STEEL_LIGHT, 1.2))
-    pal = person(shirt=TEAL, pants=NAVY, skin=2, hair=0)
-    hip = (wall_x + 0.52 * u, floor - 4.15 * u - 0.28 * u)
-    j = side_figure(img, hip, u, pal, **dict(STAND, lumbar=0, thoracic=-4, neck=6))
-    pts = [(wall_x, j["head"][1]), (wall_x, j["shoulder"][1] + 0.3 * u), (wall_x, hip[1]), (wall_x, j["ankle"][1] + 0.05 * u)]
-    for p in pts:
-        circle(img, p, 0.16 * u, fill=CORAL)
-    # hand gap
-    gap = (wall_x + 0.12 * u, hip[1] - 1.0 * u)
-    rrect(img, (gap[0] - 0.08 * u, gap[1] - 0.3 * u, gap[0] + 0.2 * u, gap[1] + 0.3 * u), 0.1 * u, fill=MUSTARD)
-    steps = pin["steps"]
-    sx = x0 + (x1 - x0) * 0.47
-    sy = y0 + 30
-    step_h = (y1 - y0 - 60) / len(steps)
-    for i, (h, t) in enumerate(steps):
-        b = (sx, sy + i * step_h, x1, sy + i * step_h + step_h - 34)
-        rrect(img, b, 36, fill=WHITE)
-        num_badge(img, (b[0] + 70, b[1] + 72), 42, i + 1, col=CORAL if i < len(steps) - 1 else TEAL)
-        ImageDraw.Draw(img).text((b[0] + 130, b[1] + 72), h, font=font("Bold", 52), fill=NAVY, anchor="lm")
-        text_block(img, b[0] + 44, b[1] + 140, t, font("Medium", 44), INK, b[2] - b[0] - 80, align="left")
+def sc_wall_test(pin, top):
+    out = []
+    u = 92
+    floor_y = ART_BOTTOM - 20
+    wall_x = L + 70
+    out.append(rect(L, top + 10, wall_x - L, floor_y - top - 10, fill=PAPER_DEEP))
+    out.append(line((wall_x, top + 10), (wall_x, floor_y), sw=1.6))
+    out.append(floor(L, L + 380, floor_y))
+    hip = (wall_x + 0.5 * u, floor_y - 3.85 * u - 0.2 * u)
+    s, j = side_figure(hip, u, **pose(STAND, thoracic=-3, neck=5))
+    out.append(s)
+    for p in [(wall_x, j["head"][1] - 0.15 * u), (wall_x, j["shoulder"][1] + 0.2 * u), (wall_x, hip[1] + 0.1 * u),
+              (wall_x, j["ankle"][1] + 0.1 * u)]:
+        out.append(circle(p, 6, fill=TERRA))
+    gy = hip[1] - 0.95 * u
+    out.append(dimension((wall_x, gy), (wall_x + 0.34 * u, gy), None, col=TERRA, sw=1.3))
+    x0 = 470
+    for i, (h, t) in enumerate(pin["steps"]):
+        yy = top + 30 + i * 205
+        out.append(text(x0, yy + 20, f"STEP {i + 1:02d}", size=14, family=MONO, fill=TERRA, ls=3))
+        out.append(text(x0, yy + 68, h, size=42, family=SERIF, fill=INK))
+        out.append(text(x0, yy + 108, t, size=23, fill=BODY))
+        out.append(hair(yy + 150, x0, R))
+    return "".join(out)
 
 
-def sc_chair_tips(img, box, pin):
-    """Pin 19: office chair posture tips (no desk)."""
-    x0, y0, x1, y1 = box
-    illo = (x0, y0, x0 + (x1 - x0) * 0.54, y1)
-    pal = person(shirt=NAVY, pants=STEEL, skin=3, hair=2)
-    u = fit_u(illo, 4.3, 8.0)
-    floor = y1 - 0.2 * u
-    hip = (x0 + 1.3 * u, floor - 2.4 * u)
-    floor_line(img, x0 + 0.1 * u, illo[2], floor, shade(STEEL_LIGHT, 1.2))
-    side_chair(img, hip, u, floor, col=STEEL, arm=True, lumbar=MUSTARD, back_h=3.4)
-    j = side_figure(img, hip, u, pal, lumbar=2, thoracic=-3, neck=5, uarm=178, farm=92)
-    items = pin["tips"]
-    tx = x0 + (x1 - x0) * 0.57
-    ty0 = floor - 7.4 * u
-    th = (y1 - ty0 - 30) / len(items)
-    for i, t in enumerate(items):
-        b = (tx, ty0 + i * th, x1, ty0 + i * th + th - 30)
-        rrect(img, b, 34, fill=WHITE)
-        check_badge(img, (b[0] + 60, (b[1] + b[3]) / 2), 34, col=TEAL)
-        lines = wrap(t, LBL(38), b[2] - b[0] - 140)
-        text_block(img, b[0] + 112, (b[1] + b[3]) / 2 - len(lines) * 27, t, LBL(38), NAVY, b[2] - b[0] - 140, align="left")
+def sc_chair_tips(pin, top):
+    out = []
+    u = 104
+    floor_y = ART_BOTTOM - 30
+    hip = (L + 1.05 * u, floor_y - 1.9 * u - 0.2 * u)
+    out.append(floor(L, 470, floor_y))
+    out.append(chair_side(hip, u, floor_y, lumbar=TERRA_SOFT, arm=True, back_h=2.9))
+    s, j = seated(hip, u, pose(SIT, uarm=178, farm=92))
+    out.append(s)
+    x0 = 540
+    for i, t in enumerate(pin["tips"]):
+        yy = top + 60 + i * 166
+        out.append(text(x0, yy, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
+        words = t.split()
+        out.append(text(x0, yy + 48, " ".join(words[:3]), size=36, family=SERIF, fill=INK))
+        if len(words) > 3:
+            out.append(text(x0, yy + 88, " ".join(words[3:]), size=36, family=SERIF, fill=INK))
+        out.append(hair(yy + 118, x0, R))
+    return "".join(out)
 
 
-# ---- top-down scenes
-def td_person(img, c, u, pal, arms_to=None):
-    """Top-down person at c (head centre) facing up."""
-    seg(img, (c[0] - 1.05 * u, c[1] + 0.35 * u), (c[0] + 1.05 * u, c[1] + 0.35 * u), 0.9 * u, pal["shirt"])
-    if arms_to:
-        for s, tgt in zip((-1, 1), arms_to):
-            sh = (c[0] + s * 1.1 * u, c[1] + 0.35 * u)
-            el = (c[0] + s * 1.2 * u, c[1] - 0.55 * u)
-            seg(img, sh, el, 0.42 * u, pal["shirt"])
-            seg(img, el, tgt, 0.34 * u, pal["skin"])
-            circle(img, tgt, 0.2 * u, fill=pal["skin"])
-    circle(img, c, 0.55 * u, fill=pal["hair"])
+# ---- plan views
+def kb_plan(x, y, w, h):
+    out = [rect(x, y, w, h, rx=6, fill=PAPER, stroke=LINE, sw=1.8)]
+    cols, rws = 14, 4
+    kw = (w - 16) / cols
+    kh = (h - 16) / rws
+    for r in range(rws):
+        for c in range(cols):
+            out.append(rect(x + 8 + c * kw + 1.5, y + 8 + r * kh + 1.5, kw - 3, kh - 3, rx=2, stroke=LINE, sw=0.8,
+                            extra='opacity=".7"'))
+    return "".join(out)
 
 
-def td_keyboard(img, c, u, w=3.0):
-    b = (c[0] - w / 2 * u, c[1] - 0.45 * u, c[0] + w / 2 * u, c[1] + 0.45 * u)
-    rrect(img, b, 0.12 * u, fill=STEEL)
-    for r in range(4):
-        for k in range(int(w * 4)):
-            kx = b[0] + 0.12 * u + k * (w * u - 0.24 * u) / int(w * 4)
-            ky = b[1] + 0.12 * u + r * 0.17 * u
-            rrect(img, (kx, ky, kx + (w * u - 0.24 * u) / int(w * 4) - 6, ky + 0.13 * u), 4, fill=STEEL_LIGHT)
-    return b
+def sc_topdown_setup(pin, top):
+    out = []
+    u = 60
+    cx = W / 2
+    dtop = top + 110
+    dbot = dtop + 420
+    out.append(rect(L + 20, dtop, R - L - 40, dbot - dtop, rx=8, fill=PAPER, stroke=LINE, sw=2))
+    out.append(rect(cx - 190, dtop + 45, 380, 22, rx=4, fill=INK))
+    out.append(rect(cx - 55, dtop + 67, 110, 44, rx=8, stroke=LINE, sw=1.6))
+    out.append(kb_plan(cx - 160, dtop + 250, 300, 96))
+    out.append(f'<ellipse cx="{fmt(cx + 200)}" cy="{fmt(dtop + 298)}" rx="24" ry="36" fill="{PAPER}" stroke="{LINE}" stroke-width="1.8"/>')
+    out.append(circle((R - 110, dtop + 90), 34, stroke=LINE, sw=1.8))
+    out.append(circle((R - 110, dtop + 90), 10, fill=TERRA))
+    for a in range(0, 360, 45):
+        p = add((L + 110, dtop + 95), a, 26)
+        out.append(circle(p, 16, fill=SAGE_SOFT, stroke=SAGE, sw=1.4))
+    out.append(circle((R - 120, dtop + 300), 22, stroke=LINE, sw=1.8))
+    out.append(rect(cx - 90, dbot + 70, 180, 150, rx=40, fill=PAPER, stroke=LINE, sw=2))
+    out.append(path(f"M{fmt(cx - 105)},{fmt(dbot + 225)} Q{fmt(cx)},{fmt(dbot + 265)} {fmt(cx + 105)},{fmt(dbot + 225)}", stroke=LINE, sw=10))
+    out.append(top_figure((cx, dbot + 95), u, arms_to=[(cx - 70, dtop + 330), (cx + 200, dtop + 330)]))
+    out.append(dimension((R - 30, dtop + 56), (R - 30, dbot + 70), "ARM'S LENGTH", text_side=1))
+    out.append(callout((cx - 190, dtop + 56), (L, top + 40), "Monitor centred", num=1))
+    out.append(callout((R - 110, dtop + 90), (R - 320, top + 40), "Light from the side", num=2))
+    out.append(callout((cx - 160, dtop + 330), (L, dbot + 120), "Keyboard in line", num=3))
+    out.append(callout((cx + 200, dtop + 334), (R - 290, dbot + 120), "Mouse close by", num=4))
+    out.append(callout((cx, dbot + 225), (L, ART_BOTTOM - 20), "Chair tucked in", num=5))
+    return "".join(out)
 
 
-def td_mouse(img, c, u):
-    ImageDraw.Draw(img).ellipse([c[0] - 0.24 * u, c[1] - 0.38 * u, c[0] + 0.24 * u, c[1] + 0.38 * u], fill=STEEL)
-    seg(img, (c[0], c[1] - 0.36 * u), (c[0], c[1] - 0.1 * u), 4, STEEL_LIGHT)
+def sc_topdown_keyboard(pin, top):
+    out = []
+    u = 78
+    cx = W / 2
+    dtop = top + 90
+    dbot = dtop + 460
+    out.append(rect(L + 20, dtop, R - L - 40, dbot - dtop, rx=8, fill=PAPER, stroke=LINE, sw=2))
+    out.append(kb_plan(cx - 190, dtop + 250, 340, 110))
+    mouse = (cx + 215, dtop + 305)
+    out.append(f'<ellipse cx="{fmt(mouse[0])}" cy="{fmt(mouse[1])}" rx="26" ry="40" fill="{PAPER}" stroke="{LINE}" stroke-width="1.8"/>')
+    out.append(rect(cx - 190, dtop + 372, 340, 36, rx=18, fill=TERRA_SOFT))
+    hc = (cx, dbot + 150)
+    out.append(top_figure(hc, u, arms_to=[(cx - 80, dtop + 340), (mouse[0], mouse[1] + 30)]))
+    out.append(line((cx - 20, dtop + 30), (cx - 20, hc[1] - 60), stroke=TERRA, sw=1.3, dash="3 6"))
+    out.append(callout((cx - 20, dtop + 60), (L, top + 40), "Centre it on your body", num=1))
+    out.append(callout((mouse[0], mouse[1] - 40), (R - 290, top + 40), "Mouse right beside it", num=2))
+    out.append(callout((cx - 190, dtop + 390), (L, dbot + 60), "Wrists straight", num=3))
+    out.append(callout((cx - 1.0 * u, hc[1] - 0.5 * u), (L, ART_BOTTOM - 20), "Elbows by your sides", num=4))
+    out.append(callout((cx + 1.0 * u, hc[1] + 0.3 * u), (R - 270, ART_BOTTOM - 20), "Shoulders relaxed", num=5))
+    return "".join(out)
 
 
-def td_plant(img, c, u):
-    circle(img, c, 0.42 * u, fill=CORAL)
-    for a in range(0, 360, 60):
-        p = add(c, a, 0.42 * u)
-        ImageDraw.Draw(img).ellipse([p[0] - 0.22 * u, p[1] - 0.22 * u, p[0] + 0.22 * u, p[1] + 0.22 * u], fill=PLANT)
-    circle(img, c, 0.2 * u, fill=shade(PLANT, 0.8))
-
-
-def td_mug(img, c, u):
-    circle(img, c, 0.3 * u, fill=WHITE)
-    circle(img, c, 0.22 * u, fill=(120, 80, 60))
-    rrect(img, (c[0] + 0.25 * u, c[1] - 0.08 * u, c[0] + 0.45 * u, c[1] + 0.08 * u), 0.06 * u, fill=WHITE)
-
-
-def sc_topdown_setup(img, box, pin):
-    """Pin 8: ergonomic desk setup from above."""
-    x0, y0, x1, y1 = box
-    u = fit_u(box, 8.4, 9.6)
-    cx = (x0 + x1) / 2
-    dtop = y0 + 1.6 * u
-    dbot = dtop + 4.2 * u
-    rrect(img, (cx - 4.0 * u, dtop, cx + 4.0 * u, dbot), 0.3 * u, fill=WOOD)
-    # monitor
-    rrect(img, (cx - 1.9 * u, dtop + 0.45 * u, cx + 1.9 * u, dtop + 0.75 * u), 0.1 * u, fill=(40, 44, 54))
-    rrect(img, (cx - 0.5 * u, dtop + 0.7 * u, cx + 0.5 * u, dtop + 1.2 * u), 0.1 * u, fill=STEEL_LIGHT)
-    kb = td_keyboard(img, (cx - 0.25 * u, dtop + 2.85 * u), u, w=2.8)
-    td_mouse(img, (cx + 1.65 * u, dtop + 2.85 * u), u)
-    td_plant(img, (cx - 3.3 * u, dtop + 0.8 * u), u)
-    td_mug(img, (cx + 3.1 * u, dtop + 2.3 * u), u)
-    # lamp
-    circle(img, (cx + 3.2 * u, dtop + 0.8 * u), 0.4 * u, fill=MUSTARD)
-    circle(img, (cx + 3.2 * u, dtop + 0.8 * u), 0.18 * u, fill=NAVY)
-    # chair
-    rrect(img, (cx - 1.3 * u, dbot + 0.35 * u, cx + 1.3 * u, dbot + 2.4 * u), 0.5 * u, fill=STEEL)
-    rrect(img, (cx - 1.5 * u, dbot + 2.2 * u, cx + 1.5 * u, dbot + 2.7 * u), 0.25 * u, fill=shade(STEEL, 0.75))
-    pal = person(shirt=TEAL, skin=1, hair=0)
-    td_person(img, (cx, dbot + 1.0 * u), u, pal, arms_to=[(cx - 0.95 * u, dtop + 3.05 * u), (cx + 0.6 * u, dtop + 3.05 * u)])
-    # distance marker
-    arrow(img, (cx + 4.35 * u, dbot + 0.9 * u), (cx + 4.35 * u, dtop + 0.65 * u), NAVY, w=10, head=34)
-    arrow(img, (cx + 4.35 * u, dtop + 0.65 * u), (cx + 4.35 * u, dbot + 0.9 * u), NAVY, w=10, head=34)
-    f = LBL(38)
-    callout(img, (cx - 1.9 * u, dtop + 0.6 * u), (x0 + 1.6 * u, y0 + 0.35 * u), "Monitor centred, at eye level", f, col=TEAL)
-    callout(img, (cx + 3.2 * u, dtop + 0.8 * u), (x1 - 1.6 * u, y0 + 0.35 * u), "Light from the side", f)
-    pill(img, (cx + 4.2 * u, (dtop + dbot) / 2 + 0.5 * u), "Arm's length", font("Bold", 34), fg=WHITE, bg=NAVY, pad=(16, 10), anchor="rm")
-    callout(img, (kb[0], kb[3]), (x0 + 1.4 * u, dbot + 1.35 * u), "Keyboard in line with you", f, col=TEAL)
-    callout(img, (cx + 1.65 * u, dtop + 3.2 * u), (x1 - 1.6 * u, dbot + 1.35 * u), "Mouse close by", f)
-    callout(img, (cx, dbot + 2.45 * u), ((x0 + x1) / 2, y1 - 0.25 * u), "Chair tucked in, elbows at your sides", f, col=NAVY)
-
-
-def sc_topdown_keyboard(img, box, pin):
-    """Pin 20: keyboard & mouse placement."""
-    x0, y0, x1, y1 = box
-    u = fit_u(box, 7.6, 9.0)
-    cx = (x0 + x1) / 2
-    dtop = y0 + 0.9 * u
-    dbot = dtop + 3.6 * u
-    rrect(img, (x0 + 0.2 * u, dtop, x1 - 0.2 * u, dbot), 0.3 * u, fill=WOOD)
-    kb = td_keyboard(img, (cx - 0.3 * u, dtop + 2.35 * u), u, w=2.6)
-    mouse = (cx + 1.55 * u, dtop + 2.4 * u)
-    td_mouse(img, mouse, u)
-    rrect(img, (kb[0], kb[3] + 0.12 * u, kb[2], kb[3] + 0.45 * u), 0.15 * u, fill=MUSTARD)
-    pal = person(shirt=CORAL, skin=0, hair=1)
-    hc = (cx, dbot + 1.55 * u)
-    td_person(img, hc, u, pal, arms_to=[(cx - 0.75 * u, dtop + 2.55 * u), (mouse[0], mouse[1] + 0.35 * u)])
-    dashed(img, (cx, dtop + 0.3 * u), (cx, hc[1] - 0.6 * u), TEAL, w=7)
-    f = LBL(38)
-    callout(img, (cx, dtop + 0.6 * u), (x0 + 1.9 * u, y0 + 0.2 * u), "Centre on your body", f, col=TEAL)
-    callout(img, (mouse[0], mouse[1] - 0.4 * u), (x1 - 1.7 * u, y0 + 0.2 * u), "Mouse right beside it", f)
-    callout(img, (kb[0] + 0.3 * u, kb[3] + 0.3 * u), (x0 + 1.7 * u, dbot + 0.75 * u), "Wrists straight", f, col=TEAL)
-    callout(img, (cx - 1.2 * u, hc[1] - 0.5 * u), (x0 + 1.7 * u, y1 - 0.9 * u), "Elbows by your sides", f)
-    callout(img, (cx + 1.2 * u, hc[1] - 0.5 * u), (x1 - 1.7 * u, y1 - 0.9 * u), "Shoulders relaxed", f, col=TEAL)
-    # side inset: height
-    pill(img, ((x0 + x1) / 2, y1 - 0.2 * u), "Keys at elbow height, not higher", LBL(40), fg=WHITE, bg=NAVY, pad=(34, 18))
-
-
-def sc_flatlay(img, box, pin):
-    """Pin 29: what helps posture at a desk — flat lay of items."""
-    x0, y0, x1, y1 = box
-    rrect(img, box, 44, fill=WOOD)
+def sc_flatlay(pin, top):
+    out = []
     items = pin["items"]
-    cols, rows = 2, 3
-    cw = (x1 - x0) / cols
-    rh = (y1 - y0) / rows
-    f = LBL(38)
-    for i, (kind, label) in enumerate(items):
+    cols, rws = 2, 3
+    cw = (R - L) / cols
+    rh = (ART_BOTTOM - top - 10) / rws
+    out.append(line((L + cw, top + 10), (L + cw, ART_BOTTOM), sw=0.9, extra='opacity="0.45"'))
+    for i in range(1, rws):
+        out.append(hair(top + 10 + rh * i))
+    for i, (kind, lab) in enumerate(items):
         r, c = divmod(i, cols)
-        cc = (x0 + cw * (c + 0.5), y0 + rh * r + rh * 0.44)
-        u = min(cw, rh) / 5.2
+        x0 = L + c * cw
+        y0 = top + 10 + r * rh
+        cc = (x0 + cw / 2, y0 + rh / 2 - 6)
         if kind == "lumbar":
-            ImageDraw.Draw(img).rounded_rectangle([cc[0] - 1.7 * u, cc[1] - 0.9 * u, cc[0] + 1.7 * u, cc[1] + 0.9 * u], radius=0.9 * u, fill=TEAL)
-            seg(img, (cc[0] - 2.2 * u, cc[1]), (cc[0] - 1.6 * u, cc[1]), 0.16 * u, NAVY)
-            seg(img, (cc[0] + 1.6 * u, cc[1]), (cc[0] + 2.2 * u, cc[1]), 0.16 * u, NAVY)
+            out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="118" ry="62" fill="{TERRA}"/>')
+            out.append(path(f"M{fmt(cc[0]-118)},{fmt(cc[1])} C{fmt(cc[0]-60)},{fmt(cc[1]-28)} {fmt(cc[0]+60)},{fmt(cc[1]-28)} {fmt(cc[0]+118)},{fmt(cc[1])}",
+                            stroke=PAPER, sw=1.2, extra='opacity=".5"'))
+            out.append(line((cc[0] - 175, cc[1]), (cc[0] - 118, cc[1]), sw=2.4))
+            out.append(line((cc[0] + 118, cc[1]), (cc[0] + 175, cc[1]), sw=2.4))
         elif kind == "laptop_stand":
-            rrect(img, (cc[0] - 1.6 * u, cc[1] - 1.0 * u, cc[0] + 1.6 * u, cc[1] + 1.0 * u), 0.2 * u, fill=STEEL_LIGHT)
-            rrect(img, (cc[0] - 1.3 * u, cc[1] - 0.75 * u, cc[0] + 1.3 * u, cc[1] + 0.75 * u), 0.15 * u, fill=shade(STEEL_LIGHT, 1.18))
+            out.append(rect(cc[0] - 130, cc[1] - 70, 260, 140, rx=10, stroke=LINE, sw=2))
+            out.append(rect(cc[0] - 110, cc[1] - 52, 220, 104, rx=6, fill=INK))
         elif kind == "footrest":
-            rrect(img, (cc[0] - 1.8 * u, cc[1] - 0.8 * u, cc[0] + 1.8 * u, cc[1] + 0.8 * u), 0.5 * u, fill=SAND)
-            for k in range(-3, 4):
-                circle(img, (cc[0] + k * 0.45 * u, cc[1]), 0.1 * u, fill=shade(SAND, 0.85))
+            out.append(rect(cc[0] - 150, cc[1] - 55, 300, 110, rx=40, fill=PAPER, stroke=LINE, sw=2))
+            for q in range(-4, 5):
+                out.append(circle((cc[0] + q * 28, cc[1]), 4, fill=INK_SOFT))
         elif kind == "wrist_rest":
-            td_keyboard(img, (cc[0], cc[1] - 0.45 * u), u * 0.9, w=3.4)
-            rrect(img, (cc[0] - 1.55 * u, cc[1] + 0.25 * u, cc[0] + 1.55 * u, cc[1] + 0.7 * u), 0.2 * u, fill=NAVY)
+            out.append(kb_plan(cc[0] - 150, cc[1] - 70, 300, 80))
+            out.append(rect(cc[0] - 150, cc[1] + 24, 300, 34, rx=17, fill=INK))
         elif kind == "timer":
-            circle(img, cc, 1.05 * u, fill=WHITE)
-            ImageDraw.Draw(img).pieslice([cc[0] - 0.85 * u, cc[1] - 0.85 * u, cc[0] + 0.85 * u, cc[1] + 0.85 * u], 270, 360 + 30, fill=CORAL)
-            circle(img, cc, 0.12 * u, fill=NAVY)
+            out.append(circle(cc, 70, fill=PAPER, stroke=LINE, sw=2))
+            e = add(cc, 110, 58)
+            out.append(path(f"M{fmt(cc[0])},{fmt(cc[1])} L{fmt(cc[0])},{fmt(cc[1]-58)} A58,58 0 0 1 {fmt(e[0])},{fmt(e[1])}Z", fill=TERRA))
+            for a in range(0, 360, 30):
+                out.append(line(add(cc, a, 62), add(cc, a, 68), sw=1.4))
         elif kind == "band":
-            ImageDraw.Draw(img).ellipse([cc[0] - 1.6 * u, cc[1] - 0.8 * u, cc[0] + 1.6 * u, cc[1] + 0.8 * u], outline=CORAL, width=int(0.28 * u))
-            ImageDraw.Draw(img).ellipse([cc[0] - 1.2 * u, cc[1] - 0.55 * u, cc[0] + 1.35 * u, cc[1] + 0.7 * u], outline=MUSTARD, width=int(0.24 * u))
-        elif kind == "monitor_riser":
-            rrect(img, (cc[0] - 1.8 * u, cc[1] - 0.6 * u, cc[0] + 1.8 * u, cc[1] + 0.6 * u), 0.15 * u, fill=shade(WOOD, 0.75))
-            rrect(img, (cc[0] - 1.8 * u, cc[1] - 0.6 * u, cc[0] + 1.8 * u, cc[1] - 0.35 * u), 0.1 * u, fill=shade(WOOD, 0.6))
-        elif kind == "brace":
-            d = ImageDraw.Draw(img)
-            for s in (-1, 1):
-                d.ellipse([cc[0] + s * 0.8 * u - 0.7 * u, cc[1] - 0.8 * u, cc[0] + s * 0.8 * u + 0.7 * u, cc[1] + 0.6 * u], outline=NAVY, width=int(0.22 * u))
-            rrect(img, (cc[0] - 0.35 * u, cc[1] - 0.2 * u, cc[0] + 0.35 * u, cc[1] + 0.9 * u), 0.1 * u, fill=NAVY)
-        pill(img, (cc[0], y0 + rh * r + rh * 0.86), label, f, fg=NAVY, bg=WHITE, pad=(22, 12))
+            out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="130" ry="58" fill="none" stroke="{TERRA}" stroke-width="16"/>')
+            out.append(f'<ellipse cx="{fmt(cc[0] + 16)}" cy="{fmt(cc[1] + 8)}" rx="104" ry="44" fill="none" stroke="{SAGE}" stroke-width="12"/>')
+        out.append(text(x0 + (0 if c == 0 else 24), y0 + 36, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
+        out.append(text(cc[0], y0 + rh - 26, lab, size=32, family=SERIF, fill=INK, anchor="middle"))
+    return "".join(out)
 
 
-def sc_scene_home(img, box, pin):
-    """Pin 21: remote work set-up at home."""
-    x0, y0, x1, y1 = box
-    illo = (x0, y0, x1, y1 - 300)
-    # window
-    u = fit_u(illo, 7.6, 8.2)
-    wx0, wy0 = x1 - 3.4 * u, y0 + 0.2 * u
-    rrect(img, (wx0, wy0, wx0 + 2.8 * u, wy0 + 2.4 * u), 0.15 * u, fill=WHITE)
-    rrect(img, (wx0 + 0.15 * u, wy0 + 0.15 * u, wx0 + 2.65 * u, wy0 + 2.25 * u), 0.1 * u, fill=(190, 222, 240))
-    seg(img, (wx0 + 1.4 * u, wy0 + 0.15 * u), (wx0 + 1.4 * u, wy0 + 2.25 * u), 0.1 * u, WHITE)
-    seg(img, (wx0 + 0.15 * u, wy0 + 1.2 * u), (wx0 + 2.65 * u, wy0 + 1.2 * u), 0.1 * u, WHITE)
-    # wall art
-    rrect(img, (x0 + 0.3 * u, y0 + 0.4 * u, x0 + 1.6 * u, y0 + 1.9 * u), 0.08 * u, fill=MUSTARD)
-    circle(img, (x0 + 0.95 * u, y0 + 1.0 * u), 0.35 * u, fill=CORAL)
-    pal = person(shirt=CORAL, pants=NAVY, skin=2, hair=1)
-    j = desk_scene(img, illo, pal, u=u, laptop="stand", monitor=None, cx=x0 + 2.0 * u, footrest=False)
-    # plant on desk
-    px = j["desk_x1"] - 0.6 * u
-    rrect(img, (px - 0.3 * u, j["desk_top"] - 0.6 * u, px + 0.3 * u, j["desk_top"]), 0.08 * u, fill=CORAL)
-    for a in (-35, 0, 35):
-        seg(img, (px, j["desk_top"] - 0.55 * u), add((px, j["desk_top"] - 0.55 * u), a, 0.8 * u), 0.22 * u, PLANT)
-    tips = pin["tips"]
-    chips_grid(img, (x0, y1 - 280, x1, y1), tips, cols=2, fnt=LBL(38), numbered=False, num_col=TEAL, row_h=120)
+def sc_home(pin, top):
+    out = []
+    u = 92
+    floor_y = ART_BOTTOM - 250
+    wx, wy = R - 300, top + 20
+    out.append(rect(wx, wy, 250, 220, rx=4, stroke=LINE, sw=2))
+    out.append(line((wx + 125, wy), (wx + 125, wy + 220), sw=1.4))
+    out.append(line((wx, wy + 110), (wx + 250, wy + 110), sw=1.4))
+    out.append(path(f"M{fmt(wx + 20)},{fmt(wy + 200)} q30,-40 60,-10 q30,-50 70,-20", stroke=SAGE, sw=1.4))
+    out.append(rect(L + 20, top + 50, 120, 150, rx=2, stroke=LINE, sw=1.6))
+    out.append(circle((L + 80, top + 110), 32, fill=TERRA_SOFT))
+    s, j, g = seated_desk(u, L + 1.25 * u, floor_y, monitor=None, laptop="stand")
+    out.append(s)
+    px = g["dx1"] - 0.6 * u
+    base = (px, g["desk_top"] - 52)
+    out.append(rect(px - 22, g["desk_top"] - 52, 44, 52, rx=6, stroke=LINE, sw=2))
+    for a in (-35, -5, 25):
+        tip = add(base, a, 70)
+        mid = add(lerp(base, tip, 0.5), a + 90, 12)
+        out.append(path(smooth_closed([base, mid, tip, add(lerp(base, tip, 0.5), a - 90, 12)]), fill=SAGE_SOFT, stroke=SAGE, sw=1.2))
+    out.append(rows(L, floor_y + 60, R - L, pin["tips"], gap=50, size=23, two_col=True))
+    return "".join(out)
 
 
-def sc_tall(img, box, pin):
-    """Pin 24: tall person with raised desk & monitor."""
-    x0, y0, x1, y1 = box
-    pal = person(shirt=NAVY, pants=STEEL, skin=1, hair=0)
-    u = fit_u(box, 7.8, 8.9)
-    legs = (1.18, 1.16)
-    j = desk_scene(img, box, pal, u=u, legs=legs, cx=x0 + 2.2 * u)
-    f = LBL(38)
-    top = j["monitor"][0]
-    dashed(img, j["eye"], (top[0], j["eye"][1]), TEAL, w=7)
-    callout(img, top, (x1 - 2.1 * u, y0 + 0.3 * u), "Raise monitor to eye level", f, col=TEAL)
-    callout(img, (j["desk_x0"] + 0.4 * u, j["desk_top"]), (x1 - 1.9 * u, j["desk_top"] - 1.2 * u), "Higher desk surface", f)
-    callout(img, (j["hip"][0] + 1.2 * u, j["hip"][1] + 0.5 * u), (x1 - 1.9 * u, j["floor"] - 1.9 * u), "Deeper seat for long thighs", f, col=TEAL)
-    callout(img, j["knee"], (x1 - 1.9 * u, j["floor"] - 0.7 * u), "Knees ~90°, feet flat", f)
-    # height ruler
-    rx = x0 + 0.35 * u
-    seg(img, (rx, j["head"][1] - 0.6 * u), (rx, j["floor"]), 10, NAVY)
-    for k in range(0, 12):
-        yy = j["floor"] - k * (j["floor"] - j["head"][1] + 0.6 * u) / 11
-        seg(img, (rx, yy), (rx + (0.3 if k % 2 == 0 else 0.18) * u, yy), 6, NAVY)
+def sc_tall(pin, top):
+    out = []
+    u = 96
+    floor_y = ART_BOTTOM - 30
+    s, j, g = seated_desk(u, 290, floor_y, legs=1.16, desk_raise=-0.25)
+    out.append(s)
+    st = g["screen_top"]
+    out.append(line(j["eye"], (st[0], j["eye"][1]), stroke=TERRA, sw=1.2, dash="1 7"))
+    rx = L + 6
+    out.append(line((rx, j["top"]), (rx, floor_y), sw=1.2))
+    for k in range(13):
+        yy = floor_y - k * (floor_y - j["top"]) / 12
+        out.append(line((rx, yy), (rx + (14 if k % 2 == 0 else 8), yy), sw=1.2))
+    out.append(callout(st, (R - 280, top + 36), "Raise the monitor", num=1))
+    out.append(callout((g["dx0"] + 40, g["desk_top"]), (R - 280, g["desk_top"] - 110), "Higher work surface", num=2))
+    out.append(callout((j["hip"][0] + 1.0 * u, j["hip"][1] + 0.4 * u), (R - 300, g["desk_top"] + 190), "Deeper seat, long thighs", num=3))
+    out.append(callout(j["knee"], (R - 280, floor_y - 50), "Knees ~90°, feet flat", num=4))
+    return "".join(out)
 
 
-def sc_student(img, box, pin):
-    """Pin 28."""
-    x0, y0, x1, y1 = box
-    illo = (x0, y0, x1, y1 - 290)
-    pal = person(shirt=MUSTARD, pants=(70, 110, 170), skin=3, hair=2)
-    u = fit_u(illo, 7.4, 8.1)
-    j = desk_scene(img, illo, pal, u=u, monitor=None, book=True, lamp=True, footrest=True, cx=x0 + 2.2 * u,
-                   arms=dict(uarm=172, farm=100))
-    # backpack
-    bx = x0 + 0.5 * u
-    rrect(img, (bx - 0.45 * u, j["floor"] - 1.3 * u, bx + 0.45 * u, j["floor"]), 0.3 * u, fill=CORAL)
-    rrect(img, (bx - 0.3 * u, j["floor"] - 0.7 * u, bx + 0.3 * u, j["floor"] - 0.2 * u), 0.12 * u, fill=shade(CORAL, 0.8))
-    f = LBL(38)
-    callout(img, (j["hip"][0] + 3.0 * u, j["desk_top"] - 1.3 * u), (x1 - 2.1 * u, y0 + 0.3 * u), "Prop books up", f, col=TEAL)
-    callout(img, (j["hip"][0] + 2.1 * u, j["floor"] - 0.3 * u), (x1 - 1.9 * u, j["floor"] - 0.9 * u), "Footrest if feet dangle", f)
-    tips = pin["tips"]
-    chips_grid(img, (x0, y1 - 270, x1, y1), tips, cols=2, fnt=LBL(38), numbered=False, row_h=115)
+def sc_student(pin, top):
+    out = []
+    u = 92
+    floor_y = ART_BOTTOM - 250
+    s, j, g = seated_desk(u, L + 1.25 * u, floor_y, pose(SIT, uarm=172, farm=100), monitor=None, book=True,
+                          lamp=True, footrest=True)
+    out.append(s)
+    out.append(callout((g["hip"][0] + 2.9 * u, g["desk_top"] - 1.25 * u), (R - 260, top + 36), "Prop books up", num=1))
+    out.append(callout((g["hip"][0] + 2.3 * u, floor_y - 0.3 * u), (R - 290, floor_y - 0.9 * u), "Footrest if feet dangle", num=2))
+    out.append(rows(L, floor_y + 60, R - L, pin["tips"], gap=50, size=23, two_col=True))
+    return "".join(out)
 
 
-def sc_wrist(img, box, pin):
-    """Pin 25: wrist angle bent vs neutral (close-up side view)."""
-    x0, y0, x1, y1 = box
-    mid = (y0 + y1) / 2
-    for b, good in (((x0, y0, x1, mid - 20), False), ((x0, mid + 20, x1, y1), True)):
-        panel(img, b, TEAL_LIGHT if good else CORAL_LIGHT)
-        u = (b[3] - b[1]) / 4.6
-        pal = person(shirt=NAVY, skin=1)
-        desk_y = b[3] - 1.2 * u
-        rrect(img, (b[0] + 0.3 * u, desk_y, b[2] - 0.3 * u, desk_y + 0.3 * u), 0.1 * u, fill=WOOD)
-        ex = b[0] + 1.6 * u
+def sc_wrist(pin, top):
+    out = []
+    mid_y = (top + ART_BOTTOM) / 2
+    for good, (y0, y1) in ((False, (top, mid_y - 10)), (True, (mid_y + 10, ART_BOTTOM))):
+        u = 100
+        desk_y = y1 - 90
+        out.append(line((L, desk_y), (R, desk_y), sw=2))
+        out.append(line((L, desk_y + 16), (R, desk_y + 16), sw=1, extra='opacity=".5"'))
+        ex = L + 110
         if good:
-            elbow = (ex, desk_y - 1.05 * u)
-            wrist = (ex + 3.0 * u, desk_y - 0.62 * u)
-            hand = (wrist[0] + 1.0 * u, wrist[1] + 0.12 * u)
-            rrect(img, (wrist[0] - 0.1 * u, desk_y - 0.32 * u, wrist[0] + 1.6 * u, desk_y), 0.08 * u, fill=STEEL)
-            rrect(img, (wrist[0] - 0.9 * u, desk_y - 0.2 * u, wrist[0] - 0.05 * u, desk_y), 0.1 * u, fill=MUSTARD)
+            elbow = (ex, desk_y - 1.0 * u)
+            wrist = (ex + 4.0 * u, desk_y - 0.55 * u)
+            knuckle = (wrist[0] + 0.95 * u, wrist[1] + 0.05 * u)
+            tip = (knuckle[0] + 0.42 * u, knuckle[1] + 0.3 * u)
+            out.append(rect(wrist[0] - 0.05 * u, desk_y - 0.26 * u, 1.9 * u, 0.26 * u, rx=4, fill=PAPER, stroke=LINE, sw=2))
+            out.append(rect(wrist[0] - 1.3 * u, desk_y - 0.18 * u, 1.2 * u, 0.18 * u, rx=0.09 * u, fill=TERRA_SOFT))
         else:
-            elbow = (ex, desk_y - 0.35 * u)
-            wrist = (ex + 3.0 * u, desk_y - 0.3 * u)
-            hand = (wrist[0] + 0.85 * u, wrist[1] - 0.6 * u)
-            polygon(img, [(wrist[0] + 0.1 * u, desk_y), (wrist[0] + 1.9 * u, desk_y), (wrist[0] + 1.9 * u, desk_y - 0.6 * u), (wrist[0] + 0.1 * u, desk_y - 0.25 * u)], STEEL)
-        if good:
-            knuckle = (wrist[0] + 0.85 * u, wrist[1] + 0.05 * u)
-            tip = (knuckle[0] + 0.32 * u, knuckle[1] + 0.26 * u)
-        else:
-            knuckle = (wrist[0] + 0.72 * u, wrist[1] - 0.5 * u)
-            tip = (knuckle[0] + 0.36 * u, knuckle[1] + 0.36 * u)
-        seg(img, (elbow[0] - 0.9 * u, elbow[1] - 0.25 * u), elbow, 0.62 * u, pal["shirt"])
-        seg(img, elbow, wrist, 0.5 * u, pal["skin"])
-        seg(img, wrist, knuckle, 0.46 * u, pal["skin"])
-        seg(img, knuckle, tip, 0.24 * u, pal["skin"])
-        seg(img, (elbow[0] - 0.9 * u, elbow[1] - 0.25 * u), (elbow[0] - 0.2 * u, elbow[1] - 0.05 * u), 0.62 * u, pal["shirt"])
-        # angle guide
-        dashed(img, elbow, (wrist[0] + (wrist[0] - elbow[0]) * 0.45, wrist[1] + (wrist[1] - elbow[1]) * 0.45), TEAL if good else STEEL_LIGHT, w=7)
+            elbow = (ex, desk_y - 0.3 * u)
+            wrist = (ex + 4.0 * u, desk_y - 0.26 * u)
+            knuckle = (wrist[0] + 0.8 * u, wrist[1] - 0.6 * u)
+            tip = (knuckle[0] + 0.45 * u, knuckle[1] + 0.4 * u)
+            out.append(path(f"M{fmt(wrist[0] + 0.15*u)},{fmt(desk_y)} L{fmt(wrist[0] + 2.1*u)},{fmt(desk_y)} "
+                            f"L{fmt(wrist[0] + 2.1*u)},{fmt(desk_y - 0.65*u)} L{fmt(wrist[0] + 0.15*u)},{fmt(desk_y - 0.26*u)}Z",
+                            fill=PAPER, stroke=LINE, sw=2))
+        out.append(path(capsule((elbow[0] - 0.9 * u, elbow[1] - 0.35 * u), 0.3 * u, elbow, 0.26 * u), fill=INK))
+        out.append(path(capsule(elbow, 0.25 * u, wrist, 0.15 * u), fill=INK))
+        out.append(path(capsule(wrist, 0.16 * u, knuckle, 0.14 * u), fill=INK))
+        out.append(path(capsule(knuckle, 0.12 * u, tip, 0.07 * u), fill=INK))
+        dx, dy = wrist[0] - elbow[0], wrist[1] - elbow[1]
+        out.append(line(elbow, (wrist[0] + dx * 0.4, wrist[1] + dy * 0.4), stroke=SAGE if good else TERRA, sw=1.3, dash="3 6"))
         if not good:
-            glow(img, wrist, 0.55 * u, alpha=160)
-        verdict(img, (b[2] - 0.3 * u - 260, b[1] + 70), good, "Neutral, straight wrist" if good else "Wrist bent upward", fnt=LBL(40))
-        ImageDraw.Draw(img).text((b[0] + 50, b[1] + 70), "Forearm + hand in one line" if good else "Keyboard tilted, wrist cocked",
-                                 font=font("Medium", 36), fill=INK, anchor="lm")
+            out.append(strain(wrist, 34))
+        out.append(caption(L, y0 + 44, "Neutral" if good else "Extended",
+                           "Forearm and hand in one line" if good else "Keyboard tilted, wrist cocked up",
+                           tag_col=SAGE if good else TERRA))
+    out.append(hair(mid_y))
+    return "".join(out)
 
 
-def sc_generic_desk(img, box, pin):
-    """Simple annotated desk scene for pins that list tips beneath."""
-    x0, y0, x1, y1 = box
-    illo = (x0, y0, x1, y1 - 290)
-    pal = person(**pin.get("pal", {}))
-    u = fit_u(illo, 7.4, 8.2)
-    j = desk_scene(img, illo, pal, u=u, cx=x0 + 2.2 * u, lumbar=pin.get("lumbar"))
-    chips_grid(img, (x0, y1 - 270, x1, y1), pin["tips"], cols=2, fnt=LBL(38), numbered=False, row_h=115)
-    return j
-
-
-def sc_doorway(img, box, pin):
-    """Pin 16: rounded shoulders - doorway stretch hero + mini tips."""
-    x0, y0, x1, y1 = box
-    illo = (x0, y0, x1, y1 - 300)
-    u = fit_u(illo, 6.4, 9.4)
-    floor = illo[3] - 0.1 * u
-    cx = (x0 + x1) / 2 - 0.3 * u
-    floor_line(img, x0 + 0.2 * u, x1 - 0.2 * u, floor, shade(STEEL_LIGHT, 1.2))
-    # door frame (behind)
-    fx = cx - 1.35 * u
-    rrect(img, (fx - 0.35 * u, illo[1], fx + 0.05 * u, floor), 0.08 * u, fill=WOOD)
-    rrect(img, (fx - 2.6 * u, illo[1], fx - 0.35 * u, floor), 0.08 * u, fill=shade(BG["cream"], 0.93))
-    pal = person(shirt=TEAL, pants=NAVY, skin=1, hair=1)
-    hip = (cx, floor - 4.15 * u - 0.28 * u)
-    j = side_figure(img, hip, u, pal, lumbar=8, thoracic=6, neck=4, thigh=198, shin=182, fthigh=160, fshin=182,
-                    uarm=262, farm=2, fuarm=262, ffarm=2)
-    c = (j["shoulder"][0] + 0.9 * u, j["shoulder"][1] + 0.35 * u)
-    arrow(img, c, (c[0] + 1.0 * u, c[1]), CORAL, w=0.12 * u, head=0.36 * u)
-    f = LBL(38)
-    callout(img, j["wrist"], (x0 + 1.2 * u, illo[1] + 0.4 * u), "Forearms on the frame", f, col=NAVY, anchor="mm")
-    pill(img, (c[0] - 0.1 * u, c[1] + 0.75 * u), "Lean chest through gently", f, fg=WHITE, bg=CORAL, anchor="lm")
-    chips = pin["tips"]
-    chips_grid(img, (x0, y1 - 270, x1, y1), chips, cols=2, fnt=LBL(38), numbered=True, row_h=115)
+def sc_doorway(pin, top):
+    out = []
+    u = 90
+    floor_y = ART_BOTTOM - 250
+    cx = W / 2 - 20
+    fx = cx - 1.45 * u
+    out.append(rect(L, top + 10, fx - L - 18, floor_y - top - 10, fill=PAPER_DEEP))
+    out.append(rect(fx - 18, top + 10, 30, floor_y - top - 10, fill=PAPER, stroke=LINE, sw=2))
+    out.append(floor(L, R, floor_y))
+    s, j = standing(cx, floor_y, u, pose(STAND, lumbar=8, thoracic=6, neck=4, thigh=196, shin=184, fthigh=160, fshin=182,
+                                         uarm=262, farm=2, hand=0, fuarm=262, ffarm=2, fhand=0))
+    out.append(s)
+    c = (j["chest"][0] + 40, j["chest"][1])
+    out.append(arrow(c, (c[0] + 110, c[1])))
+    out.append(callout(j["hand"], (R - 320, top + 40), "Forearms on the frame", num=1))
+    out.append(callout(j["chest"], (R - 320, c[1] + 110), "Lean the chest through", num=2))
+    out.append(text(L, floor_y + 70, "PAIR IT WITH", size=14, family=MONO, fill=TERRA, ls=3))
+    out.append(rows(L, floor_y + 88, R - L, pin["tips"], gap=52, size=24, two_col=True))
+    return "".join(out)
 
 
 SCENES = {
-    "desk_guide": sc_desk_guide,
-    "signs": sc_signs_compare,
-    "forward_head": sc_forward_head,
-    "exercise_grid": sc_exercise_grid,
-    "pain": sc_pain,
-    "headache": sc_headache,
-    "timeline": sc_timeline,
-    "before_after": sc_before_after,
-    "monitor_height": sc_monitor_height,
-    "chair_check": sc_chair_check,
-    "stand_vs_sit": sc_stand_vs_sit,
-    "lumbar": sc_lumbar,
-    "laptop": sc_laptop,
-    "wall_test": sc_wall_test,
-    "chair_tips": sc_chair_tips,
-    "topdown_setup": sc_topdown_setup,
-    "topdown_keyboard": sc_topdown_keyboard,
-    "flatlay": sc_flatlay,
-    "home": sc_scene_home,
-    "tall": sc_tall,
-    "student": sc_student,
-    "wrist": sc_wrist,
-    "generic_desk": sc_generic_desk,
+    "desk_guide": sc_desk_guide, "signs": sc_signs, "forward_head": sc_forward_head,
+    "exercise_grid": sc_exercise_grid, "pain": sc_pain, "headache": sc_headache, "timeline": sc_timeline,
+    "before_after": sc_before_after, "phone": sc_phone, "monitor_height": sc_monitor_height, "chair_check": sc_chair_check,
+    "stand_vs_sit": sc_stand_vs_sit, "lumbar": sc_lumbar, "laptop": sc_laptop, "wall_test": sc_wall_test,
+    "chair_tips": sc_chair_tips, "topdown_setup": sc_topdown_setup, "topdown_keyboard": sc_topdown_keyboard,
+    "flatlay": sc_flatlay, "home": sc_home, "tall": sc_tall, "student": sc_student, "wrist": sc_wrist,
     "doorway": sc_doorway,
 }
