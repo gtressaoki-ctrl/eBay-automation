@@ -18,6 +18,7 @@ from . import ledger
 from .config import load_config
 from .ebay_client import EbayClient
 from .github_client import GithubClient
+from .pipeline_research import prepare_draft_for_publish, promote_if_enabled
 from .printify_client import PrintifyClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -91,6 +92,7 @@ def run() -> None:
 
     if is_approve:
         ebay = EbayClient(config)
+        prepare_draft_for_publish(config, ebay, sku, entry)
         listing_id = ebay.publish_offer(entry["ebay_offer_id"])
         url = _listing_url(config, listing_id)
         ledger.update_listing_status(sku, "published", ebay_listing_id=listing_id, listing_url=url)
@@ -98,31 +100,9 @@ def run() -> None:
         log.info("Published SKU %s as listing %s", sku, listing_id)
 
         comment = f"承認されました。eBayに公開しました: {url}"
-        if config.promoted_listings_enabled:
-            # Best-effort: a brand-new seller has near-zero organic
-            # visibility regardless of listing quality, so buying the first
-            # sales via cost-per-sale ads matters more than the listing
-            # staying published quickly. But the listing itself is already
-            # live at this point — an ad-campaign failure (e.g. the OAuth
-            # token predates the sell.marketing scope) must not undo that.
-            try:
-                campaign_id = ebay.get_or_create_cost_per_sale_campaign(
-                    config.promoted_listings_campaign_name, config.promoted_listings_bid_percentage
-                )
-                ebay.promote_listing(campaign_id, sku, config.promoted_listings_bid_percentage)
-                comment += f"\n\n広告掲載: {config.promoted_listings_bid_percentage:.1f}%の成約課金で出稿しました。"
-                log.info(
-                    "Added %s to Promoted Listings campaign %s at %.1f%%",
-                    sku,
-                    campaign_id,
-                    config.promoted_listings_bid_percentage,
-                )
-            except Exception:
-                log.exception("Failed to add %s to Promoted Listings; listing stays live without ads.", sku)
-                comment += (
-                    "\n\n⚠️ 広告掲載に失敗しました（出品自体は公開済みです）。"
-                    "eBay側の`sell.marketing`スコープ不足の可能性があります。"
-                )
+        ad_note = promote_if_enabled(config, ebay, sku, entry)
+        if ad_note:
+            comment += f"\n\n⚠️ {ad_note}"
 
         github.comment_issue(issue_number, comment)
         github.close_issue(issue_number, "completed")

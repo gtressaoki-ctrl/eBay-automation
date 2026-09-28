@@ -147,6 +147,14 @@ class PrintifyClient:
         resp = self._request("POST", f"/shops/{shop_id}/orders.json", json=payload)
         return resp.json()
 
+    def send_to_production(self, order_id: str) -> None:
+        # Orders created through the API sit on hold until this is called
+        # (unless the shop has auto-approval configured) — without it a
+        # paid eBay order is never printed, which for a new seller means a
+        # late-shipment defect on the very first sale.
+        shop_id = self.config.printify_shop_id
+        self._request("POST", f"/shops/{shop_id}/orders/{order_id}/send_to_production.json")
+
     def get_order(self, order_id: str) -> dict:
         shop_id = self.config.printify_shop_id
         return self._request("GET", f"/shops/{shop_id}/orders/{order_id}.json").json()

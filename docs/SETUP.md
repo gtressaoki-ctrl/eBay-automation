@@ -93,6 +93,10 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 - `PRINTIFY_SHOP_ID`, `PRINTIFY_BLUEPRINT_ID`（`478`）,
   `PRINTIFY_PRINT_PROVIDER_ID`（`99`）, `PRINTIFY_VARIANT_IDS`（`65216`、カンマ区切りで複数可）
 - `DAILY_LISTING_QUOTA`（初期値 `3` 推奨）, `DRY_RUN`（`false`）
+- `LISTING_QUANTITY`（初期値 `1`、登録不要）。新規セラーには「月◯個・$◯まで」の
+  出品上限があり、**数量×価格**で消費される。受注生産なので在庫1で十分
+  （売れたら受注同期が自動で1に戻す）。上限は Seller Hub の
+  "Selling limits" から無料で引き上げ申請できる。
 - `MIN_UNIT_PROFIT_CENTS`（初期値 `10`。新規セラーは実績づくり優先のため低め。
   黒字化したら引き上げる）, `SHIPPING_COST_CENTS`（US国内マグは `579`）
 - `BRAND_LOCK_MIN_PUBLISHED`（初期値 `3`）, `BRAND_TAGLINE`（ショップ名を決めたら設定、未設定でOK）
