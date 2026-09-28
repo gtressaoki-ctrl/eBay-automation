@@ -106,6 +106,13 @@ class Config:
     # found (best case $0.68/unit); $0.10 is the floor that says "must be
     # profitable" without pretending today's mug economics support more.
     min_unit_profit_cents: int = field(default_factory=lambda: _int_env("MIN_UNIT_PROFIT_CENTS", 10))
+    # A new seller's monthly selling limit makes every listing slot scarce,
+    # so a niche must also actually move: 'japanese kanji mug' cleared the
+    # profit floor at 0.08 units/listing/month — one sale a year — while
+    # taking a slot a 3-units/month niche could have used.
+    min_units_per_listing_per_month: float = field(
+        default_factory=lambda: _float_env("MIN_UNITS_PER_LISTING_PER_MONTH", 0.5)
+    )
     # Landed cost per unit is production plus shipping; Printify bills
     # both, and ignoring shipping is what made the first pricing pass
     # look profitable when it was not.

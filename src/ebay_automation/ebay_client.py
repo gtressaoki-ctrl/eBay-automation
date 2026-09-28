@@ -139,6 +139,42 @@ class EbayClient:
         location = resp.headers.get("Location", "")
         return location.rstrip("/").rsplit("/", 1)[-1] if location else ""
 
+    # ---- Analytics API ----------------------------------------------------
+
+    TRAFFIC_METRICS = ("LISTING_IMPRESSION_TOTAL", "LISTING_VIEWS_TOTAL", "TRANSACTION")
+
+    def get_traffic_report(self, listing_ids: list[str], days: int = 30) -> dict[str, dict[str, int]]:
+        """Impressions / page views / sales per listing over the last `days`.
+
+        Tells *why* a listing isn't selling: never shown in search, shown
+        but not clicked, or clicked but not bought each call for a
+        different fix."""
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=days)
+        report: dict[str, dict[str, int]] = {}
+        for i in range(0, len(listing_ids), 200):
+            chunk = listing_ids[i : i + 200]
+            resp = self._request(
+                "GET",
+                "/sell/analytics/v1/traffic_report",
+                params={
+                    "dimension": "LISTING",
+                    "metric": ",".join(self.TRAFFIC_METRICS),
+                    "filter": (
+                        f"marketplace_ids:{{{self.config.ebay_marketplace_id}}},"
+                        f"date_range:[{start:%Y%m%d}..{today:%Y%m%d}],"
+                        f"listing_ids:{{{'|'.join(chunk)}}}"
+                    ),
+                },
+            )
+            body = resp.json()
+            keys = [m["key"] for m in body.get("header", {}).get("metrics", [])]
+            for record in body.get("records", []):
+                listing_id = record["dimensionValues"][0]["value"]
+                values = [mv.get("value") or 0 for mv in record.get("metricValues", [])]
+                report[listing_id] = {k: int(v) for k, v in zip(keys, values)}
+        return report
+
     # ---- Marketing API (Promoted Listings, cost-per-sale) --------------------
     #
     # A brand-new seller with no feedback is ranked far down eBay's own search

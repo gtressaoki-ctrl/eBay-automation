@@ -415,6 +415,35 @@ def publish_backlog(config: Config, ebay: EbayClient, github: GithubClient) -> b
     return True
 
 
+def record_traffic(ebay: EbayClient) -> None:
+    """Snapshot last-30-day impressions/views/sales for every live listing
+    into state/traffic.json. Best-effort: a missing analytics scope must
+    not stop the listing run."""
+    live = {
+        entry["ebay_listing_id"]: entry.get("headline", sku)
+        for sku, entry in ledger.load_pending_listings().items()
+        if entry.get("status") == "published" and entry.get("ebay_listing_id")
+    }
+    if not live:
+        return
+    try:
+        report = ebay.get_traffic_report(list(live))
+    except Exception:
+        log.exception("Traffic report unavailable; skipping.")
+        return
+    snapshot = {}
+    for listing_id, headline in live.items():
+        m = report.get(listing_id, {})
+        snapshot[listing_id] = {
+            "headline": headline,
+            "impressions": m.get("LISTING_IMPRESSION_TOTAL", 0),
+            "views": m.get("LISTING_VIEWS_TOTAL", 0),
+            "sales": m.get("TRANSACTION", 0),
+        }
+        log.info("Traffic %s %-45.45s %s", listing_id, headline, snapshot[listing_id])
+    ledger.save_traffic(snapshot)
+
+
 def run() -> None:
     config = load_config()
     if ledger.load_ledger().get("paused"):
@@ -427,6 +456,8 @@ def run() -> None:
     printify = PrintifyClient(config)
     ebay = EbayClient(config)
     github = GithubClient(config)
+
+    record_traffic(ebay)
 
     if config.auto_publish and not config.dry_run:
         if not publish_backlog(config, ebay, github):
@@ -487,6 +518,14 @@ def run() -> None:
     for demand in report.ranked:
         if created >= quota:
             break
+        if demand.units_per_listing_per_month < config.min_units_per_listing_per_month:
+            log.info(
+                "Skipping %r: %.2f units/listing/month is below the %.2f demand floor.",
+                demand.keyword,
+                demand.units_per_listing_per_month,
+                config.min_units_per_listing_per_month,
+            )
+            continue
         theme = by_keyword[demand.keyword]
         log.info(
             "%r: %d active, %.0f%% sell-through, %.2f units/listing/month, market price $%.2f",
