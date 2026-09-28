@@ -87,6 +87,13 @@ class Config:
 
     # Pipeline behavior
     daily_listing_quota: int = field(default_factory=lambda: _int_env("DAILY_LISTING_QUOTA", 3))
+    # Units offered per listing. eBay's new-seller selling limit counts
+    # quantity x price across every live listing (this account: 50 items /
+    # $700 a month), so offering 50 per listing — the old hard-coded value —
+    # made a single mug listing exceed the whole month's limit and every
+    # publish failed. Print-on-demand has no stock to run out of; the
+    # fulfillment sync puts the quantity back after each sale instead.
+    listing_quantity: int = field(default_factory=lambda: _int_env("LISTING_QUANTITY", 1))
     auto_publish: bool = field(default_factory=lambda: _bool_env("AUTO_PUBLISH", False))
     dry_run: bool = field(default_factory=lambda: _bool_env("DRY_RUN", False))
     # Never list a design whose unit economics at the going market price

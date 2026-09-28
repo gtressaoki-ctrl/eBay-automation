@@ -423,8 +423,174 @@ def test_auto_publish_failure_cleans_up_and_does_not_crash_the_run(monkeypatch):
     monkeypatch.setattr(pipeline_research, "EbayClient", lambda config: ebay)
     monkeypatch.setattr(pipeline_research, "GithubClient", lambda config: MagicMock())
     monkeypatch.setattr(pipeline_research, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_research, "publish_backlog", lambda *a: True)
 
     pipeline_research.run()  # must not raise
 
     printify.delete_product.assert_called_once_with("prod-1")
     ebay.delete_inventory_item.assert_called_once_with("POD-x-1")
+
+
+def _auto_publish_run_fixture(monkeypatch, theme, publish_side_effect):
+    printify = MagicMock()
+    ebay = MagicMock()
+    ebay.publish_offer.side_effect = publish_side_effect
+    config = _config(min_unit_profit_cents=10, auto_publish=True)
+    builds = []
+
+    def fake_build(*a, **k):
+        builds.append(a[4].slug)
+        return {
+            "sku": f"POD-x-{a[4].slug}",
+            "design_key": f"test-theme/{a[4].slug}",
+            "printify_product_id": f"prod-{a[4].slug}",
+            "ebay_offer_id": f"offer-{a[4].slug}",
+            "unit_profit_cents": 500,
+        }
+
+    monkeypatch.setattr(pipeline_research, "product_profile", lambda c, p: ("White", (2000, 800)))
+    monkeypatch.setattr(pipeline_research, "build_listing", fake_build)
+    monkeypatch.setattr(pipeline_research, "select_active_themes", lambda themes_, cfg: (theme,))
+    monkeypatch.setattr(
+        pipeline_research.research,
+        "rank_niches",
+        lambda *a, **k: pipeline_research.research.DemandReport(ranked=[_demand()], rejected=[]),
+    )
+    monkeypatch.setattr(pipeline_research.ledger, "load_ledger", lambda: {})
+    monkeypatch.setattr(pipeline_research.ledger, "adjust_daily_quota", lambda: 3)
+    monkeypatch.setattr(pipeline_research, "used_design_keys", lambda: set())
+    monkeypatch.setattr(pipeline_research, "PrintifyClient", lambda config: printify)
+    monkeypatch.setattr(pipeline_research, "EbayClient", lambda config: ebay)
+    monkeypatch.setattr(pipeline_research, "GithubClient", lambda config: MagicMock())
+    monkeypatch.setattr(pipeline_research, "load_config", lambda: config)
+    monkeypatch.setattr(pipeline_research, "publish_backlog", lambda *a: True)
+    return printify, ebay, builds
+
+
+def test_hitting_the_selling_limit_stops_the_run_instead_of_burning_more_products(monkeypatch):
+    # Once eBay says the account's monthly selling limit is reached, every
+    # further publish fails identically — building more Printify products
+    # just to delete them again is pure waste.
+    from ebay_automation.ebay_client import EbayApiError
+
+    limit_error = EbayApiError(
+        "POST", "u", 400, '{"errors":[{"message":"This listing would cause you to exceed the number of items"}]}'
+    )
+    _, ebay, builds = _auto_publish_run_fixture(monkeypatch, THEME, limit_error)
+
+    pipeline_research.run()
+
+    assert builds == ["one"]
+    ebay.delete_inventory_item.assert_called_once_with("POD-x-one")
+
+
+def test_other_publish_failures_move_on_to_the_next_design(monkeypatch):
+    _, _, builds = _auto_publish_run_fixture(monkeypatch, THEME, RuntimeError("500"))
+
+    pipeline_research.run()
+
+    assert builds == ["one", "two"]
+
+
+def test_ad_bid_is_capped_so_an_ad_driven_sale_stays_profitable():
+    config = _config(min_unit_profit_cents=10, promoted_listings_bid_percentage=10.0)
+    # $14.99 mug netting $0.68: 10% ($1.50) would lose money on every ad
+    # sale; the cap leaves at least the $0.10 floor.
+    bid = pipeline_research.profitable_bid_percentage(config, {"price_cents": 1499, "unit_profit_cents": 68})
+    assert bid == 3.8
+    assert 1499 * bid / 100 <= 68 - 10
+
+
+def test_no_ad_when_even_the_minimum_bid_would_lose_money():
+    config = _config(min_unit_profit_cents=10, promoted_listings_bid_percentage=10.0)
+    assert pipeline_research.profitable_bid_percentage(config, {"price_cents": 1499, "unit_profit_cents": 30}) is None
+
+
+def test_ad_bid_never_exceeds_the_configured_bid():
+    config = _config(min_unit_profit_cents=10, promoted_listings_bid_percentage=5.0)
+    assert pipeline_research.profitable_bid_percentage(config, {"price_cents": 1499, "unit_profit_cents": 900}) == 5.0
+
+
+def test_listing_quantity_comes_from_config(fake_render, printify, ebay):
+    pipeline_research.build_listing(
+        _config(listing_quantity=1), printify, ebay, THEME, THEME.designs[0], _demand(), "White", (2000, 800)
+    )
+
+    item = ebay.create_or_replace_inventory_item.call_args[0][1]
+    offer = ebay.create_offer.call_args[0][0]
+    # A new seller's monthly limit counts quantity x price across all live
+    # listings; the old hard-coded 50 exceeded it with a single listing.
+    assert item["availability"]["shipToLocationAvailability"]["quantity"] == 1
+    assert offer["availableQuantity"] == 1
+
+
+def _backlog_fixture(monkeypatch, pending):
+    updates = []
+    monkeypatch.setattr(pipeline_research.ledger, "load_pending_listings", lambda: pending)
+    monkeypatch.setattr(
+        pipeline_research.ledger, "update_listing_status", lambda sku, status, **kw: updates.append((sku, status, kw))
+    )
+    monkeypatch.setattr(pipeline_research.ledger, "record_listing_published", lambda: None)
+    ebay = MagicMock()
+    ebay.get_inventory_item.return_value = {
+        "sku": "POD-old-1",
+        "condition": "NEW",
+        "availability": {"shipToLocationAvailability": {"quantity": 50}},
+        "product": {"title": "T", "aspects": {"Brand": ["Unbranded"]}},
+    }
+    ebay.get_offer.return_value = {
+        "offerId": "offer-old",
+        "sku": "POD-old-1",
+        "marketplaceId": "EBAY_US",
+        "format": "FIXED_PRICE",
+        "status": "UNPUBLISHED",
+        "availableQuantity": 50,
+        "categoryId": "20675",
+        "pricingSummary": {"price": {"value": "14.99", "currency": "USD"}},
+    }
+    ebay.publish_offer.return_value = "1234567890"
+    github = MagicMock()
+    return ebay, github, updates
+
+
+def test_backlog_drafts_are_patched_and_published(monkeypatch):
+    pending = {
+        "POD-old-1": {
+            "status": "pending_approval",
+            "ebay_offer_id": "offer-old",
+            "design_key": "sarcastic-coffee/caffeine-and-spite",
+            "issue_number": 19,
+        },
+        "POD-done": {"status": "published", "ebay_offer_id": "x"},
+    }
+    ebay, github, updates = _backlog_fixture(monkeypatch, pending)
+
+    assert pipeline_research.publish_backlog(_config(listing_quantity=1), ebay, github) is True
+
+    sku, item = ebay.create_or_replace_inventory_item.call_args[0]
+    assert sku == "POD-old-1"
+    assert item["product"]["aspects"]["Model"] == ["caffeine-and-spite"]
+    assert item["availability"]["shipToLocationAvailability"]["quantity"] == 1
+    offer_id, offer = ebay.update_offer.call_args[0]
+    assert offer_id == "offer-old"
+    assert offer == {
+        "availableQuantity": 1,
+        "categoryId": "20675",
+        "pricingSummary": {"price": {"value": "14.99", "currency": "USD"}},
+    }
+    ebay.publish_offer.assert_called_once_with("offer-old")
+    assert updates == [
+        ("POD-old-1", "published", {"ebay_listing_id": "1234567890", "listing_url": "https://www.ebay.com/itm/1234567890"})
+    ]
+    github.close_issue.assert_called_once_with(19, "completed")
+
+
+def test_backlog_stops_and_reports_the_selling_limit(monkeypatch):
+    from ebay_automation.ebay_client import EbayApiError
+
+    pending = {"POD-old-1": {"status": "pending_approval", "ebay_offer_id": "offer-old"}}
+    ebay, github, updates = _backlog_fixture(monkeypatch, pending)
+    ebay.publish_offer.side_effect = EbayApiError("POST", "u", 400, "would exceed the number of items")
+
+    assert pipeline_research.publish_backlog(_config(), ebay, github) is False
+    assert updates == []

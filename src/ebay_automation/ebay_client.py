@@ -29,6 +29,14 @@ class EbayApiError(RuntimeError):
         self.status = status
         self.body = body
 
+    @property
+    def is_selling_limit(self) -> bool:
+        # eBay reports the account-wide monthly selling limit under the
+        # generic errorId 25002, so the message is the only distinguishing
+        # signal. Once hit, every further publish this month fails the same
+        # way — callers use this to stop instead of burning more products.
+        return "exceed the number of items" in (self.body or "")
+
 
 class EbayClient:
     def __init__(self, config: Config):
@@ -58,6 +66,9 @@ class EbayClient:
 
     # ---- Inventory API ----------------------------------------------------
 
+    def get_inventory_item(self, sku: str) -> dict[str, Any]:
+        return self._request("GET", f"/sell/inventory/v1/inventory_item/{sku}").json()
+
     def create_or_replace_inventory_item(self, sku: str, item: dict[str, Any]) -> None:
         self._request("PUT", f"/sell/inventory/v1/inventory_item/{sku}", json=item)
 
@@ -65,8 +76,26 @@ class EbayClient:
         resp = self._request("POST", "/sell/inventory/v1/offer", json=offer)
         return resp.json()["offerId"]
 
+    def get_offer(self, offer_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/sell/inventory/v1/offer/{offer_id}").json()
+
     def update_offer(self, offer_id: str, offer: dict[str, Any]) -> None:
         self._request("PUT", f"/sell/inventory/v1/offer/{offer_id}", json=offer)
+
+    def set_available_quantity(self, sku: str, offer_id: str, quantity: int) -> None:
+        self._request(
+            "POST",
+            "/sell/inventory/v1/bulk_update_price_quantity",
+            json={
+                "requests": [
+                    {
+                        "sku": sku,
+                        "shipToLocationAvailability": {"quantity": quantity},
+                        "offers": [{"offerId": offer_id, "availableQuantity": quantity}],
+                    }
+                ]
+            },
+        )
 
     def publish_offer(self, offer_id: str) -> str:
         resp = self._request("POST", f"/sell/inventory/v1/offer/{offer_id}/publish")

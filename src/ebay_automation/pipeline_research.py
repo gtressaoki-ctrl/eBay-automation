@@ -20,7 +20,7 @@ from pathlib import Path
 
 from . import design_gen, ledger, research, themes
 from .config import Config, load_config
-from .ebay_client import EbayClient
+from .ebay_client import EbayApiError, EbayClient
 from .github_client import GithubClient
 from .printify_client import PrintifyClient
 from .themes import Design, Theme
@@ -211,7 +211,7 @@ def build_listing(
                     },
                 },
                 "condition": "NEW",
-                "availability": {"shipToLocationAvailability": {"quantity": 50}},
+                "availability": {"shipToLocationAvailability": {"quantity": config.listing_quantity}},
             },
         )
 
@@ -220,7 +220,7 @@ def build_listing(
                 "sku": sku,
                 "marketplaceId": config.ebay_marketplace_id,
                 "format": "FIXED_PRICE",
-                "availableQuantity": 50,
+                "availableQuantity": config.listing_quantity,
                 "categoryId": config.ebay_category_id,
                 "listingDescription": f"{headline} - ceramic mug, printed to order.",
                 "pricingSummary": {"price": {"value": f"{price_cents / 100:.2f}", "currency": "USD"}},
@@ -285,6 +285,136 @@ def _issue_body(entry: dict) -> str:
     )
 
 
+# updateOffer replaces the whole offer; getOffer also returns read-only
+# fields (offerId, sku, marketplaceId, format, status, listing) it rejects.
+_UPDATABLE_OFFER_FIELDS = {
+    "availableQuantity",
+    "categoryId",
+    "listingDescription",
+    "listingDuration",
+    "listingPolicies",
+    "merchantLocationKey",
+    "pricingSummary",
+    "quantityLimitPerBuyer",
+    "storeCategoryNames",
+    "tax",
+}
+
+
+def listing_url(listing_id: str) -> str:
+    return f"https://www.ebay.com/itm/{listing_id}"
+
+
+_MIN_AD_BID_PERCENTAGE = 2.0  # eBay's floor for cost-per-sale bids
+
+
+def profitable_bid_percentage(config: Config, entry: dict) -> float | None:
+    """The configured ad bid, capped so an ad-driven sale still clears the
+    profit floor. None when even eBay's minimum bid would not.
+
+    The ad fee is a percentage of the sale price, charged only when an ad
+    click sells — but on a mug that nets ~$0.68, the old flat 10% bid
+    (~$1.50) turned every ad-driven sale into a loss."""
+    price = entry.get("price_cents")
+    profit = entry.get("unit_profit_cents")
+    if not price or profit is None:
+        return None
+    headroom = (profit - config.min_unit_profit_cents) / price * 100
+    bid = min(config.promoted_listings_bid_percentage, int(headroom * 10) / 10)
+    return bid if bid >= _MIN_AD_BID_PERCENTAGE else None
+
+
+def promote_if_enabled(config: Config, ebay: EbayClient, sku: str, entry: dict) -> str | None:
+    """Best-effort Promoted Listings enrollment for an already-live listing.
+
+    Returns a note for the caller to surface, or None. A failure here never
+    undoes the publish that already happened.
+    """
+    if not config.promoted_listings_enabled:
+        return None
+    bid = profitable_bid_percentage(config, entry)
+    if bid is None:
+        log.info("Not promoting %s: no ad bid leaves it profitable.", sku)
+        return "利益が残る広告率が取れないため、広告は出していません。"
+    try:
+        campaign_id = ebay.get_or_create_cost_per_sale_campaign(config.promoted_listings_campaign_name, bid)
+        ebay.promote_listing(campaign_id, sku, bid)
+        log.info("Added %s to Promoted Listings campaign %s at %.1f%%", sku, campaign_id, bid)
+        return None
+    except Exception:
+        log.exception("Failed to add %s to Promoted Listings; listing stays live without ads.", sku)
+        return "広告掲載に失敗しました（出品自体は公開済みです）。"
+
+
+def prepare_draft_for_publish(config: Config, ebay: EbayClient, sku: str, entry: dict) -> None:
+    """Bring a draft created by an older version of this pipeline up to what
+    publishOffer now requires: the Model aspect category 20675 demands, and
+    a quantity that fits the account's selling limit (old drafts asked for
+    50 units, which alone exceeds a new seller's whole monthly allowance)."""
+    item = ebay.get_inventory_item(sku)
+    product = item.get("product", {})
+    aspects = product.setdefault("aspects", {})
+    if not aspects.get("Model"):
+        design_slug = (entry.get("design_key") or sku).rsplit("/", 1)[-1]
+        aspects["Model"] = [design_slug[:65]]
+    ebay.create_or_replace_inventory_item(
+        sku,
+        {
+            "product": product,
+            "condition": item.get("condition", "NEW"),
+            "availability": {"shipToLocationAvailability": {"quantity": config.listing_quantity}},
+        },
+    )
+    offer = ebay.get_offer(entry["ebay_offer_id"])
+    offer = {k: v for k, v in offer.items() if k in _UPDATABLE_OFFER_FIELDS}
+    offer["availableQuantity"] = config.listing_quantity
+    ebay.update_offer(entry["ebay_offer_id"], offer)
+
+
+def publish_backlog(config: Config, ebay: EbayClient, github: GithubClient) -> bool:
+    """Publish drafts still waiting on an approval issue from before
+    AUTO_PUBLISH was switched on, oldest first. With AUTO_PUBLISH on, the
+    seller has delegated the publish decision, and these already cleared
+    the same demand/margin checks as a fresh listing — leaving them parked
+    behind an approval nobody is going to give just wastes the listings.
+
+    Returns False once eBay's monthly selling limit is hit, so the caller
+    stops rather than building new products that cannot be listed.
+    """
+    pending = ledger.load_pending_listings()
+    for sku, entry in pending.items():
+        if entry.get("status") != "pending_approval":
+            continue
+        try:
+            prepare_draft_for_publish(config, ebay, sku, entry)
+            listing_id = ebay.publish_offer(entry["ebay_offer_id"])
+        except EbayApiError as exc:
+            if exc.is_selling_limit:
+                return False
+            log.exception("Failed to publish backlog draft %s; leaving it pending.", sku)
+            continue
+        except Exception:
+            log.exception("Failed to publish backlog draft %s; leaving it pending.", sku)
+            continue
+
+        url = listing_url(listing_id)
+        ledger.update_listing_status(sku, "published", ebay_listing_id=listing_id, listing_url=url)
+        ledger.record_listing_published()
+        log.info("[auto-publish] Published backlog draft %s at %s", sku, url)
+        ad_note = promote_if_enabled(config, ebay, sku, entry)
+
+        if entry.get("issue_number"):
+            comment = f"AUTO_PUBLISHにより自動公開しました: {url}"
+            if ad_note:
+                comment += f"\n\n⚠️ {ad_note}"
+            try:
+                github.comment_issue(entry["issue_number"], comment)
+                github.close_issue(entry["issue_number"], "completed")
+            except Exception:
+                log.exception("Published %s but failed to update issue #%s", sku, entry["issue_number"])
+    return True
+
+
 def run() -> None:
     config = load_config()
     if ledger.load_ledger().get("paused"):
@@ -297,6 +427,11 @@ def run() -> None:
     printify = PrintifyClient(config)
     ebay = EbayClient(config)
     github = GithubClient(config)
+
+    if config.auto_publish and not config.dry_run:
+        if not publish_backlog(config, ebay, github):
+            log.warning("eBay selling limit reached; not building new listings this run.")
+            return
 
     product_colour, print_area = product_profile(config, printify)
     # Printed in full because repository variables silently override the
@@ -406,7 +541,7 @@ def run() -> None:
             if config.auto_publish:
                 try:
                     entry["ebay_listing_id"] = ebay.publish_offer(entry["ebay_offer_id"])
-                except Exception:
+                except Exception as exc:
                     # publishOffer is the one eBay call here with no upstream
                     # dry-run/margin check ahead of it to catch a category
                     # rule violation, so it is the one most likely to surprise
@@ -426,35 +561,19 @@ def run() -> None:
                         ebay.delete_inventory_item(entry["sku"])
                     except Exception:
                         log.exception("Failed to clean up eBay inventory item for %s", entry["sku"])
+                    if isinstance(exc, EbayApiError) and exc.is_selling_limit:
+                        log.warning("eBay selling limit reached; stopping this run.")
+                        log.info("Created %d draft listings.", created)
+                        return
                     continue
 
                 entry["status"] = "published"
+                entry["listing_url"] = listing_url(entry["ebay_listing_id"])
                 ledger.add_pending_listing(entry["sku"], entry)
                 ledger.record_listing_created()
                 ledger.record_listing_published()
-                log.info("[auto-publish] Published %s", entry["sku"])
-
-                if config.promoted_listings_enabled:
-                    # Mirrors pipeline_approve.py's best-effort ad enrollment
-                    # after a human /approve — AUTO_PUBLISH skips that path
-                    # entirely, so without this every auto-published listing
-                    # would silently never get promoted.
-                    try:
-                        campaign_id = ebay.get_or_create_cost_per_sale_campaign(
-                            config.promoted_listings_campaign_name, config.promoted_listings_bid_percentage
-                        )
-                        ebay.promote_listing(campaign_id, entry["sku"], config.promoted_listings_bid_percentage)
-                        log.info(
-                            "Added %s to Promoted Listings campaign %s at %.1f%%",
-                            entry["sku"],
-                            campaign_id,
-                            config.promoted_listings_bid_percentage,
-                        )
-                    except Exception:
-                        log.exception(
-                            "Failed to add %s to Promoted Listings; listing stays live without ads.",
-                            entry["sku"],
-                        )
+                log.info("[auto-publish] Published %s at %s", entry["sku"], entry["listing_url"])
+                promote_if_enabled(config, ebay, entry["sku"], entry)
 
                 created += 1
                 continue

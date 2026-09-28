@@ -57,7 +57,7 @@ def _to_printify_address(ship_to: dict) -> dict:
     }
 
 
-def _submit_to_printify(config, printify: PrintifyClient, ebay_order: dict) -> dict | None:
+def _submit_to_printify(config, printify: PrintifyClient, ebay: EbayClient, ebay_order: dict) -> dict | None:
     order_id = ebay_order["orderId"]
     line_items = ebay_order.get("lineItems", [])
     ship_to = ebay_order["fulfillmentStartInstructions"][0]["shippingStep"]["shipTo"]
@@ -94,15 +94,43 @@ def _submit_to_printify(config, printify: PrintifyClient, ebay_order: dict) -> d
     record = {
         "status": "submitted",
         "printify_order_id": printify_order["id"],
+        "sent_to_production": False,
         "ebay_line_items": ebay_line_items,
         "skus": skus,
     }
+    # Recorded before send_to_production so a failure there can't lead the
+    # next run to create a second, duplicate Printify order for this sale;
+    # _check_and_sync_shipment retries the send instead.
     ledger.set_order_record(order_id, record)
     log.info("Submitted order %s to Printify as %s", order_id, printify_order["id"])
+
+    _send_to_production(printify, order_id, record)
+
+    # Listings carry quantity 1 (see Config.listing_quantity), so a sale
+    # leaves the listing at 0 — put it back so the next buyer can order.
+    for s in skus:
+        try:
+            pending = ledger.get_pending_listing(s["sku"])
+            ebay.set_available_quantity(s["sku"], pending["ebay_offer_id"], config.listing_quantity)
+        except Exception:
+            log.exception("Failed to restock %s after order %s", s["sku"], order_id)
     return record
 
 
+def _send_to_production(printify: PrintifyClient, order_id: str, record: dict) -> None:
+    try:
+        printify.send_to_production(record["printify_order_id"])
+    except Exception:
+        log.exception("Failed to send Printify order %s to production; will retry.", record["printify_order_id"])
+        return
+    record["sent_to_production"] = True
+    ledger.set_order_record(order_id, record)
+    log.info("Sent Printify order %s to production", record["printify_order_id"])
+
+
 def _check_and_sync_shipment(config, ebay: EbayClient, printify: PrintifyClient, order_id: str, record: dict) -> None:
+    if record.get("sent_to_production") is False:
+        _send_to_production(printify, order_id, record)
     printify_order = printify.get_order(record["printify_order_id"])
     shipments = printify_order.get("shipments") or []
     if not shipments:
@@ -144,7 +172,7 @@ def run() -> None:
         try:
             record = ledger.get_order_record(order_id)
             if record is None:
-                _submit_to_printify(config, printify, order)
+                _submit_to_printify(config, printify, ebay, order)
             elif record["status"] == "submitted":
                 _check_and_sync_shipment(config, ebay, printify, order_id, record)
             else:

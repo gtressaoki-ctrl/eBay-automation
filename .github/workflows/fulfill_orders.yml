@@ -35,6 +35,7 @@ jobs:
           EBAY_ENV: ${{ vars.EBAY_ENV }}
           PRINTIFY_API_KEY: ${{ secrets.PRINTIFY_API_KEY }}
           PRINTIFY_SHOP_ID: ${{ vars.PRINTIFY_SHOP_ID }}
+          LISTING_QUANTITY: ${{ vars.LISTING_QUANTITY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python -m ebay_automation.pipeline_fulfill

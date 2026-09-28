@@ -56,7 +56,13 @@ def _use_config(monkeypatch, **overrides) -> Config:
 def _pending_listing(sku: str = "SKU-1", issue_number: int = 42) -> str:
     ledger.add_pending_listing(
         sku,
-        {"issue_number": issue_number, "status": "pending_approval", "ebay_offer_id": "offer-1"},
+        {
+            "issue_number": issue_number,
+            "status": "pending_approval",
+            "ebay_offer_id": "offer-1",
+            "price_cents": 1499,
+            "unit_profit_cents": 500,
+        },
     )
     return sku
 
@@ -91,7 +97,24 @@ def test_approve_promotes_the_listing_when_enabled(event_file, github, ebay, mon
     ebay.get_or_create_cost_per_sale_campaign.assert_called_once_with("test-camp", 12.0)
     ebay.promote_listing.assert_called_once_with("camp-1", sku, 12.0)
     comment = github.comment_issue.call_args[0][1]
-    assert "広告" in comment
+    assert "⚠️" not in comment
+
+
+def test_approve_patches_old_drafts_before_publishing(event_file, github, ebay, monkeypatch):
+    # Drafts made before the fix lack the Model aspect and ask for 50 units,
+    # either of which makes publishOffer fail.
+    _use_config(monkeypatch, listing_quantity=1)
+    ebay.get_inventory_item.return_value = {"product": {"aspects": {}}, "condition": "NEW"}
+    ebay.get_offer.return_value = {"offerId": "offer-1", "availableQuantity": 50}
+    event_file(_event())
+    _pending_listing()
+
+    pipeline_approve.run()
+
+    item = ebay.create_or_replace_inventory_item.call_args[0][1]
+    assert item["product"]["aspects"]["Model"]
+    assert ebay.update_offer.call_args[0][1] == {"availableQuantity": 1}
+    ebay.publish_offer.assert_called_once_with("offer-1")
 
 
 def test_approve_stays_published_even_when_promoted_listings_fails(event_file, github, ebay, monkeypatch):
