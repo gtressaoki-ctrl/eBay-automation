@@ -51,6 +51,9 @@ jobs:
           BRAND_TAGLINE: ${{ vars.BRAND_TAGLINE }}
           DRY_RUN: ${{ vars.DRY_RUN }}
           AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH }}
+          PROMOTED_LISTINGS_ENABLED: ${{ vars.PROMOTED_LISTINGS_ENABLED }}
+          PROMOTED_LISTINGS_BID_PERCENTAGE: ${{ vars.PROMOTED_LISTINGS_BID_PERCENTAGE }}
+          PROMOTED_LISTINGS_CAMPAIGN_NAME: ${{ vars.PROMOTED_LISTINGS_CAMPAIGN_NAME }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python -m ebay_automation.pipeline_research

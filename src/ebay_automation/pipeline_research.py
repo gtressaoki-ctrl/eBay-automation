@@ -199,6 +199,15 @@ def build_listing(
                         "Brand": [config.brand_tagline or "Unbranded"],
                         "Material": ["Ceramic"],
                         "Capacity": ["11 oz"],
+                        # Category 20675 (Mugs) requires this item specific to
+                        # publish an offer — createOrReplaceInventoryItem
+                        # accepts its absence silently, but publishOffer then
+                        # 400s with errorId 25002 ("Model is missing"), which
+                        # is how the first AUTO_PUBLISH run found this. There
+                        # is no real model number for a print-on-demand mug,
+                        # so the design's own slug stands in for one — it is
+                        # unique per listing, which is what the aspect is for.
+                        "Model": [design.slug[:65]],
                     },
                 },
                 "condition": "NEW",
@@ -395,12 +404,58 @@ def run() -> None:
                 continue
 
             if config.auto_publish:
-                entry["ebay_listing_id"] = ebay.publish_offer(entry["ebay_offer_id"])
+                try:
+                    entry["ebay_listing_id"] = ebay.publish_offer(entry["ebay_offer_id"])
+                except Exception:
+                    # publishOffer is the one eBay call here with no upstream
+                    # dry-run/margin check ahead of it to catch a category
+                    # rule violation, so it is the one most likely to surprise
+                    # us live (e.g. errorId 25002, a required item specific
+                    # this category didn't demand until publish time). Left
+                    # uncaught this took the whole run down mid-quota,
+                    # orphaning the Printify product/eBay inventory item and
+                    # silently skipping every design still queued behind it.
+                    log.exception(
+                        "Failed to publish %s; cleaning up and skipping.", entry["sku"]
+                    )
+                    try:
+                        printify.delete_product(entry["printify_product_id"])
+                    except Exception:
+                        log.exception("Failed to clean up Printify product for %s", entry["sku"])
+                    try:
+                        ebay.delete_inventory_item(entry["sku"])
+                    except Exception:
+                        log.exception("Failed to clean up eBay inventory item for %s", entry["sku"])
+                    continue
+
                 entry["status"] = "published"
                 ledger.add_pending_listing(entry["sku"], entry)
                 ledger.record_listing_created()
                 ledger.record_listing_published()
                 log.info("[auto-publish] Published %s", entry["sku"])
+
+                if config.promoted_listings_enabled:
+                    # Mirrors pipeline_approve.py's best-effort ad enrollment
+                    # after a human /approve — AUTO_PUBLISH skips that path
+                    # entirely, so without this every auto-published listing
+                    # would silently never get promoted.
+                    try:
+                        campaign_id = ebay.get_or_create_cost_per_sale_campaign(
+                            config.promoted_listings_campaign_name, config.promoted_listings_bid_percentage
+                        )
+                        ebay.promote_listing(campaign_id, entry["sku"], config.promoted_listings_bid_percentage)
+                        log.info(
+                            "Added %s to Promoted Listings campaign %s at %.1f%%",
+                            entry["sku"],
+                            campaign_id,
+                            config.promoted_listings_bid_percentage,
+                        )
+                    except Exception:
+                        log.exception(
+                            "Failed to add %s to Promoted Listings; listing stays live without ads.",
+                            entry["sku"],
+                        )
+
                 created += 1
                 continue
 
