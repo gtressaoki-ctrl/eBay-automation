@@ -1,8 +1,8 @@
 {
   "daily_listing_quota": 3,
   "totals": {
-    "listings_created": 14,
-    "listings_published": 0,
+    "listings_created": 17,
+    "listings_published": 9,
     "orders_fulfilled": 0,
     "revenue_cents": 0,
     "cost_cents": 0,

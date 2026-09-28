@@ -122,8 +122,10 @@
       "units_per_listing_per_month": 3.62,
       "expected_monthly_profit_cents": 246
     },
-    "status": "pending_approval",
-    "issue_number": 19
+    "status": "published",
+    "issue_number": 19,
+    "ebay_listing_id": "318929525352",
+    "listing_url": "https://www.ebay.com/itm/318929525352"
   },
   "POD-sarcastic-coffee-technically-awake-32f646": {
     "sku": "POD-sarcastic-coffee-technically-awake-32f646",
@@ -144,8 +146,10 @@
       "units_per_listing_per_month": 3.62,
       "expected_monthly_profit_cents": 246
     },
-    "status": "pending_approval",
-    "issue_number": 20
+    "status": "published",
+    "issue_number": 20,
+    "ebay_listing_id": "318929525756",
+    "listing_url": "https://www.ebay.com/itm/318929525756"
   },
   "POD-sarcastic-coffee-should-have-been-an-em-4641f8": {
     "sku": "POD-sarcastic-coffee-should-have-been-an-em-4641f8",
@@ -166,8 +170,10 @@
       "units_per_listing_per_month": 3.62,
       "expected_monthly_profit_cents": 246
     },
-    "status": "pending_approval",
-    "issue_number": 21
+    "status": "published",
+    "issue_number": 21,
+    "ebay_listing_id": "318929526103",
+    "listing_url": "https://www.ebay.com/itm/318929526103"
   },
   "POD-sarcastic-coffee-until-this-is-empty-ff37cb": {
     "sku": "POD-sarcastic-coffee-until-this-is-empty-ff37cb",
@@ -188,8 +194,10 @@
       "units_per_listing_per_month": 3.072,
       "expected_monthly_profit_cents": 209
     },
-    "status": "pending_approval",
-    "issue_number": 23
+    "status": "published",
+    "issue_number": 23,
+    "ebay_listing_id": "318929526441",
+    "listing_url": "https://www.ebay.com/itm/318929526441"
   },
   "POD-sarcastic-coffee-professional-overthink-98f7e1": {
     "sku": "POD-sarcastic-coffee-professional-overthink-98f7e1",
@@ -210,8 +218,10 @@
       "units_per_listing_per_month": 3.072,
       "expected_monthly_profit_cents": 209
     },
-    "status": "pending_approval",
-    "issue_number": 24
+    "status": "published",
+    "issue_number": 24,
+    "ebay_listing_id": "318929526725",
+    "listing_url": "https://www.ebay.com/itm/318929526725"
   },
   "POD-sarcastic-coffee-explaining-why-im-righ-d43845": {
     "sku": "POD-sarcastic-coffee-explaining-why-im-righ-d43845",
@@ -232,7 +242,78 @@
       "units_per_listing_per_month": 3.072,
       "expected_monthly_profit_cents": 209
     },
-    "status": "pending_approval",
-    "issue_number": 25
+    "status": "published",
+    "issue_number": 25,
+    "ebay_listing_id": "318929527170",
+    "listing_url": "https://www.ebay.com/itm/318929527170"
+  },
+  "POD-sarcastic-coffee-first-coffee-5e88f0": {
+    "sku": "POD-sarcastic-coffee-first-coffee-5e88f0",
+    "design_key": "sarcastic-coffee/first-coffee",
+    "theme": "sarcastic-coffee",
+    "headline": "FIRST COFFEE THEN YOUR PROBLEMS",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6aba7081d57c6c9e710bcd32",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "282437606011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6aba7081d57c6c9e710bcd32/65216/6310/first-coffee-then-your-problems-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2228,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 2.974,
+      "expected_monthly_profit_cents": 202
+    },
+    "status": "published",
+    "ebay_listing_id": "318929528136",
+    "listing_url": "https://www.ebay.com/itm/318929528136"
+  },
+  "POD-sarcastic-coffee-blood-type-coffee-8aa034": {
+    "sku": "POD-sarcastic-coffee-blood-type-coffee-8aa034",
+    "design_key": "sarcastic-coffee/blood-type-coffee",
+    "theme": "sarcastic-coffee",
+    "headline": "BLOOD TYPE: COFFEE",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6aba708739163e87fd00b87e",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "282437763011",
+    "price_cents": 1499,
+    "cost_cents": 1192,
+    "unit_profit_cents": 68,
+    "image_url": "https://images-api.printify.com/mockup/6aba708739163e87fd00b87e/65216/6310/blood-type-coffee-funny-sarcastic-coffee-mug-11oz-novelty-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2228,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 2.974,
+      "expected_monthly_profit_cents": 202
+    },
+    "status": "published",
+    "ebay_listing_id": "318929528304",
+    "listing_url": "https://www.ebay.com/itm/318929528304"
+  },
+  "POD-japanese-kanji-fish-kanji-ba93b1": {
+    "sku": "POD-japanese-kanji-fish-kanji-ba93b1",
+    "design_key": "japanese-kanji/fish-kanji",
+    "theme": "japanese-kanji",
+    "headline": "SUSHI FISH KANJI",
+    "keyword": "japanese kanji mug",
+    "printify_product_id": "6aba708e7c8621b7d20cce69",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "282437934011",
+    "price_cents": 1599,
+    "cost_cents": 1192,
+    "unit_profit_cents": 155,
+    "image_url": "https://images-api.printify.com/mockup/6aba708e7c8621b7d20cce69/65216/6310/sushi-fish-kanji-japanese-kanji-ceramic-coffee-mug-11oz-gift.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 215,
+      "sell_through_pct": 25,
+      "units_per_listing_per_month": 0.081,
+      "expected_monthly_profit_cents": 13
+    },
+    "status": "published",
+    "ebay_listing_id": "318929528417",
+    "listing_url": "https://www.ebay.com/itm/318929528417"
   }
 }
