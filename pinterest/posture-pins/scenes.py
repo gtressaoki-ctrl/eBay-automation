@@ -165,7 +165,7 @@ def sc_desk_guide(pin, top):
 def sc_signs(pin, top):
     out = []
     u = 70
-    floor_y = top + 480
+    floor_y = min(top + 480, ART_BOTTOM - 440)
     hip = (300, floor_y - 1.9 * u - 0.2 * u)
     out.append(floor(L, R, floor_y))
     out.append(chair_side(hip, u, floor_y))

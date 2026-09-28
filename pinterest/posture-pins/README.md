@@ -35,3 +35,20 @@ python pinterest/posture-pins/generate_pins.py 1 9 15                  # only so
 - **Disclosure**: add `#affiliate` or `#ad` to the pin description. This is an FTC requirement and Amazon Associates policy.
 - **Availability**: the ASINs were checked against amazon.com listings in Sept 2026. Stock and prices change, so open each link once before posting.
 - **Health wording**: the images avoid claims of cure or medical effect. Keep product copy, especially for posture correctors, to "supports" or "helps".
+
+## A/B test (pins 1, 2, 4, 14, 22)
+
+`python generate_pins.py --ab` renders a bolder **B** variant of five pins into `images/ab-test/`. B keeps the same illustration as A but adds:
+
+- a dark headline band;
+- a larger headline;
+- a terracotta number badge (6 checkpoints, 7 signs, 4 moves, 3 months, 5 minutes).
+
+`pins-ab-test.csv` lists both variants. Each variant links through its own Amazon tracking ID (`AMAZON_TAG_A` / `AMAZON_TAG_B`, created under Associates → Manage Tracking IDs), so Amazon reports clicks and orders per variant.
+
+Post A and B on different days, into the same board, with the same title and description. After 2–4 weeks, compare in Pinterest Analytics:
+
+- outbound clicks per impression;
+- saves per impression.
+
+Then roll the winning style out to all 30 pins.

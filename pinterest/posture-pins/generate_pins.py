@@ -18,7 +18,7 @@ import tempfile
 from PIL import Image
 
 from plate import H, W, plate_html, render_all
-from products import AMAZON_TAG, PRODUCTS, product_url
+from products import AMAZON_TAG, AMAZON_TAG_A, AMAZON_TAG_B, PRODUCTS, product_url
 from scenes import SCENES
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -248,24 +248,29 @@ def headline_html(head):
     return "<br>".join(re.sub(r"\*(.+?)\*", r"<em>\1</em>", part) for part in head.split("|"))
 
 
-def build(pin, tmp):
+def build(pin, tmp, variant="a"):
     lines = pin["head"].count("|") + 1
-    sub_top = HEAD_TOP + lines * HEAD_LH + 14
-    art_top = sub_top + 70
+    lh = HEAD_LH if variant == "a" else 121
+    sub_top = HEAD_TOP + lines * lh + 14
+    art_top = sub_top + (70 if variant == "a" else 130)
     art = SCENES[pin["scene"]](pin, art_top)
     page = dict(pin, headline_html=headline_html(pin["head"]))
-    html = plate_html(page, art, sub_top)
-    hp = os.path.join(tmp, f"{pin['n']:02d}.html")
+    html = plate_html(page, art, sub_top, variant)
+    hp = os.path.join(tmp, f"{pin['n']:02d}{variant}.html")
     with open(hp, "w", encoding="utf-8") as fh:
         fh.write(html)
-    return hp, os.path.join(tmp, f"{pin['n']:02d}.png")
+    return hp, os.path.join(tmp, f"{pin['n']:02d}{variant}.png")
 
 
-def finish(pin, raw):
+def finish(pin, raw, variant="a"):
     im = Image.open(raw).convert("RGB")
     if im.size != (W, H):
         im = im.resize((W, H), Image.LANCZOS)
-    path = os.path.join(OUT, f"{pin['n']:02d}-{pin['slug']}.png")
+    if variant == "a":
+        path = os.path.join(OUT, f"{pin['n']:02d}-{pin['slug']}.png")
+    else:
+        os.makedirs(os.path.join(OUT, "ab-test"), exist_ok=True)
+        path = os.path.join(OUT, "ab-test", f"{pin['n']:02d}-{pin['slug']}-B.png")
     im.save(path, optimize=True)
     return path
 
@@ -321,7 +326,41 @@ def write_affiliates_md(pins):
     return path
 
 
+AB_TEST = {1: ("6", "checkpoints"), 2: ("7", "signs"), 4: ("4", "moves"), 14: ("3", "months"), 22: ("5", "minutes")}
+
+
+def write_ab_csv():
+    """Both variants of the A/B test pins, each with its own Amazon tracking ID."""
+    path = os.path.join(HERE, "pins-ab-test.csv")
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["#", "Variant", "Image file", "Title", "Description", "Alt text", "Keywords", "Pinterest board",
+                    "Link (primary affiliate)"])
+        for pin in PINS:
+            if pin["n"] not in AB_TEST:
+                continue
+            for v, img, tag in (("A", f"images/{pin['n']:02d}-{pin['slug']}.png", AMAZON_TAG_A),
+                                ("B", f"images/ab-test/{pin['n']:02d}-{pin['slug']}-B.png", AMAZON_TAG_B)):
+                w.writerow([pin["n"], v, img, pin["title"], pin["desc"], alt_text(pin), pin["keyword"], BOARD,
+                            product_url(pin["products"][0], tag)])
+    return path
+
+
+def main_ab():
+    todo = [dict(p, badge_b=AB_TEST[p["n"]]) for p in PINS if p["n"] in AB_TEST]
+    with tempfile.TemporaryDirectory() as tmp:
+        jobs = [build(p, tmp, "b") for p in todo]
+        render_all(jobs, tmp, scale=2)
+        paths = [finish(p, png, "b") for p, (_, png) in zip(todo, jobs)]
+    for p in paths:
+        print("wrote", os.path.relpath(p, HERE))
+    print("wrote", os.path.relpath(contact_sheet(paths, "ab-test-sheet.png", cols=5), HERE))
+    print("wrote", os.path.relpath(write_ab_csv(), HERE))
+
+
 def main(argv):
+    if argv[:1] == ["--ab"]:
+        return main_ab()
     want = {int(a) for a in argv} if argv else None
     todo = [p for p in PINS if not want or p["n"] in want]
     os.makedirs(OUT, exist_ok=True)

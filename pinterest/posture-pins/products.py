@@ -10,6 +10,9 @@ FlexiSpot via Awin/CJ, Upright via its partner program).
 import os
 
 AMAZON_TAG = os.environ.get("AMAZON_TAG", "YOURTAG-20")
+# Separate tracking IDs for the A/B test so clicks and sales can be attributed per variant
+AMAZON_TAG_A = os.environ.get("AMAZON_TAG_A", "YOURTAG-pina-20")
+AMAZON_TAG_B = os.environ.get("AMAZON_TAG_B", "YOURTAG-pinb-20")
 
 PRODUCTS = {
     # ---- chair add-ons
@@ -54,8 +57,8 @@ PRODUCTS = {
 }
 
 
-def product_url(key):
+def product_url(key, tag=None):
     p = PRODUCTS[key]
     if "asin" in p:
-        return f"https://www.amazon.com/dp/{p['asin']}?tag={AMAZON_TAG}"
+        return f"https://www.amazon.com/dp/{p['asin']}?tag={tag or AMAZON_TAG}"
     return p["url"]

@@ -32,6 +32,18 @@ h1 {{ position: absolute; top: 118px; left: 0; right: 0; margin: 0; font-family:
 h1 em {{ color: {TERRA}; }}
 .sub {{ position: absolute; left: 0; right: 0; font-family: '{SANS}'; font-size: 27px; line-height: 1.3;
         color: #4E5260; }}
+.band {{ position: absolute; left: 0; right: 0; top: 0; background: {INK}; }}
+.b .meta {{ color: #A9A395; }}
+.b .meta b {{ color: #F2926F; }}
+.b .head .rule {{ background: {PAPER}; opacity: .28; }}
+.b h1 {{ color: {PAPER}; letter-spacing: -2px; }}
+.b h1 em {{ color: #F2926F; }}
+.b .sub {{ color: #D6D0C4; }}
+.badge {{ position: absolute; right: {MARGIN}px; width: 152px; height: 152px; border-radius: 50%; background: {TERRA};
+          display: flex; flex-direction: column; align-items: center; justify-content: center; color: {PAPER};
+          box-shadow: 0 0 0 6px {PAPER}; }}
+.badge .n {{ font-family: '{SERIF}'; font-size: 76px; line-height: .9; }}
+.badge .c {{ font-family: '{MONO}'; font-size: 13px; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 4px; }}
 .foot {{ position: absolute; left: {MARGIN}px; right: {MARGIN}px; top: 1418px; display: flex; justify-content: space-between;
         font-family: '{MONO}'; font-size: 15px; letter-spacing: 3px; color: {INK_SOFT}; text-transform: uppercase; }}
 """
@@ -44,21 +56,32 @@ GRAIN = """
 """
 
 
-def plate_html(pin, art_svg, sub_top):
+def plate_html(pin, art_svg, sub_top, variant="a"):
     head_size = pin.get("head_size", 104)
+    band = badge = ""
+    if variant == "b":
+        head_size = 124
+        band_h = sub_top + 62
+        band = f'<div class="band" style="height:{band_h}px"></div>'
+        if pin.get("badge_b"):
+            n, c = pin["badge_b"]
+            badge = f'<div class="badge" style="top:{band_h - 82}px"><div class="n">{n}</div><div class="c">{c}</div></div>'
+
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}</style></head>
-<body><div class="plate">
+<body><div class="plate {variant}">
 <svg class="art" width="{W}" height="{H}" viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg">
 <defs>{GRAIN}</defs>
 {art_svg}
 <rect width="{W}" height="{H}" filter="url(#grain)" opacity=".16"/>
 </svg>
+{band}
 <div class="head">
   <div class="meta"><span><b>No.{pin['n']:02d}</b> &nbsp;{pin['kicker']}</span><span>{pin.get('meta_right', 'Posture Atlas')}</span></div>
   <div class="rule" style="top:92px"></div>
   <h1 style="--hs:{head_size}px">{pin['headline_html']}</h1>
   <div class="sub" style="top:{sub_top}px">{pin['sub']}</div>
 </div>
+{badge}
 <div class="rule" style="top:1398px; left:{MARGIN}px; right:{MARGIN}px"></div>
 <div class="foot"><span>Save for your next work session</span><span>Fig. {pin['n']:02d}</span></div>
 </div></body></html>"""
