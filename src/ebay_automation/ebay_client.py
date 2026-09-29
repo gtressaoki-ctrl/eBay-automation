@@ -149,7 +149,9 @@ class EbayClient:
         Tells *why* a listing isn't selling: never shown in search, shown
         but not clicked, or clicked but not bought each call for a
         different fix."""
-        today = datetime.date.today()
+        # eBay evaluates dates in US Pacific time, so "today" in UTC is often
+        # still tomorrow there and gets rejected as a future date (50018).
+        today = datetime.date.today() - datetime.timedelta(days=1)
         start = today - datetime.timedelta(days=days)
         report: dict[str, dict[str, int]] = {}
         for i in range(0, len(listing_ids), 200):
