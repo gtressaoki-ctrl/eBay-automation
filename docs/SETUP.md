@@ -98,7 +98,7 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
   （売れたら受注同期が自動で1に戻す）。上限は Seller Hub の
   "Selling limits" から無料で引き上げ申請できる。
 - `MIN_UNIT_PROFIT_CENTS`（初期値 `10`。新規セラーは実績づくり優先のため低め。
-  黒字化したら引き上げる）, `SHIPPING_COST_CENTS`（US国内マグは `579`）
+  黒字化したら引き上げる）, `SHIPPING_COST_CENTS`（送料を購入者負担にしている場合は `77`=送料にかかるeBay手数料分、送料無料なら `579`）
 - `BRAND_LOCK_MIN_PUBLISHED`（初期値 `3`）, `BRAND_TAGLINE`（ショップ名を決めたら設定、未設定でOK）
 - `PROMOTED_LISTINGS_ENABLED`（`true`で成約課金広告を有効化。README「新規セラーが
   誰の目にも留まらない問題」参照）, `PROMOTED_LISTINGS_BID_PERCENTAGE`（初期値 `10.0`）,
