@@ -107,6 +107,14 @@ class EbayClient:
     def delete_inventory_item(self, sku: str) -> None:
         self._request("DELETE", f"/sell/inventory/v1/inventory_item/{sku}")
 
+    # ---- Account API (business policies) --------------------------------------
+
+    def get_fulfillment_policy(self, policy_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/sell/account/v1/fulfillment_policy/{policy_id}").json()
+
+    def update_fulfillment_policy(self, policy_id: str, policy: dict[str, Any]) -> dict[str, Any]:
+        return self._request("PUT", f"/sell/account/v1/fulfillment_policy/{policy_id}", json=policy).json()
+
     # ---- Fulfillment API ----------------------------------------------------
 
     def get_orders(self, filter_str: str = "orderfulfillmentstatus:{NOT_STARTED|IN_PROGRESS}", limit: int = 50) -> list[dict]:

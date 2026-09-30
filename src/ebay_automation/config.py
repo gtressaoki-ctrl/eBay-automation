@@ -113,10 +113,14 @@ class Config:
     min_units_per_listing_per_month: float = field(
         default_factory=lambda: _float_env("MIN_UNITS_PER_LISTING_PER_MONTH", 0.5)
     )
-    # Landed cost per unit is production plus shipping; Printify bills
-    # both, and ignoring shipping is what made the first pricing pass
-    # look profitable when it was not.
-    shipping_cost_cents: int = field(default_factory=lambda: _int_env("SHIPPING_COST_CENTS", 579))
+    # The seller's own share of shipping per unit. Printify bills $5.79 US
+    # shipping either way, but the shipping policy now charges the buyer
+    # that flat rate (scripts/set_buyer_paid_shipping.py), leaving only
+    # eBay's ~13.25% final value fee on the shipping charge (~$0.77). Set
+    # this back to 579 if shipping is ever made free to the buyer again —
+    # ignoring shipping is what made the first pricing pass look
+    # profitable when it was not.
+    shipping_cost_cents: int = field(default_factory=lambda: _int_env("SHIPPING_COST_CENTS", 77))
     # Scattering listings across unrelated themes forever never becomes a
     # brand a buyer recognizes and returns to. Once one theme has this many
     # published, profitable listings, research locks onto it exclusively;
