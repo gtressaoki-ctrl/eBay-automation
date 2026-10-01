@@ -181,6 +181,27 @@ class EbayClient:
             params={"category_id": category_id},
         )
 
+    # -- Buy Browse API (app token) ---------------------------------------
+    def search_items(
+        self,
+        query: str,
+        category_ids: str | None = None,
+        limit: int = 50,
+        marketplace_id: str = "EBAY_US",
+        sort: str | None = None,
+    ) -> dict:
+        params: dict = {"q": query, "limit": limit}
+        if category_ids:
+            params["category_ids"] = category_ids
+        if sort:
+            params["sort"] = sort
+        return self._app_request(
+            "GET",
+            "/buy/browse/v1/item_summary/search",
+            params=params,
+            headers={"X-EBAY-C-MARKETPLACE-ID": marketplace_id},
+        )
+
     # -- Sell Account API (user token) -----------------------------------
     def list_fulfillment_policies(self, marketplace_id: str = "EBAY_US") -> list[dict]:
         result = self._user_request(
