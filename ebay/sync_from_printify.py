@@ -54,6 +54,7 @@ def sync_product(
     quantity: int,
     brand_name: str,
     publish: bool,
+    colors: list[str] | None = None,
 ) -> dict:
     product = printify.get_product(shop_id, product_id)
     blueprint_id = product["blueprint_id"]
@@ -65,6 +66,18 @@ def sync_product(
     enabled = [v for v in product["variants"] if v.get("is_enabled")]
     if not enabled:
         raise ValueError(f"Product {product_id} has no enabled variants to list.")
+
+    if colors:
+        # Lists only a subset of Printify's enabled colors on eBay (e.g. to
+        # stay under a new-seller selling limit) without touching which
+        # colors are enabled on the Printify product itself/other channels.
+        wanted = {c.strip().lower() for c in colors}
+        enabled = [
+            v for v in enabled
+            if catalog_variants.get(v["id"], {}).get("options", {}).get("color", "").lower() in wanted
+        ]
+        if not enabled:
+            raise ValueError(f"Product {product_id}: no enabled variant matches --colors {colors}.")
 
     images = product.get("images", [])
     default_image = next((img["src"] for img in images if img.get("is_default")), images[0]["src"] if images else None)
@@ -95,6 +108,10 @@ def sync_product(
 
     for sku, variant, catalog_variant in skus:
         aspects = {name.capitalize(): [value] for name, value in catalog_variant.get("options", {}).items()}
+        aspects["Brand"] = [brand_name]
+        if "size" in catalog_variant.get("options", {}):
+            aspects.setdefault("Size Type", ["Regular"])
+            aspects.setdefault("Department", ["Unisex Adults"])
         payload = {
             "condition": "NEW",
             "product": {
@@ -109,9 +126,18 @@ def sync_product(
         ebay.create_or_replace_inventory_item(sku, payload)
 
     group_key = f"{sku_prefix}-GROUP"
+    # Shared (non-varying) item specifics required by some eBay categories
+    # (e.g. apparel's Brand/Size Type/Department) must be set on the
+    # inventory item GROUP too, not just on each variant's inventory item -
+    # publish_by_inventory_item_group reads specifics from the group.
+    shared_aspects: dict[str, list[str]] = {"Brand": [brand_name]}
+    if "size" in aspect_names:
+        shared_aspects.setdefault("Size Type", ["Regular"])
+        shared_aspects.setdefault("Department", ["Unisex Adults"])
     group_payload = {
         "title": product["title"][:80],
         "description": description_html,
+        "aspects": shared_aspects,
         "imageUrls": [default_image] if default_image else [],
         "variantSKUs": [sku for sku, _, _ in skus],
         "variesBy": {
@@ -177,6 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quantity", type=int, default=int(os.environ.get("EBAY_AVAILABLE_QUANTITY", "999")))
     parser.add_argument("--publish", action="store_true", default=os.environ.get("EBAY_PUBLISH") == "true")
     parser.add_argument("--brand-name", default=os.environ.get("BRAND_NAME", "EQUINOX"))
+    parser.add_argument("--colors", default=None, help="Comma-separated Printify color names to list on eBay (default: all enabled colors). Use to stay under a new-seller selling limit.")
     args = parser.parse_args(argv)
 
     required_env = [
@@ -219,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
         quantity=args.quantity,
         brand_name=args.brand_name,
         publish=args.publish,
+        colors=[c for c in args.colors.split(",") if c.strip()] if args.colors else None,
     )
     print(result, file=sys.stderr)
     return 0
