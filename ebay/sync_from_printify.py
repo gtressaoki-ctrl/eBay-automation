@@ -55,6 +55,7 @@ def sync_product(
     brand_name: str,
     publish: bool,
     colors: list[str] | None = None,
+    sizes: list[str] | None = None,
 ) -> dict:
     product = printify.get_product(shop_id, product_id)
     blueprint_id = product["blueprint_id"]
@@ -78,6 +79,15 @@ def sync_product(
         ]
         if not enabled:
             raise ValueError(f"Product {product_id}: no enabled variant matches --colors {colors}.")
+
+    if sizes:
+        wanted_sizes = {s.strip().lower() for s in sizes}
+        enabled = [
+            v for v in enabled
+            if catalog_variants.get(v["id"], {}).get("options", {}).get("size", "").lower() in wanted_sizes
+        ]
+        if not enabled:
+            raise ValueError(f"Product {product_id}: no enabled variant matches --sizes {sizes}.")
 
     images = product.get("images", [])
     default_image = next((img["src"] for img in images if img.get("is_default")), images[0]["src"] if images else None)
@@ -204,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--publish", action="store_true", default=os.environ.get("EBAY_PUBLISH") == "true")
     parser.add_argument("--brand-name", default=os.environ.get("BRAND_NAME", "EQUINOX"))
     parser.add_argument("--colors", default=None, help="Comma-separated Printify color names to list on eBay (default: all enabled colors). Use to stay under a new-seller selling limit.")
+    parser.add_argument("--sizes", default=None, help="Comma-separated Printify size names to list on eBay (default: all enabled sizes). Use to stay under a new-seller selling limit.")
     args = parser.parse_args(argv)
 
     required_env = [
@@ -247,6 +258,7 @@ def main(argv: list[str] | None = None) -> int:
         brand_name=args.brand_name,
         publish=args.publish,
         colors=[c for c in args.colors.split(",") if c.strip()] if args.colors else None,
+        sizes=[s for s in args.sizes.split(",") if s.strip()] if args.sizes else None,
     )
     print(result, file=sys.stderr)
     return 0
