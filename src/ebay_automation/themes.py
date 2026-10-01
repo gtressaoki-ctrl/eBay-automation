@@ -104,6 +104,47 @@ SARCASTIC_COFFEE = Theme(
             lines=("BLOOD TYPE:", "COFFEE"),
             accent_line=1,
         ),
+        Design(
+            slug="per-my-last-coffee",
+            lines=("PER MY", "LAST COFFEE"),
+            accent_line=1,
+        ),
+        Design(
+            slug="out-of-office-mentally",
+            lines=("OUT OF OFFICE",),
+            accent_line=0,
+            subtitle="(MENTALLY)",
+        ),
+        Design(
+            slug="monday-called",
+            lines=("MONDAY CALLED.", "I DIDN'T", "ANSWER"),
+            accent_line=2,
+        ),
+        Design(
+            slug="decaf-not-an-option",
+            lines=("DECAF IS", "NOT AN", "OPTION"),
+            accent_line=2,
+        ),
+        Design(
+            slug="patience-is-brewing",
+            lines=("MY PATIENCE", "IS STILL", "BREWING"),
+            accent_line=2,
+        ),
+        Design(
+            slug="coffee-doing-the-work",
+            lines=("I'M FINE.", "THE COFFEE", "IS DOING", "ALL THE WORK"),
+            accent_line=3,
+        ),
+        Design(
+            slug="fueled-by-sarcasm",
+            lines=("FUELED BY", "COFFEE AND", "SARCASM"),
+            accent_line=2,
+        ),
+        Design(
+            slug="meeting-needs-coffee",
+            lines=("THIS MEETING", "NEEDS MORE", "COFFEE"),
+            accent_line=2,
+        ),
     ),
 )
 
