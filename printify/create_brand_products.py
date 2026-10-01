@@ -153,6 +153,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--brand-name", default=os.environ.get("BRAND_NAME", "EQUINOX"), help="Brand name used in product titles/descriptions.")
     parser.add_argument("--design", default=str(DEFAULT_DESIGN), help="Path to the artwork file to print.")
+    parser.add_argument("--product-name", default=os.environ.get("PRODUCT_NAME", "Aries Ram"), help="Motif name used in product titles/descriptions (e.g. 'Aries Ram', 'Kamon Crest').")
+    parser.add_argument(
+        "--product-tags",
+        default=os.environ.get("PRODUCT_TAGS", "Aries,Ram,zodiac"),
+        help="Comma-separated extra tags for this motif (beyond the brand name).",
+    )
     parser.add_argument("--shop-id", default=os.environ.get("PRINTIFY_SHOP_ID"), help="Printify shop id.")
     parser.add_argument("--api-token", default=os.environ.get("PRINTIFY_API_TOKEN"), help="Printify API token.")
     parser.add_argument("--tshirt-keyword", default=os.environ.get("TSHIRT_BLUEPRINT_KEYWORD", "Unisex Heavy Cotton Tee"))
@@ -190,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     image = client.upload_image(args.design)
     print(f"   uploaded as image id={image['id']}", file=sys.stderr)
 
-    tags = [args.brand_name, "Aries", "Ram", "zodiac"]
+    tags = [args.brand_name] + [t.strip() for t in args.product_tags.split(",") if t.strip()]
 
     chest_extra_variant_ids = _existing_variant_ids(client, args.shop_id, args.tshirt_chest_product_id)
     tshirt_chest_payload = build_product_payload(
@@ -199,9 +205,9 @@ def main(argv: list[str] | None = None) -> int:
         blueprint_id=args.tshirt_blueprint_id,
         print_provider_id=args.tshirt_print_provider_id,
         image_id=image["id"],
-        title=f"{args.brand_name} - Aries Ram Left Chest T-Shirt",
+        title=f"{args.brand_name} - {args.product_name} Left Chest T-Shirt",
         description=(
-            f"{args.brand_name} original Aries ram line-art - a small left-chest "
+            f"{args.brand_name} original {args.product_name} line-art - a small left-chest "
             "logo print on a soft everyday unisex tee."
         ),
         tags=tags + ["T-Shirt", "Left Chest"],
@@ -219,9 +225,9 @@ def main(argv: list[str] | None = None) -> int:
         blueprint_id=args.tshirt_blueprint_id,
         print_provider_id=args.tshirt_print_provider_id,
         image_id=image["id"],
-        title=f"{args.brand_name} - Aries Ram Sleeve T-Shirt",
+        title=f"{args.brand_name} - {args.product_name} Sleeve T-Shirt",
         description=(
-            f"{args.brand_name} original Aries ram line-art - a small sleeve "
+            f"{args.brand_name} original {args.product_name} line-art - a small sleeve "
             "logo print on a soft everyday unisex tee."
         ),
         tags=tags + ["T-Shirt", "Sleeve"],
@@ -239,8 +245,8 @@ def main(argv: list[str] | None = None) -> int:
         blueprint_id=args.sticker_blueprint_id,
         print_provider_id=args.sticker_print_provider_id,
         image_id=image["id"],
-        title=f"{args.brand_name} - Aries Ram Sticker",
-        description=f"{args.brand_name} original Aries ram line-art die-cut sticker.",
+        title=f"{args.brand_name} - {args.product_name} Sticker",
+        description=f"{args.brand_name} original {args.product_name} line-art die-cut sticker.",
         tags=tags + ["Sticker"],
         price_cents=args.sticker_price_cents,
         max_variants=args.sticker_max_variants,
