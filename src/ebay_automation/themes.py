@@ -41,9 +41,13 @@ class Theme:
     # Phrase used to measure live demand on eBay.
     search_keyword: str
     # eBay listing title template; `{design}` is the design's headline.
+    # Search terms go first: buyers search "funny coffee mug", never the
+    # slogan itself, and the design part is the one cut to fit 80 chars.
     title_template: str
     keywords: tuple[str, ...]
     designs: tuple[Design, ...]
+    # eBay "Theme" item specific, used by buyers' search filters.
+    item_theme: str = "Humor"
 
 
 def _headline(design: Design) -> str:
@@ -60,7 +64,7 @@ def headline(design: Design) -> str:
 SARCASTIC_COFFEE = Theme(
     slug="sarcastic-coffee",
     search_keyword="funny sarcastic mug gift",
-    title_template="{design} - Funny Sarcastic Coffee Mug 11oz Novelty Gift",
+    title_template="Funny Sarcastic Coffee Mug Office Gift - {design}",
     keywords=("funny mug", "sarcastic gift", "coffee lover", "office gift", "novelty mug"),
     designs=(
         Design(
@@ -152,7 +156,8 @@ SARCASTIC_COFFEE = Theme(
 JAPANESE_KANJI = Theme(
     slug="japanese-kanji",
     search_keyword="japanese kanji mug",
-    title_template="{design} - Japanese Kanji Ceramic Coffee Mug 11oz Gift",
+    title_template="Japanese Kanji Coffee Mug 11oz Ceramic Gift - {design}",
+    item_theme="Japanese",
     keywords=("japanese mug", "kanji", "japan gift", "sushi", "japanese art"),
     designs=(
         Design(
@@ -190,7 +195,8 @@ JAPANESE_KANJI = Theme(
 DOG_MOM = Theme(
     slug="dog-mom",
     search_keyword="dog mom mug gift",
-    title_template="{design} - Dog Mom Ceramic Coffee Mug 11oz Gift",
+    title_template="Dog Mom Coffee Mug Gift for Dog Lover 11oz - {design}",
+    item_theme="Dogs",
     keywords=("dog mom", "dog lover gift", "pet mom", "dog owner gift"),
     designs=(
         Design(slug="dog-mom-life", lines=("DOG MOM", "LIFE"), accent_line=0),
@@ -212,7 +218,8 @@ DOG_MOM = Theme(
 TEACHER = Theme(
     slug="teacher-gift",
     search_keyword="teacher appreciation mug gift",
-    title_template="{design} - Teacher Appreciation Ceramic Coffee Mug 11oz Gift",
+    title_template="Teacher Appreciation Coffee Mug Gift 11oz - {design}",
+    item_theme="Teacher",
     keywords=("teacher gift", "teacher appreciation", "world's best teacher", "teacher life"),
     designs=(
         Design(slug="shaping-minds", lines=("SHAPING MINDS,", "ONE COFFEE", "AT A TIME"), accent_line=1),
