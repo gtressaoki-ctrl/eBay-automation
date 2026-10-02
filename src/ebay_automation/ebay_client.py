@@ -35,7 +35,10 @@ class EbayApiError(RuntimeError):
         # generic errorId 25002, so the message is the only distinguishing
         # signal. Once hit, every further publish this month fails the same
         # way — callers use this to stop instead of burning more products.
-        return "exceed the number of items" in (self.body or "")
+        # eBay words it differently depending on whether this listing would
+        # cross the limit ("would cause you to exceed the number of items")
+        # or it is already reached ("you've reached the number of items").
+        return "number of items" in (self.body or "")
 
 
 class EbayClient:
