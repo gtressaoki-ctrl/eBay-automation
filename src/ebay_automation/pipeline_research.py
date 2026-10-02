@@ -126,6 +126,51 @@ def select_active_themes(all_themes: tuple[Theme, ...], config: Config) -> tuple
     return (winner,)
 
 
+_TITLE_LIMIT = 80
+# Bump when listing_title()/listing_aspects() change, so refresh_live_listings
+# rewrites listings that went live under the older wording.
+CONTENT_VERSION = 2
+
+
+def _sentence_word(word: str) -> str:
+    # str.title() turns "DON'T" into "Don'T"; eBay discourages all-caps titles.
+    return word[:1].upper() + word[1:].lower()
+
+
+def listing_title(theme: Theme, headline: str) -> str:
+    """Search terms first, then as much of the design phrase as fits in
+    eBay's 80 characters, cut on a word boundary."""
+    prefix, _, suffix = theme.title_template.partition("{design}")
+    room = _TITLE_LIMIT - len(prefix) - len(suffix)
+    design = ""
+    for word in headline.split():
+        candidate = f"{design} {_sentence_word(word)}".strip()
+        if len(candidate) > room:
+            break
+        design = candidate
+    return f"{prefix}{design}{suffix}".strip(" -")
+
+
+def listing_aspects(config: Config, theme: Theme, design: Design, colour: str) -> dict[str, list[str]]:
+    """Item specifics. Buyers narrow search results with these filters, and
+    a listing missing a value drops out of every search filtered on it."""
+    return {
+        "Brand": [config.brand_tagline or "Unbranded"],
+        "Type": ["Coffee Mug"],
+        "Material": ["Ceramic"],
+        "Capacity": ["11 oz"],
+        "Color": [colour or "White"],
+        "Theme": [theme.item_theme],
+        "Features": ["Dishwasher Safe", "Microwave Safe"],
+        "Occasion": ["Birthday", "Christmas", "Father's Day", "Mother's Day"],
+        "Department": ["Unisex Adult"],
+        # Category 20675 (Mugs) requires this to publish (errorId 25002), and
+        # a print-on-demand mug has no model number; the design slug is
+        # unique per listing, which is what the aspect is for.
+        "Model": [design.slug[:65]],
+    }
+
+
 def build_listing(
     config: Config,
     printify: PrintifyClient,
@@ -176,7 +221,7 @@ def build_listing(
         images = [img["src"] for img in product.get("images", [])][:12]
 
         sku = _sku_for(theme, design)
-        title = theme.title_template.format(design=headline)[:80]
+        title = listing_title(theme, headline)
         # Blank until a shop name is chosen (that choice belongs to the
         # seller); once set, the same line goes on every listing so the
         # shop reads as one brand rather than as unrelated one-off products.
@@ -195,20 +240,7 @@ def build_listing(
                         f"{tagline_html}"
                     ),
                     "imageUrls": images,
-                    "aspects": {
-                        "Brand": [config.brand_tagline or "Unbranded"],
-                        "Material": ["Ceramic"],
-                        "Capacity": ["11 oz"],
-                        # Category 20675 (Mugs) requires this item specific to
-                        # publish an offer — createOrReplaceInventoryItem
-                        # accepts its absence silently, but publishOffer then
-                        # 400s with errorId 25002 ("Model is missing"), which
-                        # is how the first AUTO_PUBLISH run found this. There
-                        # is no real model number for a print-on-demand mug,
-                        # so the design's own slug stands in for one — it is
-                        # unique per listing, which is what the aspect is for.
-                        "Model": [design.slug[:65]],
-                    },
+                    "aspects": listing_aspects(config, theme, design, product_colour),
                 },
                 "condition": "NEW",
                 "availability": {"shipToLocationAvailability": {"quantity": config.listing_quantity}},
@@ -259,6 +291,7 @@ def build_listing(
             "expected_monthly_profit_cents": demand.expected_monthly_profit_cents,
         },
         "status": "pending_approval",
+        "content_version": CONTENT_VERSION,
     }
 
 
@@ -444,6 +477,41 @@ def record_traffic(ebay: EbayClient) -> None:
     ledger.save_traffic(snapshot)
 
 
+def refresh_live_listings(config: Config, ebay: EbayClient, colour: str) -> None:
+    """Rewrite the title and item specifics of listings published under an
+    older CONTENT_VERSION. Updating a published offer's inventory item
+    revises the live listing in place — no relist, no fee."""
+    by_slug = {theme.slug: theme for theme in themes.THEMES}
+    for sku, entry in ledger.load_pending_listings().items():
+        if entry.get("status") != "published" or entry.get("content_version") == CONTENT_VERSION:
+            continue
+        theme = by_slug.get(entry.get("theme", ""))
+        design_slug = (entry.get("design_key") or "").rsplit("/", 1)[-1]
+        design = next((d for d in theme.designs if d.slug == design_slug), None) if theme else None
+        if design is None:
+            continue
+        try:
+            item = ebay.get_inventory_item(sku)
+            product = item.get("product", {})
+            product["title"] = listing_title(theme, themes.headline(design))
+            product["aspects"] = {**product.get("aspects", {}), **listing_aspects(config, theme, design, colour)}
+            ebay.create_or_replace_inventory_item(
+                sku,
+                {
+                    "product": product,
+                    "condition": item.get("condition", "NEW"),
+                    "availability": item.get(
+                        "availability", {"shipToLocationAvailability": {"quantity": config.listing_quantity}}
+                    ),
+                },
+            )
+        except Exception:
+            log.exception("Failed to refresh listing content for %s", sku)
+            continue
+        ledger.update_listing_status(sku, "published", content_version=CONTENT_VERSION)
+        log.info("Refreshed title/item specifics for %s: %s", sku, product["title"])
+
+
 def run() -> None:
     config = load_config()
     if ledger.load_ledger().get("paused"):
@@ -465,6 +533,8 @@ def run() -> None:
             return
 
     product_colour, print_area = product_profile(config, printify)
+    if not config.dry_run:
+        refresh_live_listings(config, ebay, product_colour)
     # Printed in full because repository variables silently override the
     # defaults here: a stale value from a previous product shows up as a
     # mismatch on this line rather than as a batch of wrong listings.

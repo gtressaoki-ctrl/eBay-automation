@@ -651,3 +651,64 @@ def test_backlog_stops_and_reports_the_selling_limit(monkeypatch):
 
     assert pipeline_research.publish_backlog(_config(), ebay, github) is False
     assert updates == []
+
+
+def test_title_leads_with_search_terms_and_fits_on_a_word_boundary():
+    from ebay_automation import themes
+
+    title = pipeline_research.listing_title(
+        themes.SARCASTIC_COFFEE, "I SURVIVED ANOTHER MEETING THAT SHOULD HAVE BEEN AN EMAIL"
+    )
+    # Buyers search "funny coffee mug", not the slogan, so that comes first.
+    assert title.startswith("Funny Sarcastic Coffee Mug")
+    assert len(title) <= 80
+    design_part = title.split(" - ", 1)[1]
+    full = "I Survived Another Meeting That Should Have Been An Email"
+    # Cut between words, never mid-word.
+    assert full.startswith(design_part) and full[len(design_part):][:1] in ("", " ")
+
+
+def test_title_uses_sentence_case_without_breaking_contractions():
+    from ebay_automation import themes
+
+    title = pipeline_research.listing_title(themes.SARCASTIC_COFFEE, "DON'T TALK TO ME")
+    assert title.endswith("Don't Talk To Me")
+
+
+def test_live_listings_get_new_title_and_item_specifics_once(isolated_state):
+    pipeline_research.ledger.save_pending_listings(
+        {
+            "POD-old": {
+                "status": "published",
+                "theme": "sarcastic-coffee",
+                "design_key": "sarcastic-coffee/blood-type-coffee",
+            },
+            "POD-current": {
+                "status": "published",
+                "theme": "sarcastic-coffee",
+                "design_key": "sarcastic-coffee/first-coffee",
+                "content_version": pipeline_research.CONTENT_VERSION,
+            },
+        }
+    )
+    ebay = MagicMock()
+    ebay.get_inventory_item.return_value = {
+        "condition": "NEW",
+        "availability": {"shipToLocationAvailability": {"quantity": 1}},
+        "product": {"title": "BLOOD TYPE: COFFEE - Funny...", "aspects": {"Model": ["blood-type-coffee"]}},
+    }
+
+    pipeline_research.refresh_live_listings(_config(), ebay, "White")
+
+    ebay.get_inventory_item.assert_called_once_with("POD-old")
+    sku, item = ebay.create_or_replace_inventory_item.call_args[0]
+    assert sku == "POD-old"
+    assert item["product"]["title"].startswith("Funny Sarcastic Coffee Mug")
+    assert item["product"]["aspects"]["Type"] == ["Coffee Mug"]
+    assert item["availability"]["shipToLocationAvailability"]["quantity"] == 1
+    saved = pipeline_research.ledger.load_pending_listings()["POD-old"]
+    assert saved["content_version"] == pipeline_research.CONTENT_VERSION
+
+    ebay.reset_mock()
+    pipeline_research.refresh_live_listings(_config(), ebay, "White")
+    ebay.get_inventory_item.assert_not_called()
