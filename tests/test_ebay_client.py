@@ -153,3 +153,15 @@ def test_promote_listing_sends_inventory_reference(monkeypatch, client):
         "inventoryReferenceId": "SKU-1",
         "inventoryReferenceType": "INVENTORY_ITEM",
     }
+
+
+def test_selling_limit_is_recognised_in_both_of_ebays_wordings():
+    from ebay_automation.ebay_client import EbayApiError
+
+    would_exceed = '{"errors":[{"message":"This listing would cause you to exceed the number of items and amount you can list."}]}'
+    already_reached = "{\"errors\":[{\"message\":\"It looks like you've reached the number of items you can list.\"}]}"
+    other = '{"errors":[{"message":"The item specific Model is missing."}]}'
+
+    assert EbayApiError("POST", "u", 400, would_exceed).is_selling_limit
+    assert EbayApiError("POST", "u", 400, already_reached).is_selling_limit
+    assert not EbayApiError("POST", "u", 400, other).is_selling_limit
