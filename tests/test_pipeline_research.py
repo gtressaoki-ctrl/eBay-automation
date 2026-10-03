@@ -712,3 +712,25 @@ def test_live_listings_get_new_title_and_item_specifics_once(isolated_state):
     ebay.reset_mock()
     pipeline_research.refresh_live_listings(_config(), ebay, "White")
     ebay.get_inventory_item.assert_not_called()
+
+
+def test_listings_in_niches_below_the_demand_floor_are_retired(isolated_state):
+    pipeline_research.ledger.save_pending_listings(
+        {
+            "POD-kanji": {"status": "published", "keyword": "japanese kanji mug", "ebay_offer_id": "o-kanji"},
+            "POD-coffee": {"status": "published", "keyword": "funny sarcastic mug gift", "ebay_offer_id": "o-coffee"},
+        }
+    )
+    ebay = MagicMock()
+    demands = [
+        _demand(keyword="japanese kanji mug", units_per_listing_per_month=0.08),
+        _demand(keyword="funny sarcastic mug gift", units_per_listing_per_month=2.66),
+    ]
+
+    pipeline_research.retire_low_demand_listings(_config(), ebay, demands)
+
+    # Only the dead niche gives its slot back; the selling one stays live.
+    ebay.withdraw_offer.assert_called_once_with("o-kanji")
+    saved = pipeline_research.ledger.load_pending_listings()
+    assert saved["POD-kanji"]["status"] == "retired"
+    assert saved["POD-coffee"]["status"] == "published"
