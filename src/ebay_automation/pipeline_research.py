@@ -512,6 +512,32 @@ def refresh_live_listings(config: Config, ebay: EbayClient, colour: str) -> None
         log.info("Refreshed title/item specifics for %s: %s", sku, product["title"])
 
 
+def retire_low_demand_listings(config: Config, ebay: EbayClient, demands: list) -> None:
+    """End live listings in niches measured below the demand floor.
+
+    The monthly selling limit is shared with the seller's other listings,
+    and every live good-'til-cancelled listing renews against it on the
+    1st. A listing in a niche that sells ~once a year is a slot a
+    high-demand design could have had."""
+    dead = {
+        d.keyword
+        for d in demands
+        if d.units_per_listing_per_month < config.min_units_per_listing_per_month
+    }
+    if not dead:
+        return
+    for sku, entry in ledger.load_pending_listings().items():
+        if entry.get("status") != "published" or entry.get("keyword") not in dead:
+            continue
+        try:
+            ebay.withdraw_offer(entry["ebay_offer_id"])
+        except Exception:
+            log.exception("Failed to retire low-demand listing %s", sku)
+            continue
+        ledger.update_listing_status(sku, "retired")
+        log.info("Retired %s: niche %r is below the demand floor.", sku, entry["keyword"])
+
+
 def run() -> None:
     config = load_config()
     if ledger.load_ledger().get("paused"):
@@ -577,6 +603,8 @@ def run() -> None:
             rejected.sell_through_rate * 100,
             rejected.units_per_listing_per_month,
         )
+    if config.auto_publish and not config.dry_run:
+        retire_low_demand_listings(config, ebay, [*report.ranked, *report.rejected])
     if not report.ranked:
         log.error("No niche cleared the profit floor; nothing listed.")
         return
