@@ -210,7 +210,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sku-prefix", required=True, help="Prefix for eBay SKUs / inventory item group key, e.g. EQX-CHEST.")
     parser.add_argument("--category-query", default="T-Shirt", help="Keyword used to auto-pick an eBay category (ignored if --category-id is set).")
     parser.add_argument("--category-id", default=os.environ.get("EBAY_CATEGORY_ID"))
-    parser.add_argument("--quantity", type=int, default=int(os.environ.get("EBAY_AVAILABLE_QUANTITY", "999")))
+    # Print-on-demand means restocking is free (just raise this and re-run
+    # any time), but eBay's new-seller selling limit is a shared, finite
+    # budget across every listing - default small and bump individual
+    # variants up later once something actually sells, instead of
+    # front-loading quantity on unproven listings.
+    parser.add_argument("--quantity", type=int, default=int(os.environ.get("EBAY_AVAILABLE_QUANTITY", "1")))
     parser.add_argument("--publish", action="store_true", default=os.environ.get("EBAY_PUBLISH") == "true")
     parser.add_argument("--brand-name", default=os.environ.get("BRAND_NAME", "EQUINOX"))
     parser.add_argument("--colors", default=None, help="Comma-separated Printify color names to list on eBay (default: all enabled colors). Use to stay under a new-seller selling limit.")
