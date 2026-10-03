@@ -125,7 +125,8 @@
     "status": "published",
     "issue_number": 19,
     "ebay_listing_id": "318929525352",
-    "listing_url": "https://www.ebay.com/itm/318929525352"
+    "listing_url": "https://www.ebay.com/itm/318929525352",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-technically-awake-32f646": {
     "sku": "POD-sarcastic-coffee-technically-awake-32f646",
@@ -149,7 +150,8 @@
     "status": "published",
     "issue_number": 20,
     "ebay_listing_id": "318929525756",
-    "listing_url": "https://www.ebay.com/itm/318929525756"
+    "listing_url": "https://www.ebay.com/itm/318929525756",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-should-have-been-an-em-4641f8": {
     "sku": "POD-sarcastic-coffee-should-have-been-an-em-4641f8",
@@ -173,7 +175,8 @@
     "status": "published",
     "issue_number": 21,
     "ebay_listing_id": "318929526103",
-    "listing_url": "https://www.ebay.com/itm/318929526103"
+    "listing_url": "https://www.ebay.com/itm/318929526103",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-until-this-is-empty-ff37cb": {
     "sku": "POD-sarcastic-coffee-until-this-is-empty-ff37cb",
@@ -197,7 +200,8 @@
     "status": "published",
     "issue_number": 23,
     "ebay_listing_id": "318929526441",
-    "listing_url": "https://www.ebay.com/itm/318929526441"
+    "listing_url": "https://www.ebay.com/itm/318929526441",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-professional-overthink-98f7e1": {
     "sku": "POD-sarcastic-coffee-professional-overthink-98f7e1",
@@ -221,7 +225,8 @@
     "status": "published",
     "issue_number": 24,
     "ebay_listing_id": "318929526725",
-    "listing_url": "https://www.ebay.com/itm/318929526725"
+    "listing_url": "https://www.ebay.com/itm/318929526725",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-explaining-why-im-righ-d43845": {
     "sku": "POD-sarcastic-coffee-explaining-why-im-righ-d43845",
@@ -245,7 +250,8 @@
     "status": "published",
     "issue_number": 25,
     "ebay_listing_id": "318929527170",
-    "listing_url": "https://www.ebay.com/itm/318929527170"
+    "listing_url": "https://www.ebay.com/itm/318929527170",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-first-coffee-5e88f0": {
     "sku": "POD-sarcastic-coffee-first-coffee-5e88f0",
@@ -268,7 +274,8 @@
     },
     "status": "published",
     "ebay_listing_id": "318929528136",
-    "listing_url": "https://www.ebay.com/itm/318929528136"
+    "listing_url": "https://www.ebay.com/itm/318929528136",
+    "content_version": 2
   },
   "POD-sarcastic-coffee-blood-type-coffee-8aa034": {
     "sku": "POD-sarcastic-coffee-blood-type-coffee-8aa034",
@@ -291,7 +298,8 @@
     },
     "status": "published",
     "ebay_listing_id": "318929528304",
-    "listing_url": "https://www.ebay.com/itm/318929528304"
+    "listing_url": "https://www.ebay.com/itm/318929528304",
+    "content_version": 2
   },
   "POD-japanese-kanji-fish-kanji-ba93b1": {
     "sku": "POD-japanese-kanji-fish-kanji-ba93b1",
@@ -314,6 +322,7 @@
     },
     "status": "published",
     "ebay_listing_id": "318929528417",
-    "listing_url": "https://www.ebay.com/itm/318929528417"
+    "listing_url": "https://www.ebay.com/itm/318929528417",
+    "content_version": 2
   }
 }
