@@ -320,9 +320,81 @@
       "units_per_listing_per_month": 0.081,
       "expected_monthly_profit_cents": 13
     },
-    "status": "published",
+    "status": "retired",
     "ebay_listing_id": "318929528417",
     "listing_url": "https://www.ebay.com/itm/318929528417",
     "content_version": 2
+  },
+  "POD-sarcastic-coffee-per-my-last-coffee-360533": {
+    "sku": "POD-sarcastic-coffee-per-my-last-coffee-360533",
+    "design_key": "sarcastic-coffee/per-my-last-coffee",
+    "theme": "sarcastic-coffee",
+    "headline": "PER MY LAST COFFEE",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac19b9b47e633b61106f1fb",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "296689555011",
+    "price_cents": 1298,
+    "cost_cents": 690,
+    "unit_profit_cents": 396,
+    "image_url": "https://images-api.printify.com/mockup/6ac19b9b47e633b61106f1fb/65216/6310/funny-sarcastic-coffee-mug-office-gift-per-my-last-coffee.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2124,
+      "sell_through_pct": 67,
+      "units_per_listing_per_month": 0.934,
+      "expected_monthly_profit_cents": 370
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860005535179",
+    "listing_url": "https://www.ebay.com/itm/860005535179"
+  },
+  "POD-sarcastic-coffee-out-of-office-mentally-1d882f": {
+    "sku": "POD-sarcastic-coffee-out-of-office-mentally-1d882f",
+    "design_key": "sarcastic-coffee/out-of-office-mentally",
+    "theme": "sarcastic-coffee",
+    "headline": "OUT OF OFFICE",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac19ba176bf2c316d08b898",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "296690099011",
+    "price_cents": 1298,
+    "cost_cents": 690,
+    "unit_profit_cents": 396,
+    "image_url": "https://images-api.printify.com/mockup/6ac19ba176bf2c316d08b898/65216/6310/funny-sarcastic-coffee-mug-office-gift-out-of-office.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2124,
+      "sell_through_pct": 67,
+      "units_per_listing_per_month": 0.934,
+      "expected_monthly_profit_cents": 370
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860005535317",
+    "listing_url": "https://www.ebay.com/itm/860005535317"
+  },
+  "POD-sarcastic-coffee-monday-called-cd23dc": {
+    "sku": "POD-sarcastic-coffee-monday-called-cd23dc",
+    "design_key": "sarcastic-coffee/monday-called",
+    "theme": "sarcastic-coffee",
+    "headline": "MONDAY CALLED. I DIDN'T ANSWER",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac19ba766c79be274053e65",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "296690823011",
+    "price_cents": 1298,
+    "cost_cents": 690,
+    "unit_profit_cents": 396,
+    "image_url": "https://images-api.printify.com/mockup/6ac19ba766c79be274053e65/65216/6310/funny-sarcastic-coffee-mug-office-gift-monday-called-i-didnt-answer.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2124,
+      "sell_through_pct": 67,
+      "units_per_listing_per_month": 0.934,
+      "expected_monthly_profit_cents": 370
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860005535481",
+    "listing_url": "https://www.ebay.com/itm/860005535481"
   }
 }
