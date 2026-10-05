@@ -396,5 +396,77 @@
     "content_version": 2,
     "ebay_listing_id": "860005535481",
     "listing_url": "https://www.ebay.com/itm/860005535481"
+  },
+  "POD-sarcastic-coffee-decaf-not-an-option-f5abde": {
+    "sku": "POD-sarcastic-coffee-decaf-not-an-option-f5abde",
+    "design_key": "sarcastic-coffee/decaf-not-an-option",
+    "theme": "sarcastic-coffee",
+    "headline": "DECAF IS NOT AN OPTION",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac2ee2dd27a0ae1b3073909",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "298348236011",
+    "price_cents": 1269,
+    "cost_cents": 690,
+    "unit_profit_cents": 371,
+    "image_url": "https://images-api.printify.com/mockup/6ac2ee2dd27a0ae1b3073909/65216/6310/funny-sarcastic-coffee-mug-office-gift-decaf-is-not-an-option.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2104,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 0.961,
+      "expected_monthly_profit_cents": 357
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860009160759",
+    "listing_url": "https://www.ebay.com/itm/860009160759"
+  },
+  "POD-sarcastic-coffee-coffee-doing-the-work-98507f": {
+    "sku": "POD-sarcastic-coffee-coffee-doing-the-work-98507f",
+    "design_key": "sarcastic-coffee/coffee-doing-the-work",
+    "theme": "sarcastic-coffee",
+    "headline": "I'M FINE. THE COFFEE IS DOING ALL THE WORK",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac2ee4050c74d1aaa017758",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "298348411011",
+    "price_cents": 1269,
+    "cost_cents": 690,
+    "unit_profit_cents": 371,
+    "image_url": "https://images-api.printify.com/mockup/6ac2ee4050c74d1aaa017758/65216/6310/funny-sarcastic-coffee-mug-office-gift-im-fine-the-coffee-is-doing-all-the-work.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2104,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 0.961,
+      "expected_monthly_profit_cents": 357
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860009161574",
+    "listing_url": "https://www.ebay.com/itm/860009161574"
+  },
+  "POD-sarcastic-coffee-meeting-needs-coffee-86b81e": {
+    "sku": "POD-sarcastic-coffee-meeting-needs-coffee-86b81e",
+    "design_key": "sarcastic-coffee/meeting-needs-coffee",
+    "theme": "sarcastic-coffee",
+    "headline": "THIS MEETING NEEDS MORE COFFEE",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac2ee4b63d599869609bb1b",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "298348588011",
+    "price_cents": 1269,
+    "cost_cents": 690,
+    "unit_profit_cents": 371,
+    "image_url": "https://images-api.printify.com/mockup/6ac2ee4b63d599869609bb1b/65216/6310/funny-sarcastic-coffee-mug-office-gift-this-meeting-needs-more-coffee.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2104,
+      "sell_through_pct": 58,
+      "units_per_listing_per_month": 0.961,
+      "expected_monthly_profit_cents": 357
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860009161878",
+    "listing_url": "https://www.ebay.com/itm/860009161878"
   }
 }
