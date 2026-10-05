@@ -64,10 +64,13 @@ python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確
   - `research.py` — 需要実測（販売数・売れている価格帯・利益フィルタ）
   - `themes.py` — 実際にプリントするデザイン内容（検索キーワードとは別物）
   - `design_gen.py` — プリント領域いっぱいに組版してPNG出力
+  - `idea_pin_gen.py` — 写真からPinterest Idea Pinのタイトル・説明文を生成
 - `.github/workflows/` — 定期実行・承認処理・受注同期のGitHub Actions
 - `state/` — 実行状態（承認待ちリスト・注文台帳）。ワークフローが自動コミット
 - `docs/SETUP.md` — 初期セットアップ手順（eBay/Printify/GitHub Secrets）
 - `scripts/list_printify_catalog.py` — 出品するブランク商品のID調査用ツール
+- `scripts/generate_idea_pin.py` — 写真を渡すとIdea Pinのタイトル・説明文を
+  生成する半自動ツール（`docs/SETUP.md` §6）。Pinterest投稿自体は手動
 
 ## ブランド化の方針
 
@@ -93,6 +96,10 @@ python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確
   月額課金あり。デザインは Seller Hub の Web UI 操作のみで、公開APIがない）
 - ショップ名を決めたら `BRAND_TAGLINE` に設定すると、以後の全リスティングの説明文と
   eBayの Brand item specific に自動で反映されます
+- eBay外の認知獲得として、Pinterest上で `EQUINOX` ブランドのIdea Pinを運用する
+  導線も用意しています（`scripts/generate_idea_pin.py`、`docs/SETUP.md` §6）。
+  写真を渡すとタイトル・説明文を生成しますが、投稿自体とアフィリエイトリンクの
+  設定はPinterest側の制約により手動です
 
 ## 新規セラーが誰の目にも留まらない問題
 
