@@ -6,7 +6,7 @@ title: Privacy Policy
 
 _Last updated: 2026-10-05_
 
-This policy covers the Sarcastic Coffee Mugs pin publisher (the "app"),
+This policy covers Shop Pin Publisher (the "app"),
 an automation that creates Pins for our own product listings on our own
 Pinterest account.
 
