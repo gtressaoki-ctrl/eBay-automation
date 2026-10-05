@@ -7,7 +7,7 @@ title: Sarcastic Coffee Mugs
 Original funny and sarcastic 11oz ceramic coffee mugs, printed on demand
 and shipped within the US. Every design is our own wording.
 
-Shop on eBay: <https://www.ebay.com/sch/i.html?_ssn=&_nkw=funny+sarcastic+coffee+mug+office+gift>
+Shop on eBay: <https://www.ebay.com/itm/318929525352>
 
 ## Pin publisher
 
