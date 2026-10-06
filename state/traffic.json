@@ -1,25 +1,25 @@
 {
   "318929525352": {
     "headline": "RUNNING ON CAFFEINE AND SPITE",
-    "impressions": 51,
-    "views": 1,
+    "impressions": 54,
+    "views": 2,
     "sales": 0
   },
   "318929525756": {
     "headline": "TECHNICALLY I'M AWAKE",
-    "impressions": 24,
+    "impressions": 26,
     "views": 0,
     "sales": 0
   },
   "318929526103": {
     "headline": "I SURVIVED ANOTHER MEETING THAT SHOULD HAVE BEEN AN EMAIL",
-    "impressions": 22,
+    "impressions": 24,
     "views": 0,
     "sales": 0
   },
   "318929526441": {
     "headline": "DON'T TALK TO ME UNTIL THIS IS EMPTY",
-    "impressions": 91,
+    "impressions": 94,
     "views": 1,
     "sales": 0
   },
@@ -31,8 +31,8 @@
   },
   "318929527170": {
     "headline": "I'M NOT ARGUING I'M EXPLAINING WHY I'M RIGHT",
-    "impressions": 100,
-    "views": 2,
+    "impressions": 138,
+    "views": 5,
     "sales": 0
   },
   "318929528136": {
@@ -49,19 +49,37 @@
   },
   "860005535179": {
     "headline": "PER MY LAST COFFEE",
-    "impressions": 36,
-    "views": 0,
+    "impressions": 47,
+    "views": 1,
     "sales": 0
   },
   "860005535317": {
     "headline": "OUT OF OFFICE",
-    "impressions": 30,
+    "impressions": 40,
     "views": 0,
     "sales": 0
   },
   "860005535481": {
     "headline": "MONDAY CALLED. I DIDN'T ANSWER",
-    "impressions": 33,
+    "impressions": 40,
+    "views": 1,
+    "sales": 0
+  },
+  "860009160759": {
+    "headline": "DECAF IS NOT AN OPTION",
+    "impressions": 20,
+    "views": 0,
+    "sales": 0
+  },
+  "860009161574": {
+    "headline": "I'M FINE. THE COFFEE IS DOING ALL THE WORK",
+    "impressions": 22,
+    "views": 0,
+    "sales": 0
+  },
+  "860009161878": {
+    "headline": "THIS MEETING NEEDS MORE COFFEE",
+    "impressions": 29,
     "views": 0,
     "sales": 0
   }

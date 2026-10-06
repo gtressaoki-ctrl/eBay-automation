@@ -468,5 +468,53 @@
     "content_version": 2,
     "ebay_listing_id": "860009161878",
     "listing_url": "https://www.ebay.com/itm/860009161878"
+  },
+  "POD-sarcastic-coffee-patience-is-brewing-dd33ee": {
+    "sku": "POD-sarcastic-coffee-patience-is-brewing-dd33ee",
+    "design_key": "sarcastic-coffee/patience-is-brewing",
+    "theme": "sarcastic-coffee",
+    "headline": "MY PATIENCE IS STILL BREWING",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac4569ec3dfbecfd00148a1",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "299822209011",
+    "price_cents": 1432,
+    "cost_cents": 690,
+    "unit_profit_cents": 512,
+    "image_url": "https://images-api.printify.com/mockup/6ac4569ec3dfbecfd00148a1/65216/6310/funny-sarcastic-coffee-mug-office-gift-my-patience-is-still-brewing.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2232,
+      "sell_through_pct": 50,
+      "units_per_listing_per_month": 0.806,
+      "expected_monthly_profit_cents": 413
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860013146307",
+    "listing_url": "https://www.ebay.com/itm/860013146307"
+  },
+  "POD-sarcastic-coffee-fueled-by-sarcasm-b36713": {
+    "sku": "POD-sarcastic-coffee-fueled-by-sarcasm-b36713",
+    "design_key": "sarcastic-coffee/fueled-by-sarcasm",
+    "theme": "sarcastic-coffee",
+    "headline": "FUELED BY COFFEE AND SARCASM",
+    "keyword": "funny sarcastic mug gift",
+    "printify_product_id": "6ac456a6514db657c9055594",
+    "printify_variant_id": 65216,
+    "ebay_offer_id": "299822311011",
+    "price_cents": 1432,
+    "cost_cents": 690,
+    "unit_profit_cents": 512,
+    "image_url": "https://images-api.printify.com/mockup/6ac456a6514db657c9055594/65216/6310/funny-sarcastic-coffee-mug-office-gift-fueled-by-coffee-and-sarcasm.jpg?camera_label=front",
+    "demand": {
+      "active_listings": 2232,
+      "sell_through_pct": 50,
+      "units_per_listing_per_month": 0.806,
+      "expected_monthly_profit_cents": 413
+    },
+    "status": "published",
+    "content_version": 2,
+    "ebay_listing_id": "860013146702",
+    "listing_url": "https://www.ebay.com/itm/860013146702"
   }
 }
