@@ -30,6 +30,7 @@ SELL_SCOPES = " ".join(
         "https://api.ebay.com/oauth/api_scope/sell.account",
         "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
         "https://api.ebay.com/oauth/api_scope/sell.marketing",
+        "https://api.ebay.com/oauth/api_scope/sell.analytics.readonly",
     ]
 )
 
@@ -254,6 +255,20 @@ class EbayClient:
     def get_inventory_item(self, sku: str) -> dict:
         return self._user_request("GET", f"/sell/inventory/v1/inventory_item/{sku}")
 
+    def list_inventory_items(self, limit: int = 100) -> list[dict]:
+        items: list[dict] = []
+        offset = 0
+        while True:
+            result = self._user_request(
+                "GET", "/sell/inventory/v1/inventory_item", params={"limit": limit, "offset": offset}
+            )
+            page = result.get("inventoryItems", []) if result else []
+            items.extend(page)
+            if len(page) < limit:
+                break
+            offset += limit
+        return items
+
     def create_or_replace_inventory_item_group(self, group_key: str, payload: dict) -> None:
         self._user_request(
             "PUT",
@@ -305,6 +320,35 @@ class EbayClient:
 
     def delete_inventory_item(self, sku: str) -> None:
         self._user_request("DELETE", f"/sell/inventory/v1/inventory_item/{sku}")
+
+    # -- Sell Analytics API (user token) ----------------------------------
+    def get_traffic_report(
+        self,
+        *,
+        start_date: str,
+        end_date: str,
+        dimension: str = "LISTING",
+        metrics: str = "LISTING_IMPRESSION_TOTAL,LISTING_VIEWS_TOTAL,CLICK_THROUGH_RATE",
+        marketplace_ids: str = "EBAY_US",
+        listing_ids: list[str] | None = None,
+    ) -> dict:
+        """start_date/end_date are YYYY-MM-DD (converted to eBay's YYYYMMDD..YYYYMMDD
+        range syntax); the API caps the range at 90 days and only keeps ~2 years
+        of history."""
+        start = start_date.replace("-", "")
+        end = end_date.replace("-", "")
+        filter_parts = [
+            f"marketplaceIds:{{{marketplace_ids}}}",
+            f"dateRange:[{start}..{end}]",
+        ]
+        if listing_ids:
+            filter_parts.append(f"listingIds:{{{','.join(listing_ids)}}}")
+        params = {
+            "dimension": dimension,
+            "metric": metrics,
+            "filter": ",".join(filter_parts),
+        }
+        return self._user_request("GET", "/sell/analytics/v1/traffic_report", params=params)
 
     # -- Sell Marketing API (user token) ---------------------------------
     def create_item_promotion(self, payload: dict) -> dict:

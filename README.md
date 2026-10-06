@@ -151,6 +151,17 @@ Printify 商品の各バリエーション(色・サイズ)ごとに eBay の in
 inventory item group にまとめて多バリエーション出品として公開します。eBay の商品カテゴリは
 `--category-query` のキーワードからカタログ(Taxonomy API)を検索して自動選択します(`--category-id` で固定も可能)。
 
+### アクセス数・クリック数の確認
+
+```bash
+python -m ebay.traffic_report --days 30
+```
+
+出品ごとのインプレッション数・閲覧数・クリック率を表示します(Sell Analytics API)。`sell.marketing` を
+追加した時と同様、`sell.analytics.readonly` スコープはあとから `SELL_SCOPES` に加えたため、それより前に
+発行した `EBAY_REFRESH_TOKEN` では使えません。403 になる場合は OAuth 同意をやり直してください
+(`python -m ebay.oauth_consent` → `python -m ebay.exchange_code`)。
+
 ### ファイル構成
 
 ```
