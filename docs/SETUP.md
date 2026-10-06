@@ -132,3 +132,23 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 最初は Issue 承認を挟む設計です。安定して運用できたら、GitHub Variables で
 `AUTO_PUBLISH=true` に切り替えるだけで、承認ステップを飛ばして即座にeBayへ
 公開するモードになります（コード変更不要）。
+
+## Pinterest (free exposure for listings)
+
+New listings are pinned to our own Pinterest board daily by the
+"Pinterest pins" workflow, each Pin linking to its eBay listing.
+
+1. Create the app at <https://developers.pinterest.com/apps/> ("Connect app").
+   Website: `https://gtressaoki-ctrl.github.io/eBay-automation/`, privacy
+   policy: `.../privacy.html`. Add the redirect URI
+   `https://gtressaoki-ctrl.github.io/eBay-automation/oauth.html` in the app
+   settings.
+2. Secrets: `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, and
+   `PINTEREST_TOKEN_KEY` (generate with
+   `PYTHONPATH=src python scripts/pinterest_authorize.py newkey`).
+   While the app only has Trial access, set the variable
+   `PINTEREST_API_BASE=https://api-sandbox.pinterest.com`.
+3. Open the link from `scripts/pinterest_authorize.py url`, approve, copy the
+   code shown, and run the "Pinterest authorize" workflow with it.
+   Pinterest rotates the refresh token on every refresh, so the token pair
+   lives encrypted in `state/pinterest_token.enc` rather than in a secret.

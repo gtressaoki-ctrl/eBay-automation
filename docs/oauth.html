@@ -1,0 +1,37 @@
+---
+layout: null
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Pin Publisher – Authorization</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 36rem; margin: 3rem auto; padding: 0 1rem; color: #222; background: #fff; }
+  code { display: block; padding: .75rem; background: #f2f2f2; border-radius: 6px; word-break: break-all; font-size: 1.05rem; }
+  button { margin-top: .75rem; padding: .5rem 1rem; font-size: 1rem; }
+  .err { color: #b00020; }
+</style>
+</head>
+<body>
+<h1>Shop Pin Publisher</h1>
+<div id="out"></div>
+<script>
+  const p = new URLSearchParams(location.search);
+  const out = document.getElementById("out");
+  const code = p.get("code");
+  if (code) {
+    out.innerHTML = '<p>Authorization complete. Copy this code into the "Pinterest authorize" workflow:</p>' +
+      '<code id="c"></code><button id="b">Copy</button>';
+    document.getElementById("c").textContent = code;
+    document.getElementById("b").onclick = () => navigator.clipboard.writeText(code);
+  } else if (p.get("error")) {
+    out.innerHTML = '<p class="err"></p>';
+    out.firstChild.textContent = "Authorization was not granted: " + p.get("error");
+  } else {
+    out.innerHTML = "<p>This page receives the one-time code after authorizing Shop Pin Publisher on Pinterest.</p>";
+  }
+</script>
+</body>
+</html>

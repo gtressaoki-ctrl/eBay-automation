@@ -1,0 +1,54 @@
+name: Pinterest authorize
+
+# One-time (and again only if access is ever revoked): exchange the code
+# shown on docs/oauth.html after approving the app for the encrypted
+# token store in state/pinterest_token.enc.
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: "Code shown on the authorization page (single-use, expires in minutes)"
+        required: true
+      csv_uploaded:
+        description: "Today's live listings were already pinned via the bulk-create CSV"
+        type: boolean
+        default: true
+
+concurrency:
+  group: ebay-automation-state
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Exchange code for tokens
+        env:
+          PYTHONPATH: src
+          PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+          PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+          PINTEREST_TOKEN_KEY: ${{ secrets.PINTEREST_TOKEN_KEY }}
+          PINTEREST_API_BASE: ${{ vars.PINTEREST_API_BASE }}
+          PINTEREST_REDIRECT_URI: ${{ vars.PINTEREST_REDIRECT_URI }}
+          CODE: ${{ inputs.code }}
+        run: |
+          python scripts/pinterest_authorize.py exchange "$CODE" ${{ inputs.csv_uploaded && '--csv-uploaded' || '' }}
+      - name: Commit token store
+        run: |
+          git config user.name "ebay-automation-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/
+          git commit -m "chore(state): store Pinterest authorization [skip ci]"
+          for attempt in 1 2 3 4 5; do
+            git push && break
+            git fetch origin main && git rebase origin/main
+            sleep $((RANDOM % 5 + 1))
+          done

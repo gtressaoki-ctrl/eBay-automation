@@ -154,6 +154,28 @@ class Config:
         default_factory=lambda: _str_env("PROMOTED_LISTINGS_CAMPAIGN_NAME", "ebay-automation-cps")
     )
 
+    # Pinterest (pipeline_pinterest.py). The token pair itself is stored
+    # encrypted in state/pinterest_token.enc with this key — see
+    # pinterest_client.py for why it can't be a plain secret.
+    pinterest_app_id: str = field(default_factory=lambda: _str_env("PINTEREST_APP_ID"))
+    pinterest_app_secret: str = field(default_factory=lambda: _str_env("PINTEREST_APP_SECRET"))
+    pinterest_token_key: str = field(default_factory=lambda: _str_env("PINTEREST_TOKEN_KEY"))
+    pinterest_redirect_uri: str = field(
+        default_factory=lambda: _str_env(
+            "PINTEREST_REDIRECT_URI", "https://gtressaoki-ctrl.github.io/eBay-automation/oauth.html"
+        )
+    )
+    # Trial-access apps can only write to the sandbox
+    # (https://api-sandbox.pinterest.com); switch to production once the
+    # app is granted Standard access.
+    pinterest_api_base: str = field(
+        default_factory=lambda: _str_env("PINTEREST_API_BASE", "https://api.pinterest.com")
+    )
+    pinterest_board_name: str = field(
+        default_factory=lambda: _str_env("PINTEREST_BOARD_NAME", "Funny Coffee Mugs")
+    )
+    pinterest_pins_per_run: int = field(default_factory=lambda: _int_env("PINTEREST_PINS_PER_RUN", 2))
+
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]
         if missing:
