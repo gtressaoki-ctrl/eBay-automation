@@ -42,7 +42,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--days", type=int, default=30, help="How many trailing days to report (max ~90).")
     parser.add_argument("--sku-prefix", default="EQX-", help="Only report listings whose SKU starts with this.")
-    parser.add_argument("--marketplace-id", default=os.environ.get("EBAY_MARKETPLACE_ID", "EBAY_US"))
     args = parser.parse_args(argv)
 
     ebay = EbayClient(
@@ -63,23 +62,26 @@ def main(argv: list[str] | None = None) -> int:
     report = ebay.get_traffic_report(
         start_date=start.isoformat(),
         end_date=end.isoformat(),
-        marketplace_ids=args.marketplace_id,
         listing_ids=list(listings.keys()),
     )
 
-    rows = {r["listingId"]: r for r in report.get("records", [])}
+    metric_keys = [m["key"] for m in report.get("header", {}).get("metrics", [])]
+    rows = {}
+    for record in report.get("records", []):
+        listing_id = record["dimensionValues"][0]["value"]
+        values = dict(zip(metric_keys, (mv["value"] for mv in record["metricValues"])))
+        rows[listing_id] = values
 
-    print(f"Traffic report {start} to {end} ({args.marketplace_id}):\n")
+    print(f"Traffic report {start} to {end}:\n")
     header = f"{'SKU':<28} {'Listing ID':<14} {'Impressions':>11} {'Views':>7} {'CTR':>7}"
     print(header)
     print("-" * len(header))
     for listing_id, sku in sorted(listings.items(), key=lambda kv: kv[1]):
-        record = rows.get(listing_id, {})
-        metrics = {m["metricKey"]: m["value"] for m in record.get("metrics", [])}
-        impressions = metrics.get("LISTING_IMPRESSION_TOTAL", "0")
-        views = metrics.get("LISTING_VIEWS_TOTAL", "0")
-        ctr = metrics.get("CLICK_THROUGH_RATE", "0")
-        print(f"{sku:<28} {listing_id:<14} {impressions:>11} {views:>7} {ctr:>7}")
+        values = rows.get(listing_id, {})
+        impressions = values.get("LISTING_IMPRESSION_TOTAL", 0)
+        views = values.get("LISTING_VIEWS_TOTAL", 0)
+        ctr = values.get("CLICK_THROUGH_RATE", 0)
+        print(f"{sku:<28} {listing_id:<14} {impressions:>11} {views:>7} {ctr:>7.2f}")
 
     return 0
 

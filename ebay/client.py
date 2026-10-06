@@ -329,20 +329,20 @@ class EbayClient:
         end_date: str,
         dimension: str = "LISTING",
         metrics: str = "LISTING_IMPRESSION_TOTAL,LISTING_VIEWS_TOTAL,CLICK_THROUGH_RATE",
-        marketplace_ids: str = "EBAY_US",
         listing_ids: list[str] | None = None,
     ) -> dict:
         """start_date/end_date are YYYY-MM-DD (converted to eBay's YYYYMMDD..YYYYMMDD
         range syntax); the API caps the range at 90 days and only keeps ~2 years
-        of history."""
+        of history. Filter field names are snake_case (listing_ids, date_range)
+        despite the rest of eBay's REST APIs using camelCase, and a multi-value
+        field's members are pipe- not comma-separated - both undocumented
+        quirks found by trial and error against the live API."""
         start = start_date.replace("-", "")
         end = end_date.replace("-", "")
-        filter_parts = [
-            f"marketplaceIds:{{{marketplace_ids}}}",
-            f"dateRange:[{start}..{end}]",
-        ]
+        filter_parts = []
         if listing_ids:
-            filter_parts.append(f"listingIds:{{{','.join(listing_ids)}}}")
+            filter_parts.append(f"listing_ids:{{{'|'.join(listing_ids)}}}")
+        filter_parts.append(f"date_range:[{start}..{end}]")
         params = {
             "dimension": dimension,
             "metric": metrics,
