@@ -17,6 +17,11 @@ Claude Code では代行できません。以下を一度だけ手動で行っ�
 - 注文が入るたびに Printify 側で実費が即時にカード請求されます（eBayからの入金より
   先に発生し得ます）。これは自動化できない「実ビジネスの資金」の話として認識してください。
 
+- **日本からの輸出（受注後仕入れ）** も扱います（`export_research.py`）。売れてから
+  国内のショップで購入し、**必ず自分（または契約した発送代行）が受け取って検品・梱包し、
+  自分で発送**します。国内ショップから海外の買い手へ直送させる形は、上記の禁止形態に
+  当たるので行いません。中古品を仕入れて売る場合は**古物商許可**が必要です。
+
 ## 1. eBay Developer Program 登録 & APIキー取得
 
 1. https://developer.ebay.com でアカウント作成し、Developer Program に登録。
@@ -132,6 +137,24 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 最初は Issue 承認を挟む設計です。安定して運用できたら、GitHub Variables で
 `AUTO_PUBLISH=true` に切り替えるだけで、承認ステップを飛ばして即座にeBayへ
 公開するモードになります（コード変更不要）。
+
+## 6. 日本からの輸出リサーチ（ジャンル候補の計測）
+
+`Japan Export Research` ワークフロー（毎週月曜 06:00 JST、手動実行も可）が、ジャンルごとに
+日本発送のeBay出品の売れ行きを実測し、`reports/export_research.md` に結果を書き出します。
+出品も購入も一切しません。
+
+1. https://e.developer.yahoo.co.jp/register でアプリケーションを登録し（Yahoo! JAPAN IDが必要、無料）、
+   **Client ID** を控える。
+2. GitHub の Secrets に `YAHOO_APP_ID` = Client ID を追加。
+   未設定でも動きますが、その場合は需要だけでジャンルを並べ、仕入れ価格は照合しません。
+3. 必要に応じて Variables を調整（未設定なら既定値）:
+   - `EXPORT_SHIPPING_SMALL_JPY` / `_MEDIUM_JPY` / `_LARGE_JPY` — 国際送料（梱包込み）の概算。
+     既定は 2200 / 3800 / 6500 円。契約した配送サービスの実料金に合わせてください。
+   - `EXPORT_MIN_PROFIT_JPY` — 1個あたりの最低利益（既定 1500円）
+   - `EXPORT_TAX_REFUND=true` — 課税事業者になり、輸出消費税の還付を受けられるようになったら
+   - `EXPORT_FEE_RATE`（既定 0.1525 = 落札手数料13.6% + 海外手数料1.65%）、`EXPORT_FX_HAIRCUT`（既定 3%）
+4. Actions → Japan Export Research → Run workflow。
 
 ## Pinterest (free exposure for listings)
 
