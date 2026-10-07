@@ -49,37 +49,49 @@
   },
   "860005535179": {
     "headline": "PER MY LAST COFFEE",
-    "impressions": 47,
+    "impressions": 54,
     "views": 1,
     "sales": 0
   },
   "860005535317": {
     "headline": "OUT OF OFFICE",
-    "impressions": 40,
+    "impressions": 47,
     "views": 0,
     "sales": 0
   },
   "860005535481": {
     "headline": "MONDAY CALLED. I DIDN'T ANSWER",
-    "impressions": 40,
+    "impressions": 46,
     "views": 1,
     "sales": 0
   },
   "860009160759": {
     "headline": "DECAF IS NOT AN OPTION",
-    "impressions": 20,
+    "impressions": 31,
     "views": 0,
     "sales": 0
   },
   "860009161574": {
     "headline": "I'M FINE. THE COFFEE IS DOING ALL THE WORK",
-    "impressions": 22,
-    "views": 0,
+    "impressions": 29,
+    "views": 1,
     "sales": 0
   },
   "860009161878": {
     "headline": "THIS MEETING NEEDS MORE COFFEE",
-    "impressions": 29,
+    "impressions": 49,
+    "views": 1,
+    "sales": 0
+  },
+  "860013146307": {
+    "headline": "MY PATIENCE IS STILL BREWING",
+    "impressions": 41,
+    "views": 0,
+    "sales": 0
+  },
+  "860013146702": {
+    "headline": "FUELED BY COFFEE AND SARCASM",
+    "impressions": 24,
     "views": 0,
     "sales": 0
   }
