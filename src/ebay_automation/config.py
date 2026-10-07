@@ -176,6 +176,44 @@ class Config:
     )
     pinterest_pins_per_run: int = field(default_factory=lambda: _int_env("PINTEREST_PINS_PER_RUN", 2))
 
+    # Japan export research (export_research.py): Japanese retail goods,
+    # bought after an eBay sale, received and shipped by the seller.
+    # Yahoo!ショッピング Client ID — without it research still ranks
+    # genres by demand, but cannot price the domestic purchase.
+    yahoo_app_id: str = field(default_factory=lambda: _str_env("YAHOO_APP_ID"))
+    # Final value fee (~13.6% most categories) plus the 1.65% international
+    # fee charged when the buyer is outside the seller's registered country.
+    export_fee_rate: float = field(default_factory=lambda: _float_env("EXPORT_FEE_RATE", 0.1525))
+    export_fee_fixed_usd_cents: int = field(default_factory=lambda: _int_env("EXPORT_FEE_FIXED_USD_CENTS", 40))
+    # Payout conversion spread between the mid-market rate and what lands
+    # in the bank in yen.
+    export_fx_haircut: float = field(default_factory=lambda: _float_env("EXPORT_FX_HAIRCUT", 0.03))
+    export_fx_fallback_usd_jpy: float = field(
+        default_factory=lambda: _float_env("EXPORT_FX_FALLBACK_USD_JPY", 145.0)
+    )
+    # Allowance for the domestic leg when the Japanese shop doesn't ship free.
+    export_domestic_shipping_jpy: int = field(
+        default_factory=lambda: _int_env("EXPORT_DOMESTIC_SHIPPING_JPY", 600)
+    )
+    # International shipping estimate per genre size class, deliberately on
+    # the high side (packing materials included). Replace with real quotes
+    # from the carrier you sign up with.
+    export_shipping_small_jpy: int = field(default_factory=lambda: _int_env("EXPORT_SHIPPING_SMALL_JPY", 2200))
+    export_shipping_medium_jpy: int = field(default_factory=lambda: _int_env("EXPORT_SHIPPING_MEDIUM_JPY", 3800))
+    export_shipping_large_jpy: int = field(default_factory=lambda: _int_env("EXPORT_SHIPPING_LARGE_JPY", 6500))
+    # Exports are zero-rated, so a 課税事業者 gets the 10% consumption tax
+    # on the purchase back. Off until the seller is actually registered.
+    export_tax_refund: bool = field(default_factory=lambda: _bool_env("EXPORT_TAX_REFUND", False))
+    export_min_profit_jpy: int = field(default_factory=lambda: _int_env("EXPORT_MIN_PROFIT_JPY", 1500))
+    export_sample_size: int = field(default_factory=lambda: _int_env("EXPORT_SAMPLE_SIZE", 25))
+
+    def export_shipping_jpy(self, size: str) -> int:
+        return {
+            "small": self.export_shipping_small_jpy,
+            "medium": self.export_shipping_medium_jpy,
+            "large": self.export_shipping_large_jpy,
+        }[size]
+
     def require(self, *names: str) -> None:
         missing = [n for n in names if not getattr(self, n)]
         if missing:

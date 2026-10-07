@@ -56,6 +56,7 @@ pip install -r requirements.txt
 cp .env.example .env  # 値を埋める
 python -m pytest tests/
 python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確認可能
+python -m ebay_automation.export_research    # 輸出ジャンル候補の計測（読み取りのみ）
 ```
 
 ## ディレクトリ構成
@@ -64,6 +65,9 @@ python -m ebay_automation.pipeline_research  # DRY_RUN=trueで下書きのみ確
   - `research.py` — 需要実測（販売数・売れている価格帯・利益フィルタ）
   - `themes.py` — 実際にプリントするデザイン内容（検索キーワードとは別物）
   - `design_gen.py` — プリント領域いっぱいに組版してPNG出力
+  - `export_research.py` — 日本からの輸出（受注後仕入れ）のジャンル候補を計測。
+    日本発送の出品の月間販売数を実測し、JANコードでYahoo!ショッピングの最安値と
+    照合して1個あたりの円建て利益を出す（結果は `reports/export_research.md`）
 - `.github/workflows/` — 定期実行・承認処理・受注同期のGitHub Actions
 - `state/` — 実行状態（承認待ちリスト・注文台帳）。ワークフローが自動コミット
 - `docs/SETUP.md` — 初期セットアップ手順（eBay/Printify/GitHub Secrets）
