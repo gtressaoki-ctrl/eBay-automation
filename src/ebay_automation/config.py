@@ -204,6 +204,9 @@ class Config:
     # Exports are zero-rated, so a 課税事業者 gets the 10% consumption tax
     # on the purchase back. Off until the seller is actually registered.
     export_tax_refund: bool = field(default_factory=lambda: _bool_env("EXPORT_TAX_REFUND", False))
+    # Real retail arbitrage rarely buys at under a fifth of the resale
+    # price; a JAN match that cheap is almost always a different pack size.
+    export_min_cost_ratio: float = field(default_factory=lambda: _float_env("EXPORT_MIN_COST_RATIO", 0.2))
     export_min_profit_jpy: int = field(default_factory=lambda: _int_env("EXPORT_MIN_PROFIT_JPY", 1500))
     export_sample_size: int = field(default_factory=lambda: _int_env("EXPORT_SAMPLE_SIZE", 25))
 

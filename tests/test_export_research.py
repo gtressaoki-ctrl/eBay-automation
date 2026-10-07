@@ -168,3 +168,41 @@ def test_yahoo_cheapest_skips_out_of_stock(monkeypatch):
     assert offer.price_jpy == 1200
     assert offer.free_shipping
     assert offer.url == "b"
+
+
+def _priced(monkeypatch, title, price, domestic_price, domestic_name="商品"):
+    items = [_item("v1|1", price, 30, 30, gtin="4573102616098", title=title)]
+    monkeypatch.setattr(research.requests, "get", _browse(items))
+    monkeypatch.setattr(
+        yahoo_shopping,
+        "cheapest_new_offer",
+        lambda jan, config: DomesticOffer(jan, domestic_name, domestic_price, True, "u", "s"),
+    )
+    return export_research.measure_genre(ExportGenre("g", "g", "q", "small"), Config(yahoo_app_id="yid"))
+
+
+def test_box_listing_matched_to_single_pack_is_not_scored(monkeypatch):
+    result = _priced(monkeypatch, "Pokemon Card Booster Box Sealed", "124.00", 990, "拡張パック 1パック")
+    assert result.products[0].mismatch
+    assert result.profitable == 0
+
+
+def test_box_listing_matched_to_box_is_scored(monkeypatch):
+    result = _priced(monkeypatch, "Pokemon Card Booster Box Sealed", "124.00", 7000, "拡張パック BOX")
+    assert result.products[0].mismatch == ""
+    assert result.profitable == 1
+
+
+def test_implausibly_cheap_source_is_not_scored(monkeypatch):
+    # $110 sale (~16,000 yen) against a 752 yen purchase: a different size
+    result = _priced(monkeypatch, "Anessa Perfect UV Sunscreen", "110.00", 752)
+    assert "未満" in result.products[0].mismatch
+    assert result.profitable == 0
+
+
+@pytest.mark.parametrize(
+    "title, bundle",
+    [("UV Essence Gel 90g x3", True), ("3x Tomica", True), ("Beyblade X BX-52 Starter", False), ("Beyblade X 01", False)],
+)
+def test_bundle_regex(title, bundle):
+    assert bool(export_research._BUNDLE_RE.search(title)) is bundle

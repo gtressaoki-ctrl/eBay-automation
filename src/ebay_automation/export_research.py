@@ -49,7 +49,14 @@ REPORT_PATH = Path("reports/export_research.md")
 
 # Listings whose GTIN describes one unit but which sell several — the
 # per-unit profit would be overstated, so they are matched but not scored.
-_BUNDLE_RE = re.compile(r"\b(lot|set of|bundle|\d+\s*(pcs|pieces|packs|boxes))\b", re.I)
+_BUNDLE_RE = re.compile(
+    r"\b(lot|set of|bundle|\d+\s*(pcs|pieces|packs|boxes)|x\s?[2-9]\d*|[2-9]\d*\s?x)\b", re.I
+)
+# A sealed box listed on eBay is often tagged with the JAN of the single
+# pack inside it, so the "match" is one pack. The domestic listing must
+# then say it is a box too.
+_BOX_RE = re.compile(r"\bbox\b", re.I)
+_DOMESTIC_BOX_RE = re.compile(r"box|ボックス|カートン", re.I)
 
 
 @dataclass
@@ -62,9 +69,17 @@ class ProductOpportunity:
     units_per_month: float
     domestic_price_jpy: int | None = None
     domestic_url: str = ""
+    domestic_name: str = ""
     profit_jpy: int | None = None
     margin: float | None = None
     bundle_suspect: bool = False
+    # Why the JAN match is not trusted (e.g. box vs. single pack); such
+    # products are reported but never scored.
+    mismatch: str = ""
+
+    @property
+    def scoreable(self) -> bool:
+        return not self.bundle_suspect and not self.mismatch
 
 
 @dataclass
@@ -218,14 +233,26 @@ def _price_products(result: GenreResult, genre: ExportGenre, config: Config) -> 
             continue
         product.domestic_price_jpy = offer.price_jpy
         product.domestic_url = offer.url
+        product.domestic_name = offer.name
+        product.mismatch = _mismatch_reason(product, offer, config)
         product.profit_jpy, margin = computed
         product.margin = round(margin, 3)
         result.matched += 1
-        if product.profit_jpy >= config.export_min_profit_jpy and not product.bundle_suspect:
+        if product.profit_jpy >= config.export_min_profit_jpy and product.scoreable:
             result.profitable += 1
             result.expected_monthly_profit_jpy += round(product.profit_jpy * product.units_per_month)
 
     result.products.sort(key=lambda p: (p.profit_jpy is not None, p.profit_jpy or 0), reverse=True)
+
+
+def _mismatch_reason(product: ProductOpportunity, offer, config: Config) -> str:
+    """Why this JAN match probably isn't the same thing the eBay buyer gets."""
+    if _BOX_RE.search(product.title) and not _DOMESTIC_BOX_RE.search(offer.name):
+        return "eBayはBOX、国内はBOX表記なし（1パックの可能性）"
+    rate = fx.rate_to_jpy(product.currency, config)
+    if rate and offer.price_jpy < product.sale_price * rate * config.export_min_cost_ratio:
+        return f"仕入れ値がeBay売価の{config.export_min_cost_ratio:.0%}未満（入数・容量違いの可能性）"
+    return ""
 
 
 def rank(results: list[GenreResult], priced: bool) -> list[GenreResult]:
@@ -288,7 +315,7 @@ def render_report(results: list[GenreResult], priced: bool, config: Config, run_
                 (r, p)
                 for r in results
                 for p in r.products
-                if p.profit_jpy is not None and p.profit_jpy >= config.export_min_profit_jpy and not p.bundle_suspect
+                if p.profit_jpy is not None and p.profit_jpy >= config.export_min_profit_jpy and p.scoreable
             ),
             key=lambda rp: rp[1].profit_jpy * rp[1].units_per_month,
             reverse=True,
@@ -306,6 +333,25 @@ def render_report(results: list[GenreResult], priced: bool, config: Config, run_
                     f"| {r.label} | [{title}]({p.ebay_url}) | {p.sale_price:.2f} {p.currency} "
                     f"| [¥{p.domestic_price_jpy:,}]({p.domestic_url}) | ¥{p.profit_jpy:,} | {p.margin:.0%} "
                     f"| {p.units_per_month:.2f} |"
+                )
+
+        excluded = [(r, p) for r in results for p in r.products if p.profit_jpy is not None and not p.scoreable]
+        if excluded:
+            lines += [
+                "",
+                "## 照合が怪しいため集計から外した商品",
+                "",
+                "同じJANでも、入数・容量・まとめ売りが違うと利益が過大に出ます。目で確認して、本物なら手動で検討してください。",
+                "",
+                "| ジャンル | 商品 | eBay売価 | 国内の照合先 | 理由 |",
+                "|---|---|---|---|---|",
+            ]
+            for r, p in excluded[:25]:
+                title = p.title.replace("|", "/")[:60]
+                reason = p.mismatch or "まとめ売りの疑い"
+                lines.append(
+                    f"| {r.label} | [{title}]({p.ebay_url}) | {p.sale_price:.2f} {p.currency} "
+                    f"| [¥{p.domestic_price_jpy:,}]({p.domestic_url}) | {reason} |"
                 )
 
     lines += [
