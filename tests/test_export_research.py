@@ -206,3 +206,8 @@ def test_implausibly_cheap_source_is_not_scored(monkeypatch):
 )
 def test_bundle_regex(title, bundle):
     assert bool(export_research._BUNDLE_RE.search(title)) is bundle
+
+
+def test_new_in_box_is_not_a_box_of_packs(monkeypatch):
+    result = _priced(monkeypatch, "RICOH DW-5 Wide Conversion Lens New in Box", "124.00", 9591, "リコー ワイドコンバージョンレンズ")
+    assert result.products[0].mismatch == ""

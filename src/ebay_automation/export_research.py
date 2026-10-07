@@ -55,7 +55,8 @@ _BUNDLE_RE = re.compile(
 # A sealed box listed on eBay is often tagged with the JAN of the single
 # pack inside it, so the "match" is one pack. The domestic listing must
 # then say it is a box too.
-_BOX_RE = re.compile(r"\bbox\b", re.I)
+# "New in Box" is packaging, not a box of packs.
+_BOX_RE = re.compile(r"(?<!in )\bbox\b", re.I)
 _DOMESTIC_BOX_RE = re.compile(r"box|ボックス|カートン", re.I)
 
 
