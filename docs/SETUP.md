@@ -189,7 +189,7 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 5. Actions → **Japan Export Listing** → Run workflow（最初は `DRY_RUN=true` で候補だけ確認してもよい）。
 
 ### 調整できる値（Variables、未設定なら既定値）
-- `EXPORT_LISTING_QUERIES` — 対象の検索語（`;` 区切り、既定はベイブレードX）
+- `EXPORT_LISTING_QUERIES` — 対象の検索語（`;` 区切り、既定はベイブレードX・トミカプレミアム・トミカリミテッドヴィンテージ・プラレール・たまごっち）
 - `EXPORT_DAILY_LISTING_QUOTA`（既定3）、`EXPORT_UNDERCUT_USD_CENTS`（既定50＝$0.50下げ）
 - `EXPORT_LISTING_SIZE`（既定 `small`）、`EXPORT_MIN_COST_RATIO`（既定0.2）
 

@@ -46,7 +46,8 @@ def source_check(entry: dict, config: Config) -> tuple[yahoo_shopping.DomesticOf
     if offer is None:
         return None, None, "仕入れ先の在庫なし"
     computed = export_research.profit_jpy(
-        entry["price_usd"], "USD", offer.price_jpy, offer.free_shipping, config.export_listing_size, config
+        entry["price_usd"], "USD", offer.price_jpy, offer.free_shipping,
+        entry.get("size", config.export_listing_size), config
     )
     if computed is None:
         return offer, None, "為替レート取得失敗"
@@ -143,6 +144,7 @@ def sync_orders(config: Config, ebay: EbayClient, github: GithubClient | None) -
                     "source_price_jpy": entry.get("source_price_jpy"),
                     "source_url": entry.get("source_url"),
                     "expected_profit_jpy": entry.get("expected_profit_jpy"),
+                    "size": entry.get("size", config.export_listing_size),
                 }
             )
             # eBay took the listing to 0 with the sale; record that so the

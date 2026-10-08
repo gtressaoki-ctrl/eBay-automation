@@ -224,7 +224,8 @@ class Config:
     export_listing_queries: list[str] = field(
         default_factory=lambda: [
             q.strip()
-            for q in _str_env("EXPORT_LISTING_QUERIES", "beyblade x takara tomy;beyblade x bx;beyblade x ux").split(";")
+            for q in _str_env("EXPORT_LISTING_QUERIES", "beyblade x takara tomy;beyblade x bx;beyblade x ux;tomica premium;tomica limited vintage;"
+                "plarail takara tomy;tamagotchi japan").split(";")
             if q.strip()
         ]
     )
