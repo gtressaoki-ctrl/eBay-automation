@@ -15,6 +15,7 @@ import datetime as dt
 import os
 import sys
 
+import requests
 from dotenv import load_dotenv
 
 from .client import EbayClient
@@ -23,13 +24,21 @@ from .client import EbayClient
 def our_listing_ids(ebay: EbayClient, sku_prefix: str) -> dict[str, str]:
     """Returns {listing_id: sku} for our published offers, deduplicated by
     listing (a multi-variation listing has one listingId shared by all its
-    variant offers, so we only need to query it once)."""
+    variant offers, so we only need to query it once). eBay's offer lookup
+    occasionally 500s on an individual SKU (transient, seen in practice) -
+    skip that SKU rather than failing the whole report, since any sibling
+    SKU in the same listing group still gets us the listing id."""
     listings: dict[str, str] = {}
     for item in ebay.list_inventory_items():
         sku = item.get("sku", "")
         if not sku.startswith(sku_prefix):
             continue
-        for offer in ebay.get_offers_for_sku(sku):
+        try:
+            offers = ebay.get_offers_for_sku(sku)
+        except requests.HTTPError as exc:
+            print(f"   warning: couldn't fetch offers for {sku} ({exc}); skipping it", file=sys.stderr)
+            continue
+        for offer in offers:
             listing_id = offer.get("listing", {}).get("listingId")
             if listing_id and listing_id not in listings:
                 listings[listing_id] = sku
