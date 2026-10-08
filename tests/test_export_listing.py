@@ -455,3 +455,15 @@ def test_photo_reject_is_remembered():
     export_commands.handle_photo_reject(github, 5)
     assert export_state.load_listings()["JX-" + JAN]["status"] == "rejected"
     assert github.closed == ["not_planned"]
+
+
+@pytest.mark.parametrize(
+    "raw, cleaned",
+    [
+        ("PRESALE Beyblade X BX-52 Luster Dragoon 6-60LC Starter Takara Tomy", "Beyblade X BX-52 Luster Dragoon 6-60LC Starter Takara Tomy Japan"),
+        ("PREORDER Tamagotchi Paradise My Lab 4582770018813 From Japan", "Tamagotchi Paradise My Lab 4582770018813 Japan"),
+        ("Tomica Premium 01 Nissan Skyline Japan", "Tomica Premium 01 Nissan Skyline Japan"),
+    ],
+)
+def test_clean_title(raw, cleaned):
+    assert export_listing.clean_title(raw) == cleaned

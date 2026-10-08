@@ -51,6 +51,21 @@ _SIZE_RULES = [
 ]
 
 
+# Another seller's title often carries their own sales wording; a pre-order
+# label in particular would promise a release-date listing we don't run.
+_SELLER_WORDS = re.compile(
+    r"\b(pre-?sale|pre-?order|in stock|ships? (fast|today|now)|fast shipping|free shipping|brand new|new|"
+    r"from japan|japan seller|authentic|genuine|limited stock|hot)\b[!.,:]*",
+    re.I,
+)
+
+
+def clean_title(title: str) -> str:
+    """A competitor's title reduced to the product itself, for photo listings."""
+    cleaned = re.sub(r"\s{2,}", " ", _SELLER_WORDS.sub(" ", title or "")).strip(" -|/")
+    return f"{cleaned} Japan"[:80] if "japan" not in cleaned.lower() else cleaned[:80]
+
+
 def size_for(title: str, config: Config) -> str:
     """Shipping size class from the product title; the configured default otherwise."""
     for pattern, size in _SIZE_RULES:
@@ -385,7 +400,7 @@ def run(config: Config | None = None) -> int:
             if photo_requests >= config.export_daily_photo_requests:
                 continue
             photo_requests += 1
-            entry = candidate_entry(candidate, candidate.title[:80], "needs_photos", config)
+            entry = candidate_entry(candidate, clean_title(candidate.title), "needs_photos", config)
             if config.dry_run:
                 photo_rows.append(_row(entry))
                 continue
