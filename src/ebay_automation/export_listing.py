@@ -70,6 +70,7 @@ class Candidate:
     profit_jpy: int
     margin: float
     size: str = "small"
+    title: str = ""
 
     @property
     def expected_monthly_profit_jpy(self) -> int:
@@ -146,6 +147,7 @@ def evaluate(jan: str, info: dict, config: Config) -> Candidate | None:
         profit_jpy=profit,
         margin=round(margin, 3),
         size=size,
+        title=info["title"],
     )
 
 
@@ -189,36 +191,28 @@ def description(title: str, config: Config) -> str:
     )
 
 
-def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product: dict) -> dict:
-    sku = export_state.sku_for(candidate.jan)
-    title = product.get("title", "")[:80]
-    images = _images(product)
-    if not images:
-        raise ValueError(f"catalog product {product.get('epid')} has no stock photo")
-    body = description(title, config)
+def put_listing(
+    config: Config, ebay: EbayClient, sku: str, product: dict, category_id: str, price: float
+) -> str:
+    """Create the inventory item and its unpublished offer; returns the offer ID."""
+    body = description(product["title"], config)
     ebay.create_or_replace_inventory_item(
         sku,
         {
             "availability": {"shipToLocationAvailability": {"quantity": 1}},
             "condition": "NEW",
-            "product": {
-                "title": title,
-                "description": body,
-                "epid": product.get("epid"),
-                "imageUrls": images,
-                "aspects": _aspects(product),
-            },
+            "product": {**product, "description": body},
         },
     )
-    offer_id = ebay.create_offer(
+    return ebay.create_offer(
         {
             "sku": sku,
             "marketplaceId": config.ebay_marketplace_id,
             "format": "FIXED_PRICE",
             "availableQuantity": 1,
-            "categoryId": candidate.category_id,
+            "categoryId": category_id,
             "listingDescription": body,
-            "pricingSummary": {"price": {"value": f"{candidate.price:.2f}", "currency": "USD"}},
+            "pricingSummary": {"price": {"value": f"{price:.2f}", "currency": "USD"}},
             "merchantLocationKey": config.export_merchant_location_key,
             "listingPolicies": {
                 "fulfillmentPolicyId": config.export_fulfillment_policy_id,
@@ -227,13 +221,15 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
             },
         }
     )
+
+
+def candidate_entry(candidate: Candidate, title: str, status: str, config: Config) -> dict:
     return {
-        "sku": sku,
+        "sku": export_state.sku_for(candidate.jan),
         "jan": candidate.jan,
-        "epid": product.get("epid"),
         "title": title,
-        "status": "pending_approval",
-        "ebay_offer_id": offer_id,
+        "status": status,
+        "category_id": candidate.category_id,
         "price_usd": candidate.price,
         "competitor_price_usd": candidate.competitor_price,
         "units_per_month": candidate.units_per_month,
@@ -246,6 +242,51 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
         "size": max(candidate.size, size_for(title, config), key=["small", "medium", "large"].index),
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     }
+
+
+def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product: dict) -> dict:
+    title = product.get("title", "")[:80]
+    images = _images(product)
+    if not images:
+        raise ValueError(f"catalog product {product.get('epid')} has no stock photo")
+    entry = candidate_entry(candidate, title, "pending_approval", config)
+    entry["epid"] = product.get("epid")
+    entry["ebay_offer_id"] = put_listing(
+        config,
+        ebay,
+        entry["sku"],
+        {"title": title, "epid": product.get("epid"), "imageUrls": images, "aspects": _aspects(product)},
+        candidate.category_id,
+        candidate.price,
+    )
+    return entry
+
+
+def photo_request_body(entry: dict) -> str:
+    lines = [
+        f"## {entry['title']}",
+        "",
+        "利益が出る商品ですが、eBayカタログに公式写真がないため、**自分で撮った写真**で出品します。",
+        "",
+        "| 項目 | 値 |",
+        "|---|---|",
+        f"| 販売価格 | ${entry['price_usd']:.2f}（日本発送の最安 ${entry['competitor_price_usd']:.2f} より少し下） |",
+        f"| 今の仕入れ値 | [¥{entry['source_price_jpy']:,}]({entry['source_url']})（Yahoo!ショッピング最安・新品・在庫あり） |",
+        f"| 想定利益 / 個 | ¥{entry['expected_profit_jpy']:,}（利益率 {entry['margin']:.0%}・送料は{entry['size']}サイズで計算） |",
+        f"| 同じ商品の売れ行き | 月 {entry['units_per_month']:.1f} 個（日本発送の出品1件あたり） |",
+        f"| JAN | {entry['jan']} |",
+        "",
+        "### やること",
+        "1. 上の仕入れ先で **1個だけ** 買う（これが最初の在庫になります）",
+        "2. 届いたら3〜8枚撮る: 箱の正面・背面・側面、JAN/型番が見える面。白っぽい背景・明るい場所で",
+        "3. このIssueに写真をドラッグ＆ドロップして、同じコメントに `/photos` と書いて送信",
+        "",
+        "→ その写真でeBayに出品します（タイトルは上のものを使用。変えたい場合は `/photos` の次の行に `title: 新しいタイトル`）。",
+        "手元の1個が売れた後は、同じ写真のまま受注後仕入れで販売を続けます。",
+        "",
+        "見送る場合は `/reject`。他の出品者やメーカーの写真は使いません（eBay規約・著作権のため）。",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def issue_body(entry: dict, image_url: str | None) -> str:
@@ -272,16 +313,29 @@ def issue_body(entry: dict, image_url: str | None) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _write_summary(found: int, rows: list[str]) -> None:
+def _row(entry: dict) -> str:
+    return (
+        f"| {entry['title'][:60]} | ${entry['price_usd']:.2f} (競合 ${entry['competitor_price_usd']:.2f}) "
+        f"| [¥{entry['source_price_jpy']:,}]({entry['source_url']}) | ¥{entry['expected_profit_jpy']:,} "
+        f"| {entry['size']} | {entry['units_per_month']:.1f} |"
+    )
+
+
+def _write_summary(found: int, rows: list[str], photo_rows: list[str]) -> None:
+    header = ["| 商品 | 販売価格 | 今の仕入れ値 | 利益/個 | 送料サイズ | 月販/出品 |", "|---|---|---|---|---|---|"]
     report = "\n".join(
         [
-            "## 輸出出品の候補（DRY RUN・下書きは作っていません）",
+            "## 輸出出品の候補（DRY RUN・下書きもIssueも作っていません）",
             "",
-            f"利益ラインを超えた候補: {found} 件（うちカタログ写真があり、今日の上限内のもの: {len(rows)} 件）",
+            f"利益ラインを超えた候補: {found} 件",
             "",
-            "| 商品（eBayカタログ） | 販売価格 | 今の仕入れ値 | 利益/個 | 月販/出品 |",
-            "|---|---|---|---|---|",
-            *rows,
+            f"### eBayカタログ写真で出品できるもの（{len(rows)} 件）",
+            "",
+            *(header + rows if rows else ["なし"]),
+            "",
+            f"### 自分で撮った写真が必要なもの（{len(photo_rows)} 件・本番では[輸出・写真待ち]Issueになります）",
+            "",
+            *(header + photo_rows if photo_rows else ["なし"]),
         ]
     ) + "\n"
     print(report)
@@ -305,16 +359,22 @@ def run(config: Config | None = None) -> int:
         log.warning("Export listing not configured (%s); running as a dry run.", ", ".join(missing))
         config = dataclasses.replace(config, dry_run=True)
     listings = export_state.load_listings()
-    active = {e["jan"] for e in listings.values() if e.get("status") in ("pending_approval", "published")}
+    # Rejected products stay skipped, so a /reject is not undone the next morning.
+    active = {
+        e["jan"] for e in listings.values()
+        if e.get("status") in ("pending_approval", "published", "needs_photos", "rejected")
+    }
     candidates = find_candidates(config, active)
     log.info("%d export candidates clear the profit floor", len(candidates))
 
     ebay = EbayClient(config)
     github = None if config.dry_run else GithubClient(config)
     created = 0
+    photo_requests = 0
     dry_rows: list[str] = []
+    photo_rows: list[str] = []
     for candidate in candidates:
-        if created >= config.export_daily_listing_quota:
+        if created >= config.export_daily_listing_quota and photo_requests >= config.export_daily_photo_requests:
             break
         try:
             product = ebay.find_catalog_product(candidate.jan)
@@ -322,14 +382,26 @@ def run(config: Config | None = None) -> int:
             log.exception("Catalog lookup failed for %s", candidate.jan)
             continue
         if product is None:
-            log.info("No single catalog product for JAN %s; skipping.", candidate.jan)
+            if photo_requests >= config.export_daily_photo_requests:
+                continue
+            photo_requests += 1
+            entry = candidate_entry(candidate, candidate.title[:80], "needs_photos", config)
+            if config.dry_run:
+                photo_rows.append(_row(entry))
+                continue
+            issue = github.create_issue(
+                title=f"[輸出・写真待ち] {entry['title'][:60]} ({entry['sku']})",
+                body=photo_request_body(entry),
+                labels=["export-photos", "ebay-automation"],
+            )
+            entry["issue_number"] = issue["number"]
+            export_state.save_listing(entry["sku"], entry)
+            log.info("Opened photo request #%s for %s", issue["number"], entry["sku"])
+            continue
+        if created >= config.export_daily_listing_quota:
             continue
         if config.dry_run:
-            dry_rows.append(
-                f"| {product.get('title', '')[:60]} | ${candidate.price:.2f} (競合 ${candidate.competitor_price:.2f}) "
-                f"| [¥{candidate.domestic.price_jpy:,}]({candidate.domestic.url}) | ¥{candidate.profit_jpy:,} "
-                f"| {candidate.units_per_month:.1f} |"
-            )
+            dry_rows.append(_row(candidate_entry(candidate, product.get("title", "")[:80], "", config)))
             created += 1
             continue
         try:
@@ -347,7 +419,7 @@ def run(config: Config | None = None) -> int:
         created += 1
         log.info("Opened export approval issue #%s for %s", issue["number"], entry["sku"])
     if config.dry_run:
-        _write_summary(len(candidates), dry_rows)
+        _write_summary(len(candidates), dry_rows, photo_rows)
     log.info("Created %d export drafts.", created)
     return created
 

@@ -325,3 +325,133 @@ def test_stock_guard_uses_the_listing_size(monkeypatch):
     ebay = FakeEbay()
     export_sync.sync_stock(Config(), ebay)
     assert ebay.calls[-1] == ("qty", "JX-" + JAN, 0)
+
+
+# ---- own photos --------------------------------------------------------------
+
+from ebay_automation import export_photos  # noqa: E402
+
+
+def test_image_urls_only_take_github_hosted_images():
+    comment = (
+        "![IMG_1](https://github.com/user-attachments/assets/aaa)\n"
+        '<img width="300" src="https://github.com/user-attachments/assets/bbb" />\n'
+        "![x](https://evil.example/c.jpg)\n/photos"
+    )
+    assert export_photos.image_urls(comment) == [
+        "https://github.com/user-attachments/assets/aaa",
+        "https://github.com/user-attachments/assets/bbb",
+    ]
+
+
+def test_brand_for():
+    assert export_photos.brand_for("Tomica Limited Vintage LV-N") == "Tomytec"
+    assert export_photos.brand_for("Tomica Premium 01") == "Takara Tomy"
+    assert export_photos.brand_for("Tamagotchi Uni") == "Bandai"
+    assert export_photos.brand_for("Something") is None
+
+
+def _photo_entry(**kw):
+    candidate = export_listing.Candidate(JAN, "222", 2.0, 40.0, 39.5, _offer(1500), 2000, 0.3, "small",
+                                         "Tomica Premium 01 Nissan Skyline")
+    entry = export_listing.candidate_entry(candidate, candidate.title, "needs_photos", Config())
+    entry["issue_number"] = 5
+    entry.update(kw)
+    return entry
+
+
+class PhotoEbay(FakeEbay):
+    def upload_image(self, data, filename):
+        self.calls.append(("upload", filename, data))
+        return f"https://i.ebayimg.com/{filename}"
+
+
+def test_photos_upload_to_eps_and_publish_with_one_on_hand(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _photo_entry())
+    monkeypatch.setattr(export_photos, "_download", lambda url, config: b"jpeg-bytes")
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(1500))
+    ebay, github = PhotoEbay(), FakeGithub()
+    comment = "![a](https://github.com/user-attachments/assets/1)\n![b](https://github.com/user-attachments/assets/2)\n/photos"
+
+    export_photos.handle_photos(Config(), ebay, github, 5, comment)
+
+    uploads = [c for c in ebay.calls if c[0] == "upload"]
+    assert len(uploads) == 2
+    _, sku, item = next(c for c in ebay.calls if c[0] == "item")
+    assert item["product"]["imageUrls"] == ["https://i.ebayimg.com/JX-%s-1.jpg" % JAN, "https://i.ebayimg.com/JX-%s-2.jpg" % JAN]
+    assert item["product"]["ean"] == [JAN]
+    assert item["product"]["aspects"] == {"Brand": ["Takara Tomy"]}
+    _, offer = next(c for c in ebay.calls if c[0] == "offer")
+    assert offer["categoryId"] == "222"
+    entry = export_state.load_listings()["JX-" + JAN]
+    assert entry["status"] == "published" and entry["on_hand"] == 1
+    assert github.closed == ["completed"]
+
+
+def test_photos_title_override_and_missing_images(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _photo_entry())
+    github = FakeGithub()
+    export_photos.handle_photos(Config(), PhotoEbay(), github, 5, "/photos")
+    assert "写真が見つかりませんでした" in github.comments[0]
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "needs_photos"
+
+    monkeypatch.setattr(export_photos, "_download", lambda url, config: b"x")
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(1500))
+    ebay = PhotoEbay()
+    export_photos.handle_photos(
+        Config(), ebay, FakeGithub(), 5,
+        "![a](https://github.com/user-attachments/assets/1)\n/photos\ntitle: Tomica Premium 01 Skyline GT-R Japan",
+    )
+    _, _, item = next(c for c in ebay.calls if c[0] == "item")
+    assert item["product"]["title"] == "Tomica Premium 01 Skyline GT-R Japan"
+
+
+def test_unit_on_hand_stays_buyable_when_source_is_out(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _entry(on_hand=1, quantity=1))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: None)
+    ebay = FakeEbay()
+    export_sync.sync_stock(Config(), ebay)
+    assert not [c for c in ebay.calls if c[0] == "qty"]  # stays at 1
+
+
+def test_first_order_ships_from_hand():
+    export_state.save_listing("JX-" + JAN, _entry(on_hand=1, source_price_jpy=2500, source_url="https://store/x"))
+    ebay, github = FakeEbay(), FakeGithub()
+    ebay.orders = [_order()]
+    export_sync.sync_orders(Config(), ebay, github)
+    assert "手元の在庫" in github.issues[0]["body"]
+    assert export_state.load_listings()["JX-" + JAN]["on_hand"] == 0
+    assert export_state.load_orders()["12-34567-89012"]["items"][0]["from_stock"] is True
+
+
+def test_run_opens_photo_request_when_catalog_has_no_product(monkeypatch):
+    candidate = export_listing.Candidate(JAN, "222", 2.0, 40.0, 39.5, _offer(1500), 2000, 0.3, "small", "Tomica Premium 01")
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [candidate])
+
+    class NoCatalog(FakeEbay):
+        def __init__(self, config):
+            super().__init__()
+
+        def find_catalog_product(self, gtin):
+            return None
+
+    github = FakeGithub()
+    monkeypatch.setattr(export_listing, "EbayClient", NoCatalog)
+    monkeypatch.setattr(export_listing, "GithubClient", lambda config: github)
+    config = Config(ebay_app_id="a", ebay_cert_id="c", ebay_refresh_token="r", yahoo_app_id="y",
+                    export_merchant_location_key="jp", export_fulfillment_policy_id="fp",
+                    ebay_payment_policy_id="p", ebay_return_policy_id="r", github_token="t", github_repository="o/r")
+
+    export_listing.run(config)
+
+    assert github.issues[0]["labels"][0] == "export-photos"
+    assert "/photos" in github.issues[0]["body"]
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "needs_photos"
+
+
+def test_photo_reject_is_remembered():
+    export_state.save_listing("JX-" + JAN, _photo_entry())
+    github = FakeGithub()
+    export_commands.handle_photo_reject(github, 5)
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "rejected"
+    assert github.closed == ["not_planned"]

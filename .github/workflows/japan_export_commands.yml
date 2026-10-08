@@ -1,6 +1,7 @@
 name: Japan Export Commands
 
-# /approve, /reject on export-approval issues; /shipped on export-order issues.
+# /approve, /reject on export-approval issues; /photos, /reject on export-photos
+# issues; /shipped on export-order issues.
 on:
   issue_comment:
     types: [created]
@@ -18,9 +19,10 @@ jobs:
     if: >
       github.event.issue.pull_request == null &&
       (contains(github.event.issue.labels.*.name, 'export-approval') ||
-       contains(github.event.issue.labels.*.name, 'export-order')) &&
+       contains(github.event.issue.labels.*.name, 'export-order') ||
+       contains(github.event.issue.labels.*.name, 'export-photos')) &&
       (contains(github.event.comment.body, '/approve') || contains(github.event.comment.body, '/reject') ||
-       contains(github.event.comment.body, '/shipped'))
+       contains(github.event.comment.body, '/shipped') || contains(github.event.comment.body, '/photos'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
