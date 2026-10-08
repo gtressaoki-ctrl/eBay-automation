@@ -280,3 +280,13 @@ def test_dry_run_needs_no_export_setup_and_creates_nothing(monkeypatch, tmp_path
     assert export_listing.run(config) == 1
     assert export_state.load_listings() == {}
     assert "Beyblade X BX-01" in summary.read_text()
+
+
+def test_unconfigured_scheduled_run_falls_back_to_dry_run(monkeypatch, tmp_path):
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [])
+    monkeypatch.setattr(export_listing, "EbayClient", lambda config: FakeEbay())
+    config = Config(ebay_app_id="a", ebay_cert_id="c", ebay_refresh_token="r", yahoo_app_id="y",
+                    export_merchant_location_key="", dry_run=False)
+    assert export_listing.run(config) == 0
+    assert "DRY RUN" in (tmp_path / "s.md").read_text()

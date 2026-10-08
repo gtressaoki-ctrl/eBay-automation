@@ -21,6 +21,7 @@ Run via: python -m ebay_automation.export_listing
 """
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import logging
 import os
@@ -273,11 +274,16 @@ def _write_summary(found: int, rows: list[str]) -> None:
 def run(config: Config | None = None) -> int:
     config = config or load_config()
     config.require("ebay_app_id", "ebay_cert_id", "ebay_refresh_token", "yahoo_app_id")
-    if not config.dry_run:
-        config.require(
-            "export_merchant_location_key", "export_fulfillment_policy_id",
-            "ebay_payment_policy_id", "ebay_return_policy_id",
-        )
+    missing = [
+        n for n in ("export_merchant_location_key", "export_fulfillment_policy_id",
+                    "ebay_payment_policy_id", "ebay_return_policy_id")
+        if not getattr(config, n)
+    ]
+    if missing and not config.dry_run:
+        # Not set up yet (docs/SETUP.md §7): a scheduled run should not go
+        # red every day until then, so fall back to showing candidates.
+        log.warning("Export listing not configured (%s); running as a dry run.", ", ".join(missing))
+        config = dataclasses.replace(config, dry_run=True)
     listings = export_state.load_listings()
     active = {e["jan"] for e in listings.values() if e.get("status") in ("pending_approval", "published")}
     candidates = find_candidates(config, active)
