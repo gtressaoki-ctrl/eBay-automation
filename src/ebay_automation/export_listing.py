@@ -24,6 +24,7 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import logging
+import re
 import os
 import urllib.parse
 from dataclasses import dataclass
@@ -41,6 +42,22 @@ log = logging.getLogger(__name__)
 
 _JP_NEW = "itemLocationCountry:JP,conditionIds:{1000},buyingOptions:{FIXED_PRICE}"
 
+# Toys whose box is far bigger than a booster or a single car: a Beyblade
+# stadium or a Plarail starter set ships as "large", not at the small-parcel
+# rate the first dry run priced the BX-10 stadium at.
+_SIZE_RULES = [
+    (re.compile(r"stadium|playset|play set|garage|station|plarail|track set|rail set|starter set|bundle|deluxe", re.I), "large"),
+    (re.compile(r"\bset\b|launcher|kit|tamagotchi|\bbox\b", re.I), "medium"),
+]
+
+
+def size_for(title: str, config: Config) -> str:
+    """Shipping size class from the product title; the configured default otherwise."""
+    for pattern, size in _SIZE_RULES:
+        if pattern.search(title or ""):
+            return size
+    return config.export_listing_size
+
 
 @dataclass
 class Candidate:
@@ -52,6 +69,7 @@ class Candidate:
     domestic: yahoo_shopping.DomesticOffer
     profit_jpy: int
     margin: float
+    size: str = "small"
 
     @property
     def expected_monthly_profit_jpy(self) -> int:
@@ -108,9 +126,8 @@ def evaluate(jan: str, info: dict, config: Config) -> Candidate | None:
     offer = yahoo_shopping.cheapest_new_offer(jan, config)
     if offer is None:
         return None
-    computed = export_research.profit_jpy(
-        price, "USD", offer.price_jpy, offer.free_shipping, config.export_listing_size, config
-    )
+    size = size_for(info["title"], config)
+    computed = export_research.profit_jpy(price, "USD", offer.price_jpy, offer.free_shipping, size, config)
     if computed is None:
         return None
     profit, margin = computed
@@ -128,6 +145,7 @@ def evaluate(jan: str, info: dict, config: Config) -> Candidate | None:
         domestic=offer,
         profit_jpy=profit,
         margin=round(margin, 3),
+        size=size,
     )
 
 
@@ -224,6 +242,8 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
         "source_name": candidate.domestic.name,
         "expected_profit_jpy": candidate.profit_jpy,
         "margin": candidate.margin,
+        # The larger of what the competitor's title and the catalog title imply.
+        "size": max(candidate.size, size_for(title, config), key=["small", "medium", "large"].index),
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     }
 

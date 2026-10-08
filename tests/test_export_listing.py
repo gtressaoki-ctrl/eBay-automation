@@ -290,3 +290,38 @@ def test_unconfigured_scheduled_run_falls_back_to_dry_run(monkeypatch, tmp_path)
                     export_merchant_location_key="", dry_run=False)
     assert export_listing.run(config) == 0
     assert "DRY RUN" in (tmp_path / "s.md").read_text()
+
+
+@pytest.mark.parametrize(
+    "title, size",
+    [
+        ("Takara Tomy Beyblade X Extreme Stadium BX-10", "large"),
+        ("Plarail Basic Set Takara Tomy", "large"),
+        ("Beyblade X BX-01 Starter Dran Sword", "small"),
+        ("Beyblade X Launcher Grip BX-11", "medium"),
+        ("Tomica Premium 01 Nissan Skyline", "small"),
+    ],
+)
+def test_size_for(title, size):
+    assert export_listing.size_for(title, Config(export_listing_size="small")) == size
+
+
+def test_stadium_is_priced_with_large_shipping(monkeypatch):
+    # The first live dry run priced BX-10 at small-parcel shipping and
+    # showed ¥3,014 profit; at the large rate it no longer clears the floor.
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 66.81)
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2750))
+    info = {"rate": 3.5, "category_id": "1", "title": "Takara Tomy Beyblade X Extreme Stadium - BX-10"}
+    assert export_listing.evaluate(JAN, info, Config()) is None
+
+    info["title"] = "Takara Tomy Beyblade X BX-10 Starter"
+    assert export_listing.evaluate(JAN, info, Config()).size == "small"
+
+
+def test_stock_guard_uses_the_listing_size(monkeypatch):
+    # Profitable as a small parcel, not as a large one.
+    export_state.save_listing("JX-" + JAN, _entry(size="large"))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    ebay = FakeEbay()
+    export_sync.sync_stock(Config(), ebay)
+    assert ebay.calls[-1] == ("qty", "JX-" + JAN, 0)

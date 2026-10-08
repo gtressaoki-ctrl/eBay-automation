@@ -149,7 +149,7 @@ def handle_shipped(config: Config, ebay: EbayClient, github: GithubClient, issue
     if cost is not None:
         record["purchase_cost_jpy"] = cost
         sale = sum(i["price_usd"] * i["quantity"] for i in record["items"])
-        size = config.export_listing_size
+        size = record["items"][0].get("size", config.export_listing_size)
         computed = export_research.profit_jpy(sale, "USD", cost, True, size, config)
         if computed:
             record["profit_jpy"] = computed[0]
