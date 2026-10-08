@@ -73,7 +73,8 @@ def sync_stock(config: Config, ebay: EbayClient) -> None:
         except requests.HTTPError:
             log.warning("Source check failed for %s; leaving it as is.", sku)
             continue
-        want = 0 if blocked else 1
+        # A unit already in hand (bought to photograph) can always be sold.
+        want = 0 if blocked and not entry.get("on_hand") else 1
         if offer:
             entry.update(source_price_jpy=offer.price_jpy, source_url=offer.url, source_name=offer.name)
         entry["expected_profit_jpy"] = profit
@@ -102,13 +103,18 @@ def order_issue_body(order: dict, items: list[dict], config: Config) -> str:
         "|---|---|---|---|---|",
     ]
     for it in items:
-        source = f"[¥{it['source_price_jpy']:,}]({it['source_url']})" if it.get("source_url") else "要確認"
+        if it.get("from_stock"):
+            source = "**手元の在庫**（購入不要）"
+        elif it.get("source_url"):
+            source = f"[¥{it['source_price_jpy']:,}]({it['source_url']})"
+        else:
+            source = "要確認"
         profit = f"¥{it['expected_profit_jpy']:,}" if it.get("expected_profit_jpy") is not None else "-"
         lines.append(f"| {it['title'][:50]} | {it['quantity']} | ${it['price_usd']:.2f} | {source} | {profit} |")
     lines += [
         "",
         "### やること",
-        "1. 上の仕入れ先（またはそれより安い店）で購入する。**届け先は自分の住所**にする（購入者へ直送しない＝eBay規約）",
+        "1. 「手元の在庫」以外は、上の仕入れ先（またはそれより安い店）で購入する。**届け先は自分の住所**にする（購入者へ直送しない＝eBay規約）",
         f"2. 届いたら検品・梱包し、発送する（ハンドリング期限: 注文から {config.export_handling_days}営業日）",
         f"3. 購入者の氏名・住所は [Seller Hub の注文ページ](https://www.ebay.com/sh/ord/details?orderid={order['orderId']}) で確認",
         "4. 発送したら、このIssueに次の形でコメントする:",
@@ -147,6 +153,9 @@ def sync_orders(config: Config, ebay: EbayClient, github: GithubClient | None) -
                     "size": entry.get("size", config.export_listing_size),
                 }
             )
+            if entry.get("on_hand"):
+                entry["on_hand"] -= 1
+                items[-1]["from_stock"] = True
             # eBay took the listing to 0 with the sale; record that so the
             # stock guard restores it only after re-checking the source.
             entry["quantity"] = 0

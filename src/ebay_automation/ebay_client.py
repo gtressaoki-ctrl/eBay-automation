@@ -131,6 +131,22 @@ class EbayClient:
         products = resp.json().get("productSummaries") or []
         return products[0] if len(products) == 1 else None
 
+    # ---- Media API ---------------------------------------------------------
+
+    def upload_image(self, data: bytes, filename: str) -> str:
+        """Upload a photo to eBay Picture Services and return its EPS URL.
+
+        EPS URLs are what listings should point at: eBay serves them itself,
+        so nothing outside eBay has to stay online for the listing to work.
+        """
+        url = f"{self.base_url}/commerce/media/v1_beta/image/create_image_from_file"
+        headers = {"Authorization": f"Bearer {get_user_access_token(self.config)}"}
+        resp = requests.post(url, headers=headers, files={"image": (filename, data)}, timeout=60)
+        if not resp.ok:
+            raise EbayApiError("POST", url, resp.status_code, resp.text)
+        image_id = resp.headers.get("Location", "").rstrip("/").rsplit("/", 1)[-1]
+        return self._request("GET", f"/commerce/media/v1_beta/image/{image_id}").json()["imageUrl"]
+
     # ---- Account API (business policies) --------------------------------------
 
     def get_fulfillment_policy(self, policy_id: str) -> dict[str, Any]:

@@ -21,7 +21,7 @@ import logging
 import os
 import re
 
-from . import export_research, export_state
+from . import export_photos, export_research, export_state
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_sync import source_check
@@ -33,6 +33,8 @@ log = logging.getLogger(__name__)
 _ALLOWED_ASSOCIATIONS = {"OWNER", "COLLABORATOR", "MEMBER"}
 _APPROVE_RE = re.compile(r"^\s*/approve\b", re.I)
 _REJECT_RE = re.compile(r"^\s*/reject\b", re.I)
+# Photos are dropped into the same comment, so /photos may sit after them.
+_PHOTOS_RE = re.compile(r"^\s*/photos\b", re.I | re.M)
 _SHIPPED_RE = re.compile(r"^\s*/shipped\s+(\S+)\s+(\S+)(?:\s+[¥￥]?([\d,]+))?", re.I)
 
 # eBay carrier codes for the carriers a Japan-based seller is likely to
@@ -114,6 +116,16 @@ def handle_approval(config: Config, ebay: EbayClient, github: GithubClient, issu
     github.close_issue(issue_number, "completed")
 
 
+def handle_photo_reject(github: GithubClient, issue_number: int) -> None:
+    sku, entry = _find(export_state.load_listings(), issue_number)
+    if entry is None or entry.get("status") != "needs_photos":
+        return
+    entry["status"] = "rejected"
+    export_state.save_listing(sku, entry)
+    github.comment_issue(issue_number, "見送りました。この商品は今後の候補にも出しません。")
+    github.close_issue(issue_number, "not_planned")
+
+
 def handle_shipped(config: Config, ebay: EbayClient, github: GithubClient, issue_number: int, match: re.Match) -> None:
     order_id, record = _find(export_state.load_orders(), issue_number)
     if record is None:
@@ -167,9 +179,11 @@ def run() -> None:
     issue = event["issue"]
     labels = {label["name"] for label in issue.get("labels", [])}
     approve, reject, shipped = _APPROVE_RE.match(body), _REJECT_RE.match(body), _SHIPPED_RE.match(body)
+    photos = _PHOTOS_RE.search(body)
     is_approval_cmd = "export-approval" in labels and (approve or reject)
     is_order_cmd = "export-order" in labels and shipped
-    if not (is_approval_cmd or is_order_cmd):
+    is_photo_cmd = "export-photos" in labels and (photos or reject)
+    if not (is_approval_cmd or is_order_cmd or is_photo_cmd):
         return
 
     config = load_config()
@@ -180,6 +194,10 @@ def run() -> None:
     ebay = EbayClient(config)
     if is_approval_cmd:
         handle_approval(config, ebay, github, issue["number"], bool(approve))
+    elif is_photo_cmd and reject:
+        handle_photo_reject(github, issue["number"])
+    elif is_photo_cmd:
+        export_photos.handle_photos(config, ebay, github, issue["number"], body)
     else:
         handle_shipped(config, ebay, github, issue["number"], shipped)
 
