@@ -1,0 +1,33 @@
+name: Japan Export Setup
+
+# One-time: create the Japan ship-from location and list shipping policies.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Create location and list policies
+        env:
+          PYTHONPATH: src
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+          EXPORT_MERCHANT_LOCATION_KEY: ${{ vars.EXPORT_MERCHANT_LOCATION_KEY }}
+          EXPORT_LOCATION_CITY: ${{ vars.EXPORT_LOCATION_CITY }}
+          EXPORT_LOCATION_PREFECTURE: ${{ vars.EXPORT_LOCATION_PREFECTURE }}
+        run: python scripts/export_setup.py

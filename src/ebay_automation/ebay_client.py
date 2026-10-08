@@ -110,6 +110,27 @@ class EbayClient:
     def delete_inventory_item(self, sku: str) -> None:
         self._request("DELETE", f"/sell/inventory/v1/inventory_item/{sku}")
 
+    # ---- Catalog API -------------------------------------------------------
+
+    def find_catalog_product(self, gtin: str) -> dict[str, Any] | None:
+        """The single eBay catalog product for this GTIN, or None.
+
+        Catalog products carry eBay's own stock photos and item specifics,
+        which is what export listings use instead of copying another
+        seller's photos. Ambiguous GTINs (several products) return None:
+        the Inventory API would not pick up product details for them either.
+        """
+        resp = self._request(
+            "GET",
+            "/commerce/catalog/v1_beta/product_summary/search",
+            params={"gtin": gtin, "limit": 2},
+            extra_headers={"X-EBAY-C-MARKETPLACE-ID": self.config.ebay_marketplace_id},
+        )
+        if resp.status_code == 204:
+            return None
+        products = resp.json().get("productSummaries") or []
+        return products[0] if len(products) == 1 else None
+
     # ---- Account API (business policies) --------------------------------------
 
     def get_fulfillment_policy(self, policy_id: str) -> dict[str, Any]:

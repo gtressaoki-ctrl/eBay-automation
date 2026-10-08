@@ -68,6 +68,9 @@ python -m ebay_automation.export_research    # 輸出ジャンル候補の計測
   - `export_research.py` — 日本からの輸出（受注後仕入れ）のジャンル候補を計測。
     日本発送の出品の月間販売数を実測し、JANコードでYahoo!ショッピングの最安値と
     照合して1個あたりの円建て利益を出す（結果は `reports/export_research.md`）
+  - `export_listing.py` / `export_sync.py` / `export_commands.py` — 日本からの輸出出品
+    （受注後仕入れ）。eBayカタログの公式写真で下書き→`/approve`で公開、仕入れ先の在庫切れ・
+    値上がりで自動的に在庫0、注文が入ったら仕入れIssue、`/shipped` で発送登録（`docs/SETUP.md` §7）
 - `.github/workflows/` — 定期実行・承認処理・受注同期のGitHub Actions
 - `state/` — 実行状態（承認待ちリスト・注文台帳）。ワークフローが自動コミット
 - `docs/SETUP.md` — 初期セットアップ手順（eBay/Printify/GitHub Secrets）
