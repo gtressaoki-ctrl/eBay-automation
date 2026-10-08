@@ -156,6 +156,49 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
    - `EXPORT_FEE_RATE`（既定 0.1525 = 落札手数料13.6% + 海外手数料1.65%）、`EXPORT_FX_HAIRCUT`（既定 3%）
 4. Actions → Japan Export Research → Run workflow。
 
+## 7. 日本からの輸出出品（受注後仕入れ）
+
+`export_listing.py` / `export_sync.py` / `export_commands.py` が、ベイブレードX（既定）を
+「売れてから国内で買って、自分で発送する」形で出品します。
+
+### 流れ
+1. **毎朝 07:30 JST**（Japan Export Listing）: 日本発送で実際に売れている商品を探し、
+   同じJANの日本発送最安値より少し下の価格で、Yahoo!ショッピングの最安在庫から
+   `EXPORT_MIN_PROFIT_JPY` 以上の利益が出るものだけ下書きを作り、`[輸出・承認待ち]` Issueを開く。
+   写真と商品情報は **eBayカタログの公式ストック写真** を使う（他の出品者の写真は使わない）。
+2. Issueに `/approve` とコメントすると、仕入れ先の在庫を再確認してから公開。`/reject` で削除。
+3. **2時間ごと**（Japan Export Sync）:
+   - 仕入れ先が在庫切れ、または値上がりで利益が下限を割ったら、出品を **在庫0（購入不可）** にする。戻ったら1に戻す。
+   - 新しい注文が入ったら `[仕入れ]` Issueを開く（買う場所・想定利益つき）。
+     **購入者の氏名・住所はIssueに書かない**（このリポジトリは公開のため）。Seller Hubで確認する。
+4. 仕入れて、**自分の住所で受け取り**、検品・梱包して発送したら、Issueに
+   `/shipped japanpost EJ123456789JP 2480`（運送会社・追跡番号・実際の仕入れ値（円、省略可））とコメントする。
+   eBayに発送済みとして登録され、利益が記録される。
+
+### 一度だけ必要な設定
+1. **Seller Hubで日本発送用の配送ポリシー**を作る（Account → Business policies → Shipping）
+   - 名前: 例 `Japan export`
+   - ハンドリングタイム: **5営業日**（仕入れ〜受け取り〜梱包の時間。変えたら `EXPORT_HANDLING_DAYS` も合わせる）
+   - 国際配送: 送料は **無料**（価格に送料込み。利益計算もその前提）。サービスは日本郵便 or SpeedPAK など契約したもの
+   - 発送先: まずは **米国のみ** がおすすめ
+2. GitHub の Variables に追加:
+   - `EXPORT_LOCATION_CITY`（例 `Yokohama`）と `EXPORT_LOCATION_PREFECTURE`（例 `Kanagawa`）— 市区町村レベルまで。番地は不要
+   - `EXPORT_MERCHANT_LOCATION_KEY` = `jp-home`
+3. Actions → **Japan Export Setup** → Run workflow。発送元ロケーションが作られ、配送ポリシーの一覧が表示される。
+4. 1で作ったポリシーのIDを Variables の `EXPORT_FULFILLMENT_POLICY_ID` に設定。
+5. Actions → **Japan Export Listing** → Run workflow（最初は `DRY_RUN=true` で候補だけ確認してもよい）。
+
+### 調整できる値（Variables、未設定なら既定値）
+- `EXPORT_LISTING_QUERIES` — 対象の検索語（`;` 区切り、既定はベイブレードX）
+- `EXPORT_DAILY_LISTING_QUOTA`（既定3）、`EXPORT_UNDERCUT_USD_CENTS`（既定50＝$0.50下げ）
+- `EXPORT_LISTING_SIZE`（既定 `small`）、`EXPORT_MIN_COST_RATIO`（既定0.2）
+
+### 注意
+- 新規アカウントの販売上限（例: 月50点・$700）は出品数×価格で消費される。ベイブレードX（$60前後）なら約10出品が上限。
+- 「Beyblade」は海外ではHasbroの商標で、HasbroはeBayの権利者保護プログラム（VeRO）に参加している。正規の日本版タカラトミー品でも
+  出品が削除されることがある。タイトルに「Japan / Takara Tomy」が入るカタログ情報を使っているが、削除されたら無理に再出品しない。
+- 仕入れられない注文が出たら、早めにSeller Hubから購入者に連絡してキャンセルする（放置が最も評価に響く）。
+
 ## Pinterest (free exposure for listings)
 
 New listings are pinned to our own Pinterest board daily by the

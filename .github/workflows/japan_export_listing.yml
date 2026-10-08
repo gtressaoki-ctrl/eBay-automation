@@ -1,0 +1,87 @@
+name: Japan Export Listing
+
+# Drafts export listings (Beyblade X by default) and opens an approval
+# issue for each. Nothing is published or bought without /approve.
+on:
+  schedule:
+    - cron: "30 22 * * *"  # 07:30 JST daily
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List candidates only (no drafts, no issues)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ebay-automation-state
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Draft export listings
+        env:
+          PYTHONPATH: src
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_DEV_ID: ${{ secrets.EBAY_DEV_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+          EBAY_PAYMENT_POLICY_ID: ${{ vars.EBAY_PAYMENT_POLICY_ID }}
+          EBAY_RETURN_POLICY_ID: ${{ vars.EBAY_RETURN_POLICY_ID }}
+          YAHOO_APP_ID: ${{ secrets.YAHOO_APP_ID }}
+          EXPORT_MERCHANT_LOCATION_KEY: ${{ vars.EXPORT_MERCHANT_LOCATION_KEY }}
+          EXPORT_FULFILLMENT_POLICY_ID: ${{ vars.EXPORT_FULFILLMENT_POLICY_ID }}
+          EXPORT_LISTING_QUERIES: ${{ vars.EXPORT_LISTING_QUERIES }}
+          EXPORT_DAILY_LISTING_QUOTA: ${{ vars.EXPORT_DAILY_LISTING_QUOTA }}
+          EXPORT_UNDERCUT_USD_CENTS: ${{ vars.EXPORT_UNDERCUT_USD_CENTS }}
+          EXPORT_HANDLING_DAYS: ${{ vars.EXPORT_HANDLING_DAYS }}
+          EXPORT_LISTING_SIZE: ${{ vars.EXPORT_LISTING_SIZE }}
+          EXPORT_FEE_RATE: ${{ vars.EXPORT_FEE_RATE }}
+          EXPORT_FEE_FIXED_USD_CENTS: ${{ vars.EXPORT_FEE_FIXED_USD_CENTS }}
+          EXPORT_FX_HAIRCUT: ${{ vars.EXPORT_FX_HAIRCUT }}
+          EXPORT_DOMESTIC_SHIPPING_JPY: ${{ vars.EXPORT_DOMESTIC_SHIPPING_JPY }}
+          EXPORT_SHIPPING_SMALL_JPY: ${{ vars.EXPORT_SHIPPING_SMALL_JPY }}
+          EXPORT_SHIPPING_MEDIUM_JPY: ${{ vars.EXPORT_SHIPPING_MEDIUM_JPY }}
+          EXPORT_SHIPPING_LARGE_JPY: ${{ vars.EXPORT_SHIPPING_LARGE_JPY }}
+          EXPORT_TAX_REFUND: ${{ vars.EXPORT_TAX_REFUND }}
+          EXPORT_MIN_PROFIT_JPY: ${{ vars.EXPORT_MIN_PROFIT_JPY }}
+          EXPORT_MIN_COST_RATIO: ${{ vars.EXPORT_MIN_COST_RATIO }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || vars.DRY_RUN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python -m ebay_automation.export_listing
+
+      - name: Commit updated state
+        run: |
+          git config user.name "ebay-automation-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(state): export drafts $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              if git push; then
+                break
+              fi
+              echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+              git fetch origin main
+              git rebase origin/main
+              sleep $((RANDOM % 5 + 1))
+            done
+          else
+            echo "No state changes to commit."
+          fi

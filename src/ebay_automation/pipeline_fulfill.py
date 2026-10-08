@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 
-from . import ledger
+from . import export_state, ledger
 from .config import load_config
 from .ebay_client import EbayClient
 from .printify_client import PrintifyClient
@@ -67,6 +67,8 @@ def _submit_to_printify(config, printify: PrintifyClient, ebay: EbayClient, ebay
     skus = []
     for li in line_items:
         sku = li["sku"]
+        if export_state.is_export_sku(sku):
+            continue  # bought and shipped by hand; see export_sync.py
         pending = ledger.get_pending_listing(sku)
         if pending is None:
             log.warning("Order %s references unknown SKU %s (not ours?) skipping line item.", order_id, sku)

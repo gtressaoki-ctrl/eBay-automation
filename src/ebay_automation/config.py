@@ -210,6 +210,35 @@ class Config:
     export_min_profit_jpy: int = field(default_factory=lambda: _int_env("EXPORT_MIN_PROFIT_JPY", 1500))
     export_sample_size: int = field(default_factory=lambda: _int_env("EXPORT_SAMPLE_SIZE", 25))
 
+    # Export listings (export_listing.py): shipped from the seller's own
+    # address in Japan, so they need their own location and shipping
+    # policy, separate from the US print-on-demand ones.
+    export_merchant_location_key: str = field(
+        default_factory=lambda: _str_env("EXPORT_MERCHANT_LOCATION_KEY")
+    )
+    export_fulfillment_policy_id: str = field(
+        default_factory=lambda: _str_env("EXPORT_FULFILLMENT_POLICY_ID")
+    )
+    # What to list: Browse search phrases, sampled for Japan-shipped new
+    # listings that are actually selling.
+    export_listing_queries: list[str] = field(
+        default_factory=lambda: [
+            q.strip()
+            for q in _str_env("EXPORT_LISTING_QUERIES", "beyblade x takara tomy;beyblade x bx;beyblade x ux").split(";")
+            if q.strip()
+        ]
+    )
+    export_daily_listing_quota: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_LISTING_QUOTA", 3))
+    # How far under the cheapest Japan-shipped competitor to price.
+    export_undercut_usd_cents: int = field(default_factory=lambda: _int_env("EXPORT_UNDERCUT_USD_CENTS", 50))
+    # Business days between the sale and handing the parcel to the carrier:
+    # buying, delivery to you, inspection and packing. Must match the
+    # handling time on EXPORT_FULFILLMENT_POLICY_ID.
+    export_handling_days: int = field(default_factory=lambda: _int_env("EXPORT_HANDLING_DAYS", 5))
+    # Size class for international shipping on export listings (Beyblade X
+    # starters and boosters fit "small").
+    export_listing_size: str = field(default_factory=lambda: _str_env("EXPORT_LISTING_SIZE", "small"))
+
     def export_shipping_jpy(self, size: str) -> int:
         return {
             "small": self.export_shipping_small_jpy,
