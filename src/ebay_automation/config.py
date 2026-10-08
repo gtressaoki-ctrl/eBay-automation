@@ -162,7 +162,7 @@ class Config:
     pinterest_token_key: str = field(default_factory=lambda: _str_env("PINTEREST_TOKEN_KEY"))
     pinterest_redirect_uri: str = field(
         default_factory=lambda: _str_env(
-            "PINTEREST_REDIRECT_URI", "https://gtressaoki-ctrl.github.io/eBay-automation/oauth.html"
+            "PINTEREST_REDIRECT_URI", "https://slowjapantrails.com/oauth.html"
         )
     )
     # Trial-access apps can only write to the sandbox

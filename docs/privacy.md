@@ -4,9 +4,9 @@ title: Privacy Policy
 
 # Privacy Policy
 
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-08_
 
-This policy covers Shop Pin Publisher (the "app"),
+This policy covers Shop Pin Publisher (the "app") by Slow Japan Trails,
 an automation that creates Pins for our own product listings on our own
 Pinterest account.
 

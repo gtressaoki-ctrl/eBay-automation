@@ -205,9 +205,9 @@ New listings are pinned to our own Pinterest board daily by the
 "Pinterest pins" workflow, each Pin linking to its eBay listing.
 
 1. Create the app at <https://developers.pinterest.com/apps/> ("Connect app").
-   Website: `https://gtressaoki-ctrl.github.io/eBay-automation/`, privacy
+   Website: `https://slowjapantrails.com/`, privacy
    policy: `.../privacy.html`. Add the redirect URI
-   `https://gtressaoki-ctrl.github.io/eBay-automation/oauth.html` in the app
+   `https://slowjapantrails.com/oauth.html` in the app
    settings.
 2. Secrets: `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, and
    `PINTEREST_TOKEN_KEY` (generate with
