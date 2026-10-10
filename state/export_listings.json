@@ -59,7 +59,7 @@
     "ebay_listing_id": "860029711234",
     "listing_url": "https://www.ebay.com/itm/860029711234",
     "published_at": "2026-10-10T13:30:02+00:00",
-    "checked_at": "2026-10-10T18:49:39+00:00",
+    "checked_at": "2026-10-10T23:48:58+00:00",
     "paused_reason": ""
   },
   "JX-4547410246117": {
@@ -73,7 +73,7 @@
     "units_per_month": 0.42,
     "source_price_jpy": 5500,
     "source_url": "https://store.shopping.yahoo.co.jp/saeday/4547410246117.html",
-    "source_name": "富士フイルム フジクローム PROVIA 100F 135 PROVIA100F NP 36EX (プロビア 100F 36枚撮り リバーサルフィルム)",
+    "source_name": "フジフイルム リバーサルフィルム　プロビア100F(PROVIA100F) 36枚撮り",
     "expected_profit_jpy": 1636,
     "margin": 0.114,
     "size": "medium",
@@ -84,6 +84,8 @@
     "quantity": 1,
     "ebay_listing_id": "860031034007",
     "listing_url": "https://www.ebay.com/itm/860031034007",
-    "published_at": "2026-10-10T23:00:16+00:00"
+    "published_at": "2026-10-10T23:00:16+00:00",
+    "checked_at": "2026-10-10T23:48:58+00:00",
+    "paused_reason": ""
   }
 }
