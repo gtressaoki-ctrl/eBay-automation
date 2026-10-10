@@ -3,7 +3,7 @@
     "sku": "JX-4904810081609",
     "jan": "4904810081609",
     "title": "Takara Tomy / Tomica Premium Custom Works BK26 Honda NSX / JDM Japan",
-    "status": "needs_photos",
+    "status": "withdrawn",
     "category_id": "180506",
     "price_usd": 54.48,
     "competitor_price_usd": 54.98,
@@ -11,11 +11,12 @@
     "source_price_jpy": 2640,
     "source_url": "https://store.shopping.yahoo.co.jp/iiado-oska/4904810081609.html",
     "source_name": "tomica custom works BK26 Honda NSX トミカCW",
-    "expected_profit_jpy": 1586,
+    "expected_profit_jpy": -7,
     "margin": 0.19,
     "size": "small",
     "created_at": "2026-10-10T09:12:49+00:00",
-    "issue_number": 47
+    "issue_number": 47,
+    "paused_reason": "利益 ¥-7 が下限 ¥1,500 未満"
   },
   "JX-4543736311553": {
     "sku": "JX-4543736311553",
