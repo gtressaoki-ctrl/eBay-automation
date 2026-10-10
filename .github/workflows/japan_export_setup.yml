@@ -1,8 +1,16 @@
 name: Japan Export Setup
 
-# One-time: create the Japan ship-from location and list shipping policies.
+# One-time: create the Japan ship-from location and the "Japan export"
+# shipping policy. Safe to re-run; existing ones are left alone.
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      city:
+        description: "City in English, e.g. Yokohama (shown to buyers as 'Located in')"
+        required: false
+      prefecture:
+        description: "Prefecture in English, e.g. Kanagawa"
+        required: false
 
 permissions:
   contents: read
@@ -19,7 +27,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Create location and list policies
+      - name: Create location and shipping policy
         env:
           PYTHONPATH: src
           EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
@@ -27,7 +35,11 @@ jobs:
           EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
           EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
           EBAY_ENV: ${{ vars.EBAY_ENV }}
+          EBAY_PAYMENT_POLICY_ID: ${{ vars.EBAY_PAYMENT_POLICY_ID }}
+          EBAY_RETURN_POLICY_ID: ${{ vars.EBAY_RETURN_POLICY_ID }}
           EXPORT_MERCHANT_LOCATION_KEY: ${{ vars.EXPORT_MERCHANT_LOCATION_KEY }}
-          EXPORT_LOCATION_CITY: ${{ vars.EXPORT_LOCATION_CITY }}
-          EXPORT_LOCATION_PREFECTURE: ${{ vars.EXPORT_LOCATION_PREFECTURE }}
+          EXPORT_FULFILLMENT_POLICY_NAME: ${{ vars.EXPORT_FULFILLMENT_POLICY_NAME }}
+          EXPORT_HANDLING_DAYS: ${{ vars.EXPORT_HANDLING_DAYS }}
+          EXPORT_LOCATION_CITY: ${{ inputs.city || vars.EXPORT_LOCATION_CITY }}
+          EXPORT_LOCATION_PREFECTURE: ${{ inputs.prefecture || vars.EXPORT_LOCATION_PREFECTURE }}
         run: python scripts/export_setup.py

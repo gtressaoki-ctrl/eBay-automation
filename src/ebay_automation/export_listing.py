@@ -206,6 +206,22 @@ def description(title: str, config: Config) -> str:
     )
 
 
+_policy_cache: dict[str, str] = {}
+
+
+def export_policy_id(config: Config, ebay: EbayClient) -> str | None:
+    """The Japan shipping policy: as configured, or found by name (created by export_setup.py)."""
+    if config.export_fulfillment_policy_id:
+        return config.export_fulfillment_policy_id
+    name = config.export_fulfillment_policy_name
+    if name not in _policy_cache:
+        found = ebay.find_fulfillment_policy_id(name)
+        if not found:
+            return None
+        _policy_cache[name] = found
+    return _policy_cache[name]
+
+
 def put_listing(
     config: Config, ebay: EbayClient, sku: str, product: dict, category_id: str, price: float
 ) -> str:
@@ -230,7 +246,7 @@ def put_listing(
             "pricingSummary": {"price": {"value": f"{price:.2f}", "currency": "USD"}},
             "merchantLocationKey": config.export_merchant_location_key,
             "listingPolicies": {
-                "fulfillmentPolicyId": config.export_fulfillment_policy_id,
+                "fulfillmentPolicyId": export_policy_id(config, ebay),
                 "paymentPolicyId": config.ebay_payment_policy_id,
                 "returnPolicyId": config.ebay_return_policy_id,
             },
@@ -360,18 +376,25 @@ def _write_summary(found: int, rows: list[str], photo_rows: list[str]) -> None:
             f.write(report)
 
 
+def setup_missing(config: Config, ebay: EbayClient) -> list[str]:
+    """What export listing still lacks before it can create real drafts."""
+    missing = [n for n in ("ebay_payment_policy_id", "ebay_return_policy_id") if not getattr(config, n)]
+    if not ebay.get_location(config.export_merchant_location_key):
+        missing.append(f"location '{config.export_merchant_location_key}' (run Japan Export Setup)")
+    if not export_policy_id(config, ebay):
+        missing.append(f"shipping policy '{config.export_fulfillment_policy_name}' (run Japan Export Setup)")
+    return missing
+
+
 def run(config: Config | None = None) -> int:
     config = config or load_config()
     config.require("ebay_app_id", "ebay_cert_id", "ebay_refresh_token", "yahoo_app_id")
-    missing = [
-        n for n in ("export_merchant_location_key", "export_fulfillment_policy_id",
-                    "ebay_payment_policy_id", "ebay_return_policy_id")
-        if not getattr(config, n)
-    ]
-    if missing and not config.dry_run:
+    ebay = EbayClient(config)
+    missing = [] if config.dry_run else setup_missing(config, ebay)
+    if missing:
         # Not set up yet (docs/SETUP.md §7): a scheduled run should not go
         # red every day until then, so fall back to showing candidates.
-        log.warning("Export listing not configured (%s); running as a dry run.", ", ".join(missing))
+        log.warning("Export listing not set up (%s); running as a dry run.", "; ".join(missing))
         config = dataclasses.replace(config, dry_run=True)
     listings = export_state.load_listings()
     # Rejected products stay skipped, so a /reject is not undone the next morning.
@@ -382,7 +405,6 @@ def run(config: Config | None = None) -> int:
     candidates = find_candidates(config, active)
     log.info("%d export candidates clear the profit floor", len(candidates))
 
-    ebay = EbayClient(config)
     github = None if config.dry_run else GithubClient(config)
     created = 0
     photo_requests = 0

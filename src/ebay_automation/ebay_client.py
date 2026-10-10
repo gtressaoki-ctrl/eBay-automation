@@ -149,6 +149,29 @@ class EbayClient:
 
     # ---- Account API (business policies) --------------------------------------
 
+    def find_fulfillment_policy_id(self, name: str) -> str | None:
+        resp = self._request(
+            "GET", "/sell/account/v1/fulfillment_policy", params={"marketplace_id": self.config.ebay_marketplace_id}
+        )
+        for policy in resp.json().get("fulfillmentPolicies", []):
+            if policy.get("name") == name:
+                return policy["fulfillmentPolicyId"]
+        return None
+
+    def create_fulfillment_policy(self, policy: dict[str, Any]) -> str:
+        return self._request("POST", "/sell/account/v1/fulfillment_policy", json=policy).json()["fulfillmentPolicyId"]
+
+    def get_location(self, key: str) -> dict[str, Any] | None:
+        try:
+            return self._request("GET", f"/sell/inventory/v1/location/{key}").json()
+        except EbayApiError as exc:
+            if exc.status == 404:
+                return None
+            raise
+
+    def create_location(self, key: str, location: dict[str, Any]) -> None:
+        self._request("POST", f"/sell/inventory/v1/location/{key}", json=location)
+
     def get_fulfillment_policy(self, policy_id: str) -> dict[str, Any]:
         return self._request("GET", f"/sell/account/v1/fulfillment_policy/{policy_id}").json()
 

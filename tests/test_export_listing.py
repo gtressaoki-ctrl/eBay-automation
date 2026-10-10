@@ -14,6 +14,7 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(export_state, "ORDERS_PATH", tmp_path / "export_orders.json")
     monkeypatch.setattr(export_state, "_STATE_DIR", tmp_path)
     monkeypatch.setattr(fx, "rate_to_jpy", lambda currency, config: {"USD": 150.0}.get(currency))
+    export_listing._policy_cache.clear()
 
 
 def _offer(price, name="ベイブレードX BX-01"):
@@ -24,6 +25,14 @@ class FakeEbay:
     def __init__(self):
         self.calls = []
         self.publish_error = None
+        self.location = {"name": "Japan (export)"}
+        self.policy_id = "FP-BY-NAME"
+
+    def get_location(self, key):
+        return self.location
+
+    def find_fulfillment_policy_id(self, name):
+        return self.policy_id
 
     def set_available_quantity(self, sku, offer_id, qty):
         self.calls.append(("qty", sku, qty))
@@ -285,9 +294,11 @@ def test_dry_run_needs_no_export_setup_and_creates_nothing(monkeypatch, tmp_path
 def test_unconfigured_scheduled_run_falls_back_to_dry_run(monkeypatch, tmp_path):
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))
     monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [])
-    monkeypatch.setattr(export_listing, "EbayClient", lambda config: FakeEbay())
+    unset = FakeEbay()
+    unset.location, unset.policy_id = None, None  # Japan Export Setup never ran
+    monkeypatch.setattr(export_listing, "EbayClient", lambda config: unset)
     config = Config(ebay_app_id="a", ebay_cert_id="c", ebay_refresh_token="r", yahoo_app_id="y",
-                    export_merchant_location_key="", dry_run=False)
+                    ebay_payment_policy_id="p", ebay_return_policy_id="r", dry_run=False)
     assert export_listing.run(config) == 0
     assert "DRY RUN" in (tmp_path / "s.md").read_text()
 
@@ -467,3 +478,24 @@ def test_photo_reject_is_remembered():
 )
 def test_clean_title(raw, cleaned):
     assert export_listing.clean_title(raw) == cleaned
+
+
+def test_policy_is_found_by_name_unless_set():
+    ebay = FakeEbay()
+    assert export_listing.export_policy_id(Config(), ebay) == "FP-BY-NAME"
+    assert export_listing.export_policy_id(Config(export_fulfillment_policy_id="EXPLICIT"), ebay) == "EXPLICIT"
+    ebay.location, ebay.policy_id = None, None
+    export_listing._policy_cache.clear()
+    missing = export_listing.setup_missing(Config(ebay_payment_policy_id="p", ebay_return_policy_id="r"), ebay)
+    assert len(missing) == 2 and "Japan Export Setup" in missing[0]
+
+
+def test_setup_policy_body_is_free_shipping_with_handling_days():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("export_setup", "scripts/export_setup.py")
+    setup = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(setup)
+    body = setup.policy_body("Japan export", "EBAY_US", 5, "EconomyShippingFromOutsideUS")
+    service = body["shippingOptions"][0]["shippingServices"][0]
+    assert body["handlingTime"] == {"value": 5, "unit": "DAY"}
+    assert service["freeShipping"] is True and service["shippingServiceCode"] == "EconomyShippingFromOutsideUS"

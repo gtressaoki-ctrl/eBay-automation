@@ -183,17 +183,14 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
    eBayに発送済みとして登録され、利益が記録される。
 
 ### 一度だけ必要な設定
-1. **Seller Hubで日本発送用の配送ポリシー**を作る（Account → Business policies → Shipping）
-   - 名前: 例 `Japan export`
-   - ハンドリングタイム: **5営業日**（仕入れ〜受け取り〜梱包の時間。変えたら `EXPORT_HANDLING_DAYS` も合わせる）
-   - 国際配送: 送料は **無料**（価格に送料込み。利益計算もその前提）。サービスは日本郵便 or SpeedPAK など契約したもの
-   - 発送先: まずは **米国のみ** がおすすめ
-2. GitHub の Variables に追加:
-   - `EXPORT_LOCATION_CITY`（例 `Yokohama`）と `EXPORT_LOCATION_PREFECTURE`（例 `Kanagawa`）— 市区町村レベルまで。番地は不要
-   - `EXPORT_MERCHANT_LOCATION_KEY` = `jp-home`
-3. Actions → **Japan Export Setup** → Run workflow。発送元ロケーションが作られ、配送ポリシーの一覧が表示される。
-4. 1で作ったポリシーのIDを Variables の `EXPORT_FULFILLMENT_POLICY_ID` に設定。
-5. Actions → **Japan Export Listing** → Run workflow（最初は `DRY_RUN=true` で候補だけ確認してもよい）。
+Actions → **Japan Export Setup** → Run workflow で、`city`（例 `Yokohama`）と `prefecture`（例 `Kanagawa`）を
+入力して実行するだけ。次の2つを自動で作る（すでにあれば何もしない。何度実行しても安全）。
+- 発送元ロケーション `jp-home`（市区町村まで。購入者に「Located in」として表示されるのと同じ範囲。番地は使わない）
+- 配送ポリシー `Japan export`: 米国の購入者へ **送料無料**（価格に送料込み）、Economy Shipping from outside US、
+  ハンドリング `EXPORT_HANDLING_DAYS`（既定5）営業日
+
+※ 入力した市・都道府県は公開リポジトリのActions実行履歴に残る（出品ページに出る範囲と同じ）。
+※ Variablesの設定は不要。別のポリシーを使いたいときだけ `EXPORT_FULFILLMENT_POLICY_ID` を設定する。
 
 ### 調整できる値（Variables、未設定なら既定値）
 - `EXPORT_LISTING_QUERIES` — 対象の検索語（`;` 区切り、既定はベイブレードX・トミカプレミアム・トミカリミテッドヴィンテージ・プラレール・たまごっち）
