@@ -20,7 +20,10 @@ from .config import Config
 log = logging.getLogger(__name__)
 
 _URL = "https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch"
-_MIN_INTERVAL_S = 1.1
+_MIN_INTERVAL_S = 1.5
+# The first live run still hit 429 at 1.1s spacing and lost three
+# candidates; back off harder before giving up on one.
+_RETRY_WAITS_S = (5, 15, 30, 60)
 # hit["shipping"]["code"]: 2 = 送料無料. Anything else may charge us
 # domestic shipping, so Config.export_domestic_shipping_jpy is added.
 _FREE_SHIPPING_CODE = 2
@@ -49,7 +52,7 @@ def _throttle() -> None:
 def cheapest_new_offer(jan: str, config: Config) -> DomesticOffer | None:
     """Cheapest new, in-stock listing for this JAN, or None if nobody stocks it."""
     config.require("yahoo_app_id")
-    for attempt in range(3):
+    for attempt in range(len(_RETRY_WAITS_S) + 1):
         _throttle()
         resp = requests.get(
             _URL,
@@ -63,8 +66,8 @@ def cheapest_new_offer(jan: str, config: Config) -> DomesticOffer | None:
             },
             timeout=20,
         )
-        if resp.status_code == 429 and attempt < 2:
-            time.sleep(5 * (attempt + 1))
+        if resp.status_code == 429 and attempt < len(_RETRY_WAITS_S):
+            time.sleep(_RETRY_WAITS_S[attempt])
             continue
         resp.raise_for_status()
         break
