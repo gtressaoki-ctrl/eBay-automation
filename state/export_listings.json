@@ -40,7 +40,7 @@
     "sku": "JX-4997184188296",
     "jan": "4997184188296",
     "title": "Modal Soul by Nujabes (Record, 2024)",
-    "status": "pending_approval",
+    "status": "published",
     "category_id": "176985",
     "price_usd": 78.5,
     "competitor_price_usd": 79.0,
@@ -54,7 +54,11 @@
     "created_at": "2026-10-10T13:27:42+00:00",
     "epid": "15071192459",
     "ebay_offer_id": "307038362011",
-    "issue_number": 53
+    "issue_number": 53,
+    "quantity": 1,
+    "ebay_listing_id": "860029711234",
+    "listing_url": "https://www.ebay.com/itm/860029711234",
+    "published_at": "2026-10-10T13:30:02+00:00"
   },
   "JX-4547410246117": {
     "sku": "JX-4547410246117",
