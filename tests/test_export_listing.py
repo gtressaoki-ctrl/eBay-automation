@@ -606,3 +606,32 @@ def test_selling_limit_stops_the_day(monkeypatch):
     github = _catalog_run(monkeypatch, [_cand(JAN), _cand("4549660000006")], publish_error=limit)
     assert len(github.issues) == 1
     assert "販売上限" in github.issues[0]["body"]
+
+
+def test_sweep_covers_categories_and_sets_size_floor(monkeypatch):
+    calls = []
+
+    def fake_browse(path, config, params=None):
+        if path == "/item_summary/search":
+            calls.append(params)
+            if params.get("category_ids") == "619":
+                return {"itemSummaries": [{"itemId": "v1|guitar"}]}
+            return {"itemSummaries": []}
+        return {"gtin": JAN, "title": "Yamaha Guitar", "categoryId": "33034",
+                "estimatedAvailabilities": [{"estimatedSoldQuantity": 3}], "itemCreationDate": None}
+
+    monkeypatch.setattr(export_listing, "_browse_get", fake_browse)
+    config = Config(export_listing_queries=["beyblade x"], export_sweep_categories=["220", "619"])
+    found = export_listing._selling_jans(config)
+
+    assert [c.get("q") or c.get("category_ids") for c in calls] == ["beyblade x", "220", "619"]
+    assert all("itemLocationCountry:JP" in c["filter"] for c in calls)
+    assert found[JAN]["size_floor"] == "large"
+
+
+def test_size_floor_raises_shipping(monkeypatch):
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 60.0)
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    info = {"rate": 5.0, "category_id": "1", "title": "Item", "size_floor": "large"}
+    candidate = export_listing.evaluate(JAN, info, Config(export_min_profit_jpy=-100000))
+    assert candidate.size == "large"

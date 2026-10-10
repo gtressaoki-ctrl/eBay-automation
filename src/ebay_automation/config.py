@@ -214,7 +214,10 @@ class Config:
     # Real retail arbitrage rarely buys at under a fifth of the resale
     # price; a JAN match that cheap is almost always a different pack size.
     export_min_cost_ratio: float = field(default_factory=lambda: _float_env("EXPORT_MIN_COST_RATIO", 0.2))
-    export_min_profit_jpy: int = field(default_factory=lambda: _int_env("EXPORT_MIN_PROFIT_JPY", 1500))
+    # Low on purpose: a seller with no feedback needs sales first — they
+    # raise search rank and the monthly selling limit, which matter more
+    # right now than margin per unit. Still never below break-even.
+    export_min_profit_jpy: int = field(default_factory=lambda: _int_env("EXPORT_MIN_PROFIT_JPY", 300))
     export_sample_size: int = field(default_factory=lambda: _int_env("EXPORT_SAMPLE_SIZE", 25))
 
     # Export listings (export_listing.py): shipped from the seller's own
@@ -242,6 +245,24 @@ class Config:
         ]
     )
     export_daily_listing_quota: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_LISTING_QUOTA", 3))
+    # Category sweep: rather than only the search phrases above, sample
+    # Japan-shipped listings in every top-level eBay US category and let
+    # the sales data say what is worth sourcing.
+    export_sweep_categories: list[str] = field(
+        default_factory=lambda: [
+            c.strip()
+            for c in _str_env(
+                "EXPORT_SWEEP_CATEGORIES",
+                # Toys, Collectibles, Video Games, Cameras, Electronics, Watches/Jewelry,
+                # Sporting Goods, Home & Garden, Music, Instruments, Entertainment
+                # Memorabilia, Health & Beauty, Crafts, Pottery & Glass, Computers,
+                # Clothing, Books, Art, Antiques, Dolls & Bears
+                "220,1,1249,625,293,281,888,11700,11233,619,45100,26395,14339,870,58058,11450,267,550,20081,237",
+            ).split(",")
+            if c.strip()
+        ]
+    )
+    export_sweep_per_category: int = field(default_factory=lambda: _int_env("EXPORT_SWEEP_PER_CATEGORY", 50))
     # Products with no eBay catalog photo become "buy one, photograph it"
     # issues; each one asks for a purchase, so they are capped separately.
     # Off by default: a photo request needs someone to buy and photograph

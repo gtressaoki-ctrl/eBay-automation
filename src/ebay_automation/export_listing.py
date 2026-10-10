@@ -67,6 +67,21 @@ def clean_title(title: str) -> str:
     return f"{cleaned} Japan"[:80] if "japan" not in cleaned.lower() else cleaned[:80]
 
 
+# Sweep categories whose typical item does not fit a small parcel. Titles
+# rarely say how big a rice cooker or a guitar is, so the category sets a
+# floor under whatever size_for() reads from the title.
+_CATEGORY_SIZE_FLOOR = {
+    "293": "medium", "625": "medium", "11700": "medium", "58058": "medium", "870": "medium",
+    "11450": "medium", "550": "medium", "20081": "medium", "888": "medium",
+    "619": "large",
+}
+_SIZES = ["small", "medium", "large"]
+
+
+def larger(a: str, b: str) -> str:
+    return max(a, b, key=_SIZES.index)
+
+
 def size_for(title: str, config: Config) -> str:
     """Shipping size class from the product title; the configured default otherwise."""
     for pattern, size in _SIZE_RULES:
@@ -108,8 +123,16 @@ def _selling_jans(config: Config) -> dict[str, dict]:
     """JAN -> fastest sales rate and category among Japan-shipped listings."""
     found: dict[str, dict] = {}
     seen: set[str] = set()
-    for query in config.export_listing_queries:
-        search = _browse_get("/item_summary/search", config, {"q": query, "limit": 50, "filter": _JP_NEW})
+    searches = [{"q": q, "limit": 50} for q in config.export_listing_queries] + [
+        {"category_ids": c, "limit": config.export_sweep_per_category} for c in config.export_sweep_categories
+    ]
+    for params in searches:
+        floor = _CATEGORY_SIZE_FLOOR.get(params.get("category_ids", ""), "small")
+        try:
+            search = _browse_get("/item_summary/search", config, {**params, "filter": _JP_NEW})
+        except requests.HTTPError:
+            log.warning("Search %s failed; skipping.", params)
+            continue
         for summary in search.get("itemSummaries", []) or []:
             if summary["itemId"] in seen:
                 continue
@@ -125,7 +148,12 @@ def _selling_jans(config: Config) -> dict[str, dict]:
             rate = sold / _listing_age_days(item.get("itemCreationDate")) * 30
             best = found.get(jan)
             if best is None or rate > best["rate"]:
-                found[jan] = {"rate": rate, "category_id": item.get("categoryId", ""), "title": item.get("title", "")}
+                found[jan] = {
+                    "rate": rate,
+                    "category_id": item.get("categoryId", ""),
+                    "title": item.get("title", ""),
+                    "size_floor": floor,
+                }
     return found
 
 
@@ -143,7 +171,7 @@ def evaluate(jan: str, info: dict, config: Config) -> Candidate | None:
     offer = yahoo_shopping.cheapest_new_offer(jan, config)
     if offer is None:
         return None
-    size = size_for(info["title"], config)
+    size = larger(size_for(info["title"], config), info.get("size_floor", "small"))
     computed = export_research.profit_jpy(price, "USD", offer.price_jpy, offer.free_shipping, size, config)
     if computed is None:
         return None
@@ -271,7 +299,7 @@ def candidate_entry(candidate: Candidate, title: str, status: str, config: Confi
         "expected_profit_jpy": candidate.profit_jpy,
         "margin": candidate.margin,
         # The larger of what the competitor's title and the catalog title imply.
-        "size": max(candidate.size, size_for(title, config), key=["small", "medium", "large"].index),
+        "size": larger(candidate.size, size_for(title, config)),
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     }
 
