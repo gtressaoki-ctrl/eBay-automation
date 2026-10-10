@@ -36,6 +36,7 @@ from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_research import ProductOpportunity
 from .github_client import GithubClient
+from .pipeline_research import listing_url
 from .research import _browse_get, _listing_age_days
 
 log = logging.getLogger(__name__)
@@ -293,6 +294,40 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
     return entry
 
 
+def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
+    """Re-check the source, then publish; returns why not, or None once live."""
+    from .export_sync import source_check  # export_sync builds on this module's helpers
+
+    offer, profit, blocked = source_check(entry, config)
+    if blocked:
+        return blocked
+    try:
+        listing_id = ebay.publish_offer(entry["ebay_offer_id"])
+    except EbayApiError as exc:
+        return "今月の販売上限（出品数・金額）に達しています" if exc.is_selling_limit else f"eBayエラー: {exc.body[:400]}"
+    entry.update(
+        status="published",
+        quantity=1,
+        ebay_listing_id=listing_id,
+        listing_url=listing_url(listing_id),
+        expected_profit_jpy=profit,
+        source_price_jpy=offer.price_jpy,
+        source_url=offer.url,
+        published_at=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    )
+    export_state.save_listing(entry["sku"], entry)
+    return None
+
+
+def published_note(entry: dict) -> str:
+    return (
+        f"公開しました: {entry['listing_url']}\n\n今の仕入れ値 ¥{entry['source_price_jpy']:,}、"
+        f"想定利益 ¥{entry['expected_profit_jpy']:,}/個。仕入れ先の在庫は2時間ごとに確認し、"
+        "在庫切れや採算割れのときは自動で購入不可にします。\n\n"
+        "**売れたら「[仕入れ]」Issueが届きます。** 買って、自分の住所で受け取り、発送して `/shipped` してください。"
+    )
+
+
 def photo_request_body(entry: dict) -> str:
     lines = [
         f"## {entry['title']}",
@@ -407,6 +442,7 @@ def run(config: Config | None = None) -> int:
 
     github = None if config.dry_run else GithubClient(config)
     created = 0
+    stop_reason = ""
     photo_requests = 0
     dry_rows: list[str] = []
     photo_rows: list[str] = []
@@ -451,15 +487,30 @@ def run(config: Config | None = None) -> int:
         except (EbayApiError, ValueError):
             log.exception("Drafting JAN %s failed; skipping.", candidate.jan)
             continue
+        export_state.save_listing(entry["sku"], entry)
+        failure = publish_draft(config, ebay, entry) if config.export_auto_publish else "approval"
+        if failure and failure != "approval" and "販売上限" in failure:
+            stop_reason = failure
         issue = github.create_issue(
-            title=f"[輸出・承認待ち] {entry['title'][:60]} ({entry['sku']})",
-            body=issue_body(entry, (_images(product) or [None])[0]),
+            title=(
+                f"[輸出・出品済み] {entry['title'][:60]} ({entry['sku']})"
+                if not failure
+                else f"[輸出・承認待ち] {entry['title'][:60]} ({entry['sku']})"
+            ),
+            body=issue_body(entry, (_images(product) or [None])[0])
+            + ("" if failure in (None, "approval") else f"\n自動公開できませんでした: {failure}\n"),
             labels=["export-approval", "ebay-automation"],
         )
         entry["issue_number"] = issue["number"]
         export_state.save_listing(entry["sku"], entry)
+        if not failure:
+            github.comment_issue(issue["number"], published_note(entry))
+            github.close_issue(issue["number"], "completed")
         created += 1
-        log.info("Opened export approval issue #%s for %s", issue["number"], entry["sku"])
+        log.info("Export %s: %s (#%s)", entry["sku"], failure or "published", issue["number"])
+        if stop_reason:
+            log.warning("Stopping for today: %s", stop_reason)
+            break
     if config.dry_run:
         _write_summary(len(candidates), dry_rows, photo_rows)
     log.info("Created %d export drafts.", created)

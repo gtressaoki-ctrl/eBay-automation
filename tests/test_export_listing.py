@@ -453,7 +453,8 @@ def test_run_opens_photo_request_when_catalog_has_no_product(monkeypatch):
     monkeypatch.setattr(export_listing, "GithubClient", lambda config: github)
     config = Config(ebay_app_id="a", ebay_cert_id="c", ebay_refresh_token="r", yahoo_app_id="y",
                     export_merchant_location_key="jp", export_fulfillment_policy_id="fp",
-                    ebay_payment_policy_id="p", ebay_return_policy_id="r", github_token="t", github_repository="o/r")
+                    ebay_payment_policy_id="p", ebay_return_policy_id="r", github_token="t", github_repository="o/r",
+                    export_daily_photo_requests=2)
 
     export_listing.run(config)
 
@@ -560,3 +561,48 @@ def test_profitable_photo_request_stays_open(monkeypatch):
     export_sync.sync_photo_requests(Config(export_seller_duty_rate=0.15), github)
     assert export_state.load_listings()["JX-" + JAN]["status"] == "needs_photos"
     assert github.comments == []
+
+
+def _catalog_run(monkeypatch, candidates, publish_error=None, **cfg):
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: candidates)
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+
+    class Catalog(FakeEbay):
+        def __init__(self, config):
+            super().__init__()
+            self.publish_error = publish_error
+
+        def find_catalog_product(self, gtin):
+            return {"epid": "9", "title": f"Beyblade X {gtin}", "image": {"imageUrl": "https://i.ebayimg.com/a.jpg"}}
+
+    github = FakeGithub()
+    monkeypatch.setattr(export_listing, "EbayClient", Catalog)
+    monkeypatch.setattr(export_listing, "GithubClient", lambda config: github)
+    config = Config(ebay_app_id="a", ebay_cert_id="c", ebay_refresh_token="r", yahoo_app_id="y",
+                    ebay_payment_policy_id="p", ebay_return_policy_id="r", **cfg)
+    export_listing.run(config)
+    return github
+
+
+def _cand(jan):
+    return export_listing.Candidate(jan, "1", 12.0, 60.0, 59.5, _offer(2500), 3000, 0.3, "small", "Beyblade X")
+
+
+def test_catalog_candidates_publish_without_approval(monkeypatch):
+    github = _catalog_run(monkeypatch, [_cand(JAN)])
+    assert github.issues[0]["title"].startswith("[輸出・出品済み]")
+    assert github.closed == ["completed"] and "公開しました" in github.comments[0]
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "published"
+
+
+def test_approval_still_available_when_auto_publish_is_off(monkeypatch):
+    github = _catalog_run(monkeypatch, [_cand(JAN)], export_auto_publish=False)
+    assert github.issues[0]["title"].startswith("[輸出・承認待ち]") and github.closed == []
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "pending_approval"
+
+
+def test_selling_limit_stops_the_day(monkeypatch):
+    limit = EbayApiError("POST", "u", 400, "you've reached the number of items")
+    github = _catalog_run(monkeypatch, [_cand(JAN), _cand("4549660000006")], publish_error=limit)
+    assert len(github.issues) == 1
+    assert "販売上限" in github.issues[0]["body"]

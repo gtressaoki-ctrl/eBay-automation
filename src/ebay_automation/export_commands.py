@@ -24,9 +24,8 @@ import re
 from . import export_photos, export_research, export_state
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
-from .export_sync import source_check
+from .export_listing import publish_draft, published_note
 from .github_client import GithubClient
-from .pipeline_research import listing_url
 
 log = logging.getLogger(__name__)
 
@@ -84,35 +83,11 @@ def handle_approval(config: Config, ebay: EbayClient, github: GithubClient, issu
         github.close_issue(issue_number, "not_planned")
         return
 
-    offer, profit, blocked = source_check(entry, config)
-    if blocked:
-        github.comment_issue(
-            issue_number,
-            f"今は公開しません: {blocked}。仕入れ先が戻ったら、もう一度 `/approve` してください。",
-        )
+    failure = publish_draft(config, ebay, entry)
+    if failure:
+        github.comment_issue(issue_number, f"今は公開しません: {failure}。直ったら、もう一度 `/approve` してください。")
         return
-    try:
-        listing_id = ebay.publish_offer(entry["ebay_offer_id"])
-    except EbayApiError as exc:
-        note = "今月の販売上限（出品数・金額）に達しています。" if exc.is_selling_limit else exc.body[:500]
-        github.comment_issue(issue_number, f"公開に失敗しました: {note}")
-        return
-    entry.update(
-        status="published",
-        quantity=1,
-        ebay_listing_id=listing_id,
-        listing_url=listing_url(listing_id),
-        expected_profit_jpy=profit,
-        source_price_jpy=offer.price_jpy,
-        source_url=offer.url,
-        published_at=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-    )
-    export_state.save_listing(sku, entry)
-    github.comment_issue(
-        issue_number,
-        f"公開しました: {entry['listing_url']}\n\n今の仕入れ値 ¥{offer.price_jpy:,}、想定利益 ¥{profit:,}/個。"
-        "仕入れ先の在庫は2時間ごとに確認します。",
-    )
+    github.comment_issue(issue_number, published_note(entry))
     github.close_issue(issue_number, "completed")
 
 
