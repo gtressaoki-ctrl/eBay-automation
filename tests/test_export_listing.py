@@ -635,3 +635,12 @@ def test_size_floor_raises_shipping(monkeypatch):
     info = {"rate": 5.0, "category_id": "1", "title": "Item", "size_floor": "large"}
     candidate = export_listing.evaluate(JAN, info, Config(export_min_profit_jpy=-100000))
     assert candidate.size == "large"
+
+
+def test_waiting_drafts_are_published_when_auto_publish_is_on(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _entry(status="pending_approval", issue_number=53))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    github = FakeGithub()
+    assert export_listing.publish_pending(Config(), FakeEbay(), github) == 1
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "published"
+    assert github.closed == ["completed"]

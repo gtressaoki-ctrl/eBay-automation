@@ -449,6 +449,31 @@ def setup_missing(config: Config, ebay: EbayClient) -> list[str]:
     return missing
 
 
+def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> int:
+    """Publish drafts still waiting on /approve once auto-publish is on.
+
+    Drafts made while auto-publish was off (or that could not go live at
+    the time, e.g. source out of stock) would otherwise wait for a comment
+    nobody is going to write.
+    """
+    published = 0
+    for sku, entry in export_state.load_listings().items():
+        if entry.get("status") != "pending_approval":
+            continue
+        failure = publish_draft(config, ebay, entry)
+        if failure:
+            log.info("Draft %s still not published: %s", sku, failure)
+            if "販売上限" in failure:
+                break
+            continue
+        published += 1
+        if entry.get("issue_number"):
+            github.comment_issue(entry["issue_number"], published_note(entry))
+            github.close_issue(entry["issue_number"], "completed")
+        log.info("Published waiting draft %s", sku)
+    return published
+
+
 def run(config: Config | None = None) -> int:
     config = config or load_config()
     config.require("ebay_app_id", "ebay_cert_id", "ebay_refresh_token", "yahoo_app_id")
@@ -459,6 +484,8 @@ def run(config: Config | None = None) -> int:
         # red every day until then, so fall back to showing candidates.
         log.warning("Export listing not set up (%s); running as a dry run.", "; ".join(missing))
         config = dataclasses.replace(config, dry_run=True)
+    if config.export_auto_publish and not config.dry_run:
+        publish_pending(config, ebay, GithubClient(config))
     listings = export_state.load_listings()
     # Rejected products stay skipped, so a /reject is not undone the next morning.
     active = {
