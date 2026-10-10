@@ -244,7 +244,12 @@ class Config:
     export_daily_listing_quota: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_LISTING_QUOTA", 3))
     # Products with no eBay catalog photo become "buy one, photograph it"
     # issues; each one asks for a purchase, so they are capped separately.
-    export_daily_photo_requests: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_PHOTO_REQUESTS", 2))
+    # Off by default: a photo request needs someone to buy and photograph
+    # a unit first, and listing is meant to run without the seller.
+    export_daily_photo_requests: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_PHOTO_REQUESTS", 0))
+    # Publish catalog-photo drafts straight away (after re-checking the
+    # source) instead of waiting for /approve on the issue.
+    export_auto_publish: bool = field(default_factory=lambda: _bool_env("EXPORT_AUTO_PUBLISH", True))
     export_photo_min_units_per_month: float = field(
         default_factory=lambda: _float_env("EXPORT_PHOTO_MIN_UNITS_PER_MONTH", 1.0)
     )
