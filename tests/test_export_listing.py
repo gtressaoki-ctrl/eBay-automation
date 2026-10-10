@@ -15,6 +15,8 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(export_state, "_STATE_DIR", tmp_path)
     monkeypatch.setattr(fx, "rate_to_jpy", lambda currency, config: {"USD": 150.0}.get(currency))
     export_listing._policy_cache.clear()
+    # Duty has its own test; the rest of these numbers predate it.
+    monkeypatch.setenv("EXPORT_SELLER_DUTY_RATE", "0")
 
 
 def _offer(price, name="ベイブレードX BX-01"):
@@ -539,3 +541,22 @@ def test_yahoo_retries_through_rate_limits(monkeypatch):
 
     monkeypatch.setattr(yahoo_shopping.requests, "get", lambda *a, **k: Resp())
     assert yahoo_shopping.cheapest_new_offer(JAN, Config(yahoo_app_id="y")).price_jpy == 3300
+
+
+def test_unprofitable_photo_request_is_withdrawn(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _photo_entry())  # $39.50 sale
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(1500))
+    github = FakeGithub()
+    export_sync.sync_photo_requests(Config(export_seller_duty_rate=0.15), github)
+    entry = export_state.load_listings()["JX-" + JAN]
+    assert entry["status"] == "withdrawn"
+    assert "買わないで" in github.comments[0] and github.closed == ["not_planned"]
+
+
+def test_profitable_photo_request_stays_open(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _photo_entry(price_usd=80.0))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(3000))
+    github = FakeGithub()
+    export_sync.sync_photo_requests(Config(export_seller_duty_rate=0.15), github)
+    assert export_state.load_listings()["JX-" + JAN]["status"] == "needs_photos"
+    assert github.comments == []

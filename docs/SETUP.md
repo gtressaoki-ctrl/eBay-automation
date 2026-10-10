@@ -196,6 +196,9 @@ Actions → **Japan Export Setup** → Run workflow で、`city`（例 `Yokohama
 - `EXPORT_LISTING_QUERIES` — 対象の検索語（`;` 区切り、既定はベイブレードX・トミカプレミアム・トミカリミテッドヴィンテージ・プラレール・たまごっち）
 - `EXPORT_DAILY_LISTING_QUOTA`（既定3）、`EXPORT_UNDERCUT_USD_CENTS`（既定50＝$0.50下げ）
 - `EXPORT_LISTING_SIZE`（既定 `small`）、`EXPORT_MIN_COST_RATIO`（既定0.2）
+- `EXPORT_SELLER_DUTY_RATE`（既定0.15）と `EXPORT_DUTY_FEE_JPY`（既定300）— 米国関税を出品者が前払いする分。2026年4月から
+  日本郵便の米国宛ては差出人の関税前払い（Zonos経由）が必須で、日本製品は15%。関税を購入者から徴収する発送方法
+  （例: SpeedPAKで購入者負担になる場合）に切り替えたら `EXPORT_SELLER_DUTY_RATE=0` にする
 
 ### 注意
 - 新規アカウントの販売上限（例: 月50点・$700）は出品数×価格で消費される。ベイブレードX（$60前後）なら約10出品が上限。

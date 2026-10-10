@@ -21,6 +21,7 @@ class FakeResponse:
 
 @pytest.fixture(autouse=True)
 def fixed_fx(monkeypatch):
+    monkeypatch.setenv("EXPORT_SELLER_DUTY_RATE", "0")
     monkeypatch.setattr(research, "get_app_access_token", lambda config: "fake-app-token")
     monkeypatch.setattr(fx, "rate_to_jpy", lambda currency, config: {"USD": 150.0, "JPY": 1.0}.get(currency))
 
@@ -211,3 +212,12 @@ def test_bundle_regex(title, bundle):
 def test_new_in_box_is_not_a_box_of_packs(monkeypatch):
     result = _priced(monkeypatch, "RICOH DW-5 Wide Conversion Lens New in Box", "124.00", 9591, "リコー ワイドコンバージョンレンズ")
     assert result.products[0].mismatch == ""
+
+
+def test_seller_paid_duty_is_charged_on_item_value():
+    no_duty = Config(export_fx_haircut=0.03, export_seller_duty_rate=0.0)
+    duty = Config(export_fx_haircut=0.03, export_seller_duty_rate=0.15, export_duty_fee_jpy=300)
+    p0, _ = export_research.profit_jpy(54.48, "USD", 2640, True, "small", no_duty)
+    p1, _ = export_research.profit_jpy(54.48, "USD", 2640, True, "small", duty)
+    # 15% of $54.48 at the mid rate (150), plus the prepayment fee.
+    assert p0 - p1 == round(54.48 * 150 * 0.15 + 300)
