@@ -213,11 +213,16 @@ class Config:
     # Export listings (export_listing.py): shipped from the seller's own
     # address in Japan, so they need their own location and shipping
     # policy, separate from the US print-on-demand ones.
+    # Both are created by scripts/export_setup.py; nothing needs setting by
+    # hand. A policy ID set explicitly wins over the lookup by name.
     export_merchant_location_key: str = field(
-        default_factory=lambda: _str_env("EXPORT_MERCHANT_LOCATION_KEY")
+        default_factory=lambda: _str_env("EXPORT_MERCHANT_LOCATION_KEY", "jp-home")
     )
     export_fulfillment_policy_id: str = field(
         default_factory=lambda: _str_env("EXPORT_FULFILLMENT_POLICY_ID")
+    )
+    export_fulfillment_policy_name: str = field(
+        default_factory=lambda: _str_env("EXPORT_FULFILLMENT_POLICY_NAME", "Japan export")
     )
     # What to list: Browse search phrases, sampled for Japan-shipped new
     # listings that are actually selling.
