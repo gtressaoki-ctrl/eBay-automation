@@ -44,3 +44,14 @@ def test_repository_variables_still_win_when_actually_set(monkeypatch):
 
     assert config.ebay_category_id == "15687"
     assert config.printify_variant_ids == [1, 2, 3]
+
+
+def test_blank_bool_env_uses_default(monkeypatch):
+    from ebay_automation.config import Config
+
+    monkeypatch.setenv("EXPORT_AUTO_PUBLISH", "")
+    monkeypatch.setenv("DRY_RUN", "")
+    assert Config().export_auto_publish is True
+    assert Config().dry_run is False
+    monkeypatch.setenv("EXPORT_AUTO_PUBLISH", "false")
+    assert Config().export_auto_publish is False

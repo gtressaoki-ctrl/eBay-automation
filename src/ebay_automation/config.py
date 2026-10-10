@@ -10,10 +10,13 @@ from dataclasses import dataclass, field
 
 
 def _bool_env(name: str, default: bool) -> bool:
-    val = os.environ.get(name)
-    if val is None:
+    # An unset repository variable reaches the workflow as "", which must
+    # mean "use the default" (see _str_env) — read as False it silently
+    # turned EXPORT_AUTO_PUBLISH off on its first live run.
+    val = os.environ.get(name, "").strip()
+    if not val:
         return default
-    return val.strip().lower() in ("1", "true", "yes", "on")
+    return val.lower() in ("1", "true", "yes", "on")
 
 
 def _int_env(name: str, default: int) -> int:
