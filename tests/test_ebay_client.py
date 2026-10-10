@@ -165,3 +165,10 @@ def test_selling_limit_is_recognised_in_both_of_ebays_wordings():
     assert EbayApiError("POST", "u", 400, would_exceed).is_selling_limit
     assert EbayApiError("POST", "u", 400, already_reached).is_selling_limit
     assert not EbayApiError("POST", "u", 400, other).is_selling_limit
+
+
+def test_selling_limit_detects_the_dollar_limit():
+    from ebay_automation.ebay_client import EbayApiError
+
+    body = '{"errors":[{"errorId":25002,"message":"This listing would cause you to exceed the amount you can list."}]}'
+    assert EbayApiError("POST", "u", 400, body).is_selling_limit
