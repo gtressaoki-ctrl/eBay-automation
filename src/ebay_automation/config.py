@@ -201,6 +201,13 @@ class Config:
     export_shipping_small_jpy: int = field(default_factory=lambda: _int_env("EXPORT_SHIPPING_SMALL_JPY", 2200))
     export_shipping_medium_jpy: int = field(default_factory=lambda: _int_env("EXPORT_SHIPPING_MEDIUM_JPY", 3800))
     export_shipping_large_jpy: int = field(default_factory=lambda: _int_env("EXPORT_SHIPPING_LARGE_JPY", 6500))
+    # US import duty the seller prepays. Since April 2026 Japan Post only
+    # takes US parcels with duty prepaid by the sender (through Zonos), and
+    # Japanese goods carry a 15% US tariff. Set to 0 only once shipping goes
+    # through a service that collects duty from the buyer at checkout.
+    export_seller_duty_rate: float = field(default_factory=lambda: _float_env("EXPORT_SELLER_DUTY_RATE", 0.15))
+    # Per-parcel charge for prepaying that duty (the Zonos fee), estimated.
+    export_duty_fee_jpy: int = field(default_factory=lambda: _int_env("EXPORT_DUTY_FEE_JPY", 300))
     # Exports are zero-rated, so a 課税事業者 gets the 10% consumption tax
     # on the purchase back. Off until the seller is actually registered.
     export_tax_refund: bool = field(default_factory=lambda: _bool_env("EXPORT_TAX_REFUND", False))

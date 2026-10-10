@@ -62,6 +62,8 @@ jobs:
           EXPORT_SHIPPING_LARGE_JPY: ${{ vars.EXPORT_SHIPPING_LARGE_JPY }}
           EXPORT_TAX_REFUND: ${{ vars.EXPORT_TAX_REFUND }}
           EXPORT_MIN_PROFIT_JPY: ${{ vars.EXPORT_MIN_PROFIT_JPY }}
+          EXPORT_SELLER_DUTY_RATE: ${{ vars.EXPORT_SELLER_DUTY_RATE }}
+          EXPORT_DUTY_FEE_JPY: ${{ vars.EXPORT_DUTY_FEE_JPY }}
           EXPORT_MIN_COST_RATIO: ${{ vars.EXPORT_MIN_COST_RATIO }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || vars.DRY_RUN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

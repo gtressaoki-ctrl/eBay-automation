@@ -91,6 +91,36 @@ def sync_stock(config: Config, ebay: EbayClient) -> None:
         export_state.save_listing(sku, entry)
 
 
+def sync_photo_requests(config: Config, github: GithubClient | None) -> None:
+    """Withdraw "buy one and photograph it" requests that stopped paying.
+
+    Those issues ask for money up front, so one whose source sold out or
+    whose margin no longer clears the floor (prices move; cost assumptions
+    such as US duty change) is closed before anyone buys for it.
+    """
+    for sku, entry in export_state.load_listings().items():
+        if entry.get("status") != "needs_photos":
+            continue
+        try:
+            offer, profit, blocked = source_check(entry, config)
+        except requests.HTTPError:
+            continue
+        if not blocked:
+            entry["expected_profit_jpy"] = profit
+            export_state.save_listing(sku, entry)
+            continue
+        entry.update(status="withdrawn", paused_reason=blocked, expected_profit_jpy=profit)
+        export_state.save_listing(sku, entry)
+        if github is not None and entry.get("issue_number"):
+            github.comment_issue(
+                entry["issue_number"],
+                f"再計算した結果、今は見送ります: {blocked}。**まだ買っていなければ買わないでください。**\n\n"
+                "条件が戻れば、毎朝の候補探しでまた提案されます。",
+            )
+            github.close_issue(entry["issue_number"], "not_planned")
+        log.info("Withdrew photo request for %s (%s)", sku, blocked)
+
+
 def order_issue_body(order: dict, items: list[dict], config: Config) -> str:
     country = (
         order.get("fulfillmentStartInstructions", [{}])[0]
@@ -185,6 +215,7 @@ def run(config: Config | None = None) -> None:
     # stock guard decides what quantity the listing should have.
     sync_orders(config, ebay, github)
     sync_stock(config, ebay)
+    sync_photo_requests(config, github)
 
 
 if __name__ == "__main__":

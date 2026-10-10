@@ -140,7 +140,12 @@ def profit_jpy(
     fees = revenue * config.export_fee_rate + config.export_fee_fixed_usd_cents / 100 * usd_rate * payout
     domestic = 0 if free_domestic_shipping else config.export_domestic_shipping_jpy
     refund = purchase_jpy * 10 / 110 if config.export_tax_refund else 0
-    profit = revenue - fees - purchase_jpy - domestic - config.export_shipping_jpy(size) + refund
+    # Duty is assessed on the declared item value and paid in dollars by
+    # card, so it is not reduced by the payout spread.
+    duty = sale_total * rate * config.export_seller_duty_rate
+    if duty:
+        duty += config.export_duty_fee_jpy
+    profit = revenue - fees - purchase_jpy - domestic - config.export_shipping_jpy(size) - duty + refund
     return round(profit), (profit / revenue if revenue else 0.0)
 
 
