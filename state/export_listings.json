@@ -1,0 +1,38 @@
+{
+  "JX-4904810081609": {
+    "sku": "JX-4904810081609",
+    "jan": "4904810081609",
+    "title": "Takara Tomy / Tomica Premium Custom Works BK26 Honda NSX / JDM Japan",
+    "status": "needs_photos",
+    "category_id": "180506",
+    "price_usd": 54.48,
+    "competitor_price_usd": 54.98,
+    "units_per_month": 2.07,
+    "source_price_jpy": 2640,
+    "source_url": "https://store.shopping.yahoo.co.jp/iiado-oska/4904810081609.html",
+    "source_name": "tomica custom works BK26 Honda NSX トミカCW",
+    "expected_profit_jpy": 1586,
+    "margin": 0.19,
+    "size": "small",
+    "created_at": "2026-10-10T09:12:49+00:00",
+    "issue_number": 47
+  },
+  "JX-4543736311553": {
+    "sku": "JX-4543736311553",
+    "jan": "4543736311553",
+    "title": "Tomytec Tomica Limited Vintage Neo 1/64 TLV-NEO Ferrari F355 Spider Red Japan",
+    "status": "needs_photos",
+    "category_id": "261055",
+    "price_usd": 165.8,
+    "competitor_price_usd": 166.3,
+    "units_per_month": 0.15,
+    "source_price_jpy": 9900,
+    "source_url": "https://store.shopping.yahoo.co.jp/minicar-kenbox/4543736311553.html",
+    "source_name": "TOMYTEC　トミカリミテッドヴィンテージネオ　フェラーリF355スパイダー(赤)",
+    "expected_profit_jpy": 8808,
+    "margin": 0.346,
+    "size": "small",
+    "created_at": "2026-10-10T09:12:50+00:00",
+    "issue_number": 48
+  }
+}
