@@ -238,6 +238,9 @@ class Config:
     # Products with no eBay catalog photo become "buy one, photograph it"
     # issues; each one asks for a purchase, so they are capped separately.
     export_daily_photo_requests: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_PHOTO_REQUESTS", 2))
+    export_photo_min_units_per_month: float = field(
+        default_factory=lambda: _float_env("EXPORT_PHOTO_MIN_UNITS_PER_MONTH", 1.0)
+    )
     # How far under the cheapest Japan-shipped competitor to price.
     export_undercut_usd_cents: int = field(default_factory=lambda: _int_env("EXPORT_UNDERCUT_USD_CENTS", 50))
     # Business days between the sale and handing the parcel to the carrier:

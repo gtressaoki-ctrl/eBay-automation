@@ -499,3 +499,43 @@ def test_setup_policy_body_is_free_shipping_with_handling_days():
     service = body["shippingOptions"][0]["shippingServices"][0]
     assert body["handlingTime"] == {"value": 5, "unit": "DAY"}
     assert service["freeShipping"] is True and service["shippingServiceCode"] == "EconomyShippingFromOutsideUS"
+
+
+def test_slow_sellers_do_not_get_photo_requests(monkeypatch):
+    slow = export_listing.Candidate(JAN, "1", 0.1, 166.3, 165.8, _offer(9900), 8808, 0.35, "small", "TLV-NEO F355")
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [slow])
+
+    class NoCatalog(FakeEbay):
+        def __init__(self, config):
+            super().__init__()
+
+        def find_catalog_product(self, gtin):
+            return None
+
+    github = FakeGithub()
+    monkeypatch.setattr(export_listing, "EbayClient", NoCatalog)
+    monkeypatch.setattr(export_listing, "GithubClient", lambda config: github)
+    config = Config(ebay_app_id="a", ebay_cert_id="c", ebay_refresh_token="r", yahoo_app_id="y",
+                    ebay_payment_policy_id="p", ebay_return_policy_id="r")
+    export_listing.run(config)
+    assert github.issues == []
+
+
+def test_yahoo_retries_through_rate_limits(monkeypatch):
+    monkeypatch.setattr(yahoo_shopping, "_MIN_INTERVAL_S", 0)
+    monkeypatch.setattr(yahoo_shopping.time, "sleep", lambda s: None)
+    statuses = iter([429, 429, 429, 200])
+
+    class Resp:
+        def __init__(self):
+            self.status_code = next(statuses)
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise yahoo_shopping.requests.HTTPError(str(self.status_code))
+
+        def json(self):
+            return {"hits": [{"price": 3300, "inStock": True, "condition": "new", "url": "u"}]}
+
+    monkeypatch.setattr(yahoo_shopping.requests, "get", lambda *a, **k: Resp())
+    assert yahoo_shopping.cheapest_new_offer(JAN, Config(yahoo_app_id="y")).price_jpy == 3300

@@ -421,6 +421,11 @@ def run(config: Config | None = None) -> int:
         if product is None:
             if photo_requests >= config.export_daily_photo_requests:
                 continue
+            # A photo request means buying a unit up front; one that sells
+            # once in ten months (as the first live run proposed) just ties
+            # up the money.
+            if candidate.units_per_month < config.export_photo_min_units_per_month:
+                continue
             photo_requests += 1
             entry = candidate_entry(candidate, clean_title(candidate.title), "needs_photos", config)
             if config.dry_run:
