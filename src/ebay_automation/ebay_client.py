@@ -38,7 +38,10 @@ class EbayApiError(RuntimeError):
         # eBay words it differently depending on whether this listing would
         # cross the limit ("would cause you to exceed the number of items")
         # or it is already reached ("you've reached the number of items").
-        return "number of items" in (self.body or "")
+        # The dollar side of the limit reads "would cause you to exceed the
+        # amount you can list" (seen on the first export listing run).
+        body = self.body or ""
+        return "number of items" in body or "amount you can list" in body
 
 
 class EbayClient:
