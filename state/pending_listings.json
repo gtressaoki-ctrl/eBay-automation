@@ -122,11 +122,13 @@
       "units_per_listing_per_month": 3.62,
       "expected_monthly_profit_cents": 246
     },
-    "status": "published",
+    "status": "retired",
     "issue_number": 19,
     "ebay_listing_id": "318929525352",
     "listing_url": "https://www.ebay.com/itm/318929525352",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-technically-awake-32f646": {
     "sku": "POD-sarcastic-coffee-technically-awake-32f646",
@@ -147,11 +149,13 @@
       "units_per_listing_per_month": 3.62,
       "expected_monthly_profit_cents": 246
     },
-    "status": "published",
+    "status": "retired",
     "issue_number": 20,
     "ebay_listing_id": "318929525756",
     "listing_url": "https://www.ebay.com/itm/318929525756",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-should-have-been-an-em-4641f8": {
     "sku": "POD-sarcastic-coffee-should-have-been-an-em-4641f8",
@@ -172,11 +176,13 @@
       "units_per_listing_per_month": 3.62,
       "expected_monthly_profit_cents": 246
     },
-    "status": "published",
+    "status": "retired",
     "issue_number": 21,
     "ebay_listing_id": "318929526103",
     "listing_url": "https://www.ebay.com/itm/318929526103",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-until-this-is-empty-ff37cb": {
     "sku": "POD-sarcastic-coffee-until-this-is-empty-ff37cb",
@@ -197,11 +203,13 @@
       "units_per_listing_per_month": 3.072,
       "expected_monthly_profit_cents": 209
     },
-    "status": "published",
+    "status": "retired",
     "issue_number": 23,
     "ebay_listing_id": "318929526441",
     "listing_url": "https://www.ebay.com/itm/318929526441",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-professional-overthink-98f7e1": {
     "sku": "POD-sarcastic-coffee-professional-overthink-98f7e1",
@@ -222,11 +230,13 @@
       "units_per_listing_per_month": 3.072,
       "expected_monthly_profit_cents": 209
     },
-    "status": "published",
+    "status": "retired",
     "issue_number": 24,
     "ebay_listing_id": "318929526725",
     "listing_url": "https://www.ebay.com/itm/318929526725",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-explaining-why-im-righ-d43845": {
     "sku": "POD-sarcastic-coffee-explaining-why-im-righ-d43845",
@@ -272,10 +282,12 @@
       "units_per_listing_per_month": 2.974,
       "expected_monthly_profit_cents": 202
     },
-    "status": "published",
+    "status": "retired",
     "ebay_listing_id": "318929528136",
     "listing_url": "https://www.ebay.com/itm/318929528136",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-blood-type-coffee-8aa034": {
     "sku": "POD-sarcastic-coffee-blood-type-coffee-8aa034",
@@ -296,10 +308,12 @@
       "units_per_listing_per_month": 2.974,
       "expected_monthly_profit_cents": 202
     },
-    "status": "published",
+    "status": "retired",
     "ebay_listing_id": "318929528304",
     "listing_url": "https://www.ebay.com/itm/318929528304",
-    "content_version": 2
+    "content_version": 2,
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-japanese-kanji-fish-kanji-ba93b1": {
     "sku": "POD-japanese-kanji-fish-kanji-ba93b1",
@@ -344,10 +358,12 @@
       "units_per_listing_per_month": 0.934,
       "expected_monthly_profit_cents": 370
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860005535179",
-    "listing_url": "https://www.ebay.com/itm/860005535179"
+    "listing_url": "https://www.ebay.com/itm/860005535179",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-out-of-office-mentally-1d882f": {
     "sku": "POD-sarcastic-coffee-out-of-office-mentally-1d882f",
@@ -368,10 +384,12 @@
       "units_per_listing_per_month": 0.934,
       "expected_monthly_profit_cents": 370
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860005535317",
-    "listing_url": "https://www.ebay.com/itm/860005535317"
+    "listing_url": "https://www.ebay.com/itm/860005535317",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-monday-called-cd23dc": {
     "sku": "POD-sarcastic-coffee-monday-called-cd23dc",
@@ -392,10 +410,12 @@
       "units_per_listing_per_month": 0.934,
       "expected_monthly_profit_cents": 370
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860005535481",
-    "listing_url": "https://www.ebay.com/itm/860005535481"
+    "listing_url": "https://www.ebay.com/itm/860005535481",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-decaf-not-an-option-f5abde": {
     "sku": "POD-sarcastic-coffee-decaf-not-an-option-f5abde",
@@ -416,10 +436,12 @@
       "units_per_listing_per_month": 0.961,
       "expected_monthly_profit_cents": 357
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860009160759",
-    "listing_url": "https://www.ebay.com/itm/860009160759"
+    "listing_url": "https://www.ebay.com/itm/860009160759",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-coffee-doing-the-work-98507f": {
     "sku": "POD-sarcastic-coffee-coffee-doing-the-work-98507f",
@@ -440,10 +462,12 @@
       "units_per_listing_per_month": 0.961,
       "expected_monthly_profit_cents": 357
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860009161574",
-    "listing_url": "https://www.ebay.com/itm/860009161574"
+    "listing_url": "https://www.ebay.com/itm/860009161574",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-meeting-needs-coffee-86b81e": {
     "sku": "POD-sarcastic-coffee-meeting-needs-coffee-86b81e",
@@ -464,10 +488,12 @@
       "units_per_listing_per_month": 0.961,
       "expected_monthly_profit_cents": 357
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860009161878",
-    "listing_url": "https://www.ebay.com/itm/860009161878"
+    "listing_url": "https://www.ebay.com/itm/860009161878",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-patience-is-brewing-dd33ee": {
     "sku": "POD-sarcastic-coffee-patience-is-brewing-dd33ee",
@@ -488,10 +514,12 @@
       "units_per_listing_per_month": 0.806,
       "expected_monthly_profit_cents": 413
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860013146307",
-    "listing_url": "https://www.ebay.com/itm/860013146307"
+    "listing_url": "https://www.ebay.com/itm/860013146307",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   },
   "POD-sarcastic-coffee-fueled-by-sarcasm-b36713": {
     "sku": "POD-sarcastic-coffee-fueled-by-sarcasm-b36713",
@@ -512,9 +540,11 @@
       "units_per_listing_per_month": 0.806,
       "expected_monthly_profit_cents": 413
     },
-    "status": "published",
+    "status": "retired",
     "content_version": 2,
     "ebay_listing_id": "860013146702",
-    "listing_url": "https://www.ebay.com/itm/860013146702"
+    "listing_url": "https://www.ebay.com/itm/860013146702",
+    "retired_at": "2026-10-10T22:08:02+00:00",
+    "retired_reason": "selling limit reallocated to Japan export listings"
   }
 }

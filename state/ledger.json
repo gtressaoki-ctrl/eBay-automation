@@ -9,6 +9,6 @@
     "profit_cents": 0
   },
   "orders": [],
-  "paused": false,
-  "pause_reason": null
+  "paused": true,
+  "pause_reason": "selling limit reallocated to Japan export listings"
 }
