@@ -1,0 +1,52 @@
+name: Retire mug listings
+
+# Runs once when an agreed retirement request lands on main
+# (state/retire_request.json), or manually.
+on:
+  push:
+    branches: [main]
+    paths: [state/retire_request.json]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ebay-automation-state
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Withdraw mug offers
+        env:
+          PYTHONPATH: src
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_DEV_ID: ${{ secrets.EBAY_DEV_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+        run: |
+          KEEP=$(python -c "import json;print(','.join(json.load(open('state/retire_request.json')).get('keep', [])))")
+          PAUSE=$(python -c "import json;print('--pause' if json.load(open('state/retire_request.json')).get('pause') else '')")
+          python scripts/retire_mug_listings.py --keep "$KEEP" $PAUSE
+      - name: Commit updated state
+        run: |
+          git config user.name "ebay-automation-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(state): retire mug listings [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              git push && break
+              git fetch origin main && git rebase origin/main
+              sleep $((RANDOM % 5 + 1))
+            done
+          fi
