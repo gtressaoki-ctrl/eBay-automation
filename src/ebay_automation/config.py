@@ -265,7 +265,7 @@ class Config:
             if c.strip()
         ]
     )
-    export_sweep_per_category: int = field(default_factory=lambda: _int_env("EXPORT_SWEEP_PER_CATEGORY", 50))
+    export_sweep_per_category: int = field(default_factory=lambda: _int_env("EXPORT_SWEEP_PER_CATEGORY", 25))
     # Products with no eBay catalog photo become "buy one, photograph it"
     # issues; each one asks for a purchase, so they are capped separately.
     # Off by default: a photo request needs someone to buy and photograph
