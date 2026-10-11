@@ -31,7 +31,7 @@ from dataclasses import dataclass
 
 import requests
 
-from . import export_research, export_state, yahoo_shopping
+from . import export_research, export_state, fx, yahoo_shopping
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_research import ProductOpportunity
@@ -344,7 +344,42 @@ def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
         published_at=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     )
     export_state.save_listing(entry["sku"], entry)
+    note = promote(config, ebay, entry)
+    if note:
+        log.info("%s: %s", entry["sku"], note)
     return None
+
+
+def promote(config: Config, ebay: EbayClient, entry: dict) -> str | None:
+    """Add a live listing to the export cost-per-sale campaign; returns a note when it can't."""
+    bid = config.export_promote_bid_percent
+    if bid <= 0 or entry.get("promoted"):
+        return None
+    usd = fx.rate_to_jpy("USD", config) or config.export_fx_fallback_usd_jpy
+    ad_cost = entry["price_usd"] * bid / 100 * usd
+    if entry.get("expected_profit_jpy") is not None and ad_cost >= entry["expected_profit_jpy"]:
+        return f"広告費（約¥{ad_cost:,.0f}）が利益を上回るため広告なし"
+    try:
+        campaign = ebay.get_or_create_cost_per_sale_campaign(config.export_promote_campaign, bid)
+        ebay.promote_listing(campaign, entry["sku"], bid)
+    except EbayApiError as exc:
+        if "already" in (exc.body or "").lower():
+            entry["promoted"] = True
+            export_state.save_listing(entry["sku"], entry)
+            return None
+        return f"広告を設定できませんでした: {exc.body[:200]}"
+    entry["promoted"] = True
+    export_state.save_listing(entry["sku"], entry)
+    return None
+
+
+def promote_published(config: Config, ebay: EbayClient) -> None:
+    """Catch up listings published before promotion existed (or that failed then)."""
+    for entry in export_state.load_listings().values():
+        if entry.get("status") == "published" and not entry.get("promoted"):
+            note = promote(config, ebay, entry)
+            if note:
+                log.info("%s: %s", entry["sku"], note)
 
 
 def published_note(entry: dict) -> str:
@@ -486,6 +521,8 @@ def run(config: Config | None = None) -> int:
         config = dataclasses.replace(config, dry_run=True)
     if config.export_auto_publish and not config.dry_run:
         publish_pending(config, ebay, GithubClient(config))
+    if not config.dry_run:
+        promote_published(config, ebay)
     listings = export_state.load_listings()
     # Rejected products stay skipped, so a /reject is not undone the next morning.
     active = {

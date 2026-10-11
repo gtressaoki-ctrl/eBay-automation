@@ -168,6 +168,7 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
    写真と商品情報は **eBayカタログの公式ストック写真** を使う（他の出品者の写真は使わない）。
 2. **自動で公開する**（`EXPORT_AUTO_PUBLISH`、既定 true）。仕入れ先の在庫と利益を再確認してから公開し、`[輸出・出品済み]` Issueに記録して閉じる。
    今月の販売上限に達したら、その日の出品を止める。`EXPORT_AUTO_PUBLISH=false` にすると、従来どおり `/approve` を待つ（`/reject` で削除）。
+3. **広告（Promoted Listings Standard）**（`EXPORT_PROMOTE_BID_PERCENT`、既定 3%）。公開した輸出出品を `japan-export-cps` キャンペーンに入れる。費用は広告経由で売れたときだけ発生する。広告費が想定利益を上回る商品は広告に入れない。0 にすると止まる。
    - **eBayカタログに公式写真がない商品**は、`EXPORT_DAILY_PHOTO_REQUESTS` を1以上にしたときだけ `[輸出・写真待ち]` Issueになる（既定0＝出品を完全に自動にするため写真依頼はしない）。
      その商品を **1個だけ買い**、届いたら3〜8枚撮って、Issueに写真をドラッグ＆ドロップし、同じコメントに `/photos` と書いて送る。
      写真はeBayの画像サーバー（EPS）にアップロードされ、そのまま出品・公開される。手元の1個がまず売れ、
