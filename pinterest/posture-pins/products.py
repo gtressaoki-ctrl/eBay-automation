@@ -30,6 +30,7 @@ PRODUCTS = {
     "nulaxy": dict(name="Nulaxy Adjustable Laptop Stand", asin="B077B9W343", program="Amazon"),
     # ---- input devices
     "k860": dict(name="Logitech ERGO K860 Split Ergonomic Keyboard", asin="B07ZWK2TQT", program="Amazon"),
+    "mx_vertical": dict(name="Logitech MX Vertical Ergonomic Wireless Mouse", asin="B07FNJB8TT", program="Amazon"),
     "gimars": dict(name="Gimars Gel Memory Foam Keyboard + Mouse Wrist Rest Set", asin="B01M11FLUJ", program="Amazon"),
     # ---- chairs & desks (high ticket)
     "sihoo_m57": dict(name="SIHOO M57 Ergonomic Office Chair", asin="B07BDFW1Y7", program="Amazon"),
@@ -37,6 +38,7 @@ PRODUCTS = {
     "flexispot_e7": dict(name="FlexiSpot E7 Pro Electric Standing Desk", asin="B094N16PQM", program="Amazon",
                          alt_url="https://www.flexispot.com/flexispot-best-standing-desk-e7pro"),
     "flexispot_conv": dict(name="FlexiSpot 35in Standing Desk Converter", asin="B0C8TMNWP8", program="Amazon"),
+    "topo_mat": dict(name="Ergodriven Topo Anti-Fatigue Standing Desk Mat", asin="B00V3TO9HW", program="Amazon"),
     # ---- stretching / recovery
     "theraband": dict(name="THERABAND Resistance Band Set", asin="B000LX4KRA", program="Amazon"),
     "chirp": dict(name="Chirp Wheel+ Foam Roller (10in/12in)", asin="B0B88FZ1LC", program="Amazon"),

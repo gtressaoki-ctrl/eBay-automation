@@ -35,9 +35,17 @@ def sc_chair_annot(pin, top):
     out.append(floor(L, R, floor_y))
     out.append(chair_side(hip, u, floor_y, lumbar=pin.get("lumbar_col", TERRA_SOFT), arm=pin.get("arm", True),
                           recline=pin.get("recline", 8), back_h=3.2))
-    s, j = seated(hip, u, pose(SIT, thoracic=-4, neck=3, uarm=180, farm=92))
+    s, j = seated(hip, u, pose(SIT, **dict(dict(thoracic=-4, neck=3, uarm=180, farm=92), **pin.get("pose", {}))))
     out.append(s)
     a = _chair_anchors(hip, u, floor_y, j)
+    if "recline" in pin:  # follow the reclined backrest instead of the default offsets
+        from svgkit import add, lerp
+        rc = pin["recline"]
+        b0 = (hip[0] - 0.78 * u, hip[1] + 0.24 * u)
+        b1 = add(b0, -rc, 3.2 * u)
+        a["backrest"] = lerp(b0, b1, 0.8)
+        a["lumbar"] = add(lerp(b0, b1, 0.22), 90, 0.22 * u)
+        a["arc"] = add((hip[0] - 0.7 * u, hip[1] + 0.3 * u), (90 - rc) / 2, 1.15 * u)
     for d in pin.get("dims", []):
         if d == "seat_height":
             x = hip[0] + 3.0 * u
@@ -49,6 +57,18 @@ def sc_chair_annot(pin, top):
         elif d == "seat_depth":
             y = hip[1] + 0.95 * u
             out.append(dimension((hip[0] + 1.55 * u, y), (j["knee"][0] - 0.05 * u, y), "2–3 FINGERS", col=TERRA))
+        elif d == "recline":
+            rc = pin.get("recline", 8)
+            c = (hip[0] - 0.7 * u, hip[1] + 0.3 * u)
+            out.append(line(c, (c[0] + 1.9 * u, c[1]), stroke=TERRA, sw=1.1, dash="3 5"))
+            out.append(angle_arc(c, 1.15 * u, -rc, 90, value=pin.get("recline_label")))
+        elif d == "elbow_line":
+            out.append(line((j["elbow"][0] - 0.6 * u, j["elbow"][1]), (hip[0] + 1.6 * u, j["elbow"][1]),
+                            stroke=TERRA, sw=1.2, dash="3 5"))
+        elif d == "belt_line":
+            y = a["lumbar"][1]
+            out.append(line((L, y), (hip[0] + 1.2 * u, y), stroke=TERRA, sw=1.2, dash="3 5"))
+            out.append(text(L, y - 12, "BELT LINE", size=14, family=MONO, fill=TERRA, ls=3))
         elif d == "lumbar_ring":
             c = a["lumbar"]
             out.append(circle((c[0] + 0.15 * u, c[1]), 0.9 * u, stroke=TERRA, sw=1.3))
@@ -96,8 +116,9 @@ def sc_chair_compare(pin, top):
     floor_y = top + 600
     mid = W / 2
     out.append(line((mid, top + 10), (mid, ART_BOTTOM - 100), sw=0.9, extra='opacity="0.45"'))
-    out.append(caption(L, top + 36, "Ergonomic chair", "Built to adjust to you", tag_col=SAGE))
-    out.append(caption(mid + 30, top + 36, "Gaming chair", "Built for the look", tag_col=TERRA))
+    (lt, ls), (rt, rs) = pin.get("sides", (("Ergonomic chair", "Built to adjust to you"), ("Gaming chair", "Built for the look")))
+    out.append(caption(L, top + 36, lt, ls, tag_col=SAGE))
+    out.append(caption(mid + 30, top + 36, rt, rs, tag_col=TERRA))
     out.append(floor(L, mid - 30, floor_y))
     out.append(floor(mid + 30, R, floor_y))
     hip1 = (L + 1.6 * u, floor_y - 2.1 * u)
@@ -107,7 +128,10 @@ def sc_chair_compare(pin, top):
         y = hip1[1] - 0.6 * u - k * 0.45 * u
         out.append(line((hip1[0] - 1.0 * u, y), (hip1[0] - 0.65 * u, y - 0.12 * u), sw=0.9, extra='opacity=".5"'))
     hip2 = (mid + 30 + 1.8 * u, floor_y - 2.1 * u)
-    out.append(_gaming_chair(hip2, u, floor_y))
+    if pin.get("right") == "basic":
+        out.append(chair_side(hip2, u, floor_y, recline=1, back_h=2.1))
+    else:
+        out.append(_gaming_chair(hip2, u, floor_y))
     y0 = floor_y + 60
     for i, (good_txt, bad_txt) in enumerate(pin["compare"]):
         yy = y0 + i * 70

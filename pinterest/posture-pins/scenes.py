@@ -724,6 +724,18 @@ def sc_flatlay(pin, top):
         elif kind == "seat_cushion":
             out.append(rect(cc[0] - 140, cc[1] - 65, 280, 130, rx=46, fill=SAGE_SOFT, stroke=SAGE, sw=2))
             out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]+65)} L{fmt(cc[0]-40)},{fmt(cc[1]+15)} Q{fmt(cc[0])},{fmt(cc[1]-15)} {fmt(cc[0]+40)},{fmt(cc[1]+15)} L{fmt(cc[0]+40)},{fmt(cc[1]+65)}Z", fill=PAPER, stroke=SAGE, sw=2))
+        elif kind == "mat":
+            out.append(rect(cc[0] - 150, cc[1] - 70, 300, 140, rx=30, fill=SAGE_SOFT, stroke=SAGE, sw=2))
+            out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]-70)} Q{fmt(cc[0]-15)},{fmt(cc[1])} {fmt(cc[0]-40)},{fmt(cc[1]+70)}", stroke=SAGE, sw=1.6))
+            out.append(path(f"M{fmt(cc[0]+40)},{fmt(cc[1]-70)} Q{fmt(cc[0]+15)},{fmt(cc[1])} {fmt(cc[0]+40)},{fmt(cc[1]+70)}", stroke=SAGE, sw=1.6))
+            out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="16" ry="30" fill="{SAGE}"/>')
+        elif kind == "vmouse":
+            out.append(line((cc[0] - 120, cc[1] + 62), (cc[0] + 120, cc[1] + 62), sw=2))
+            out.append(path(f"M{fmt(cc[0]-60)},{fmt(cc[1]+62)} L{fmt(cc[0]-52)},{fmt(cc[1]-40)} "
+                            f"Q{fmt(cc[0]-40)},{fmt(cc[1]-80)} {fmt(cc[0])},{fmt(cc[1]-68)} "
+                            f"Q{fmt(cc[0]+62)},{fmt(cc[1]-50)} {fmt(cc[0]+66)},{fmt(cc[1]+20)} L{fmt(cc[0]+66)},{fmt(cc[1]+62)}Z",
+                            fill=INK))
+            out.append(circle((cc[0] - 20, cc[1] - 20), 10, fill=TERRA))
         out.append(text(x0 + (0 if c == 0 else 24), y0 + 36, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
         out.append(text(cc[0], y0 + rh - 26, lab, size=32, family=SERIF, fill=INK, anchor="middle"))
     return "".join(out)

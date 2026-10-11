@@ -24,6 +24,8 @@ from scenes import SCENES
 from scenes2 import SCENES2
 
 SCENES.update(SCENES2)
+from scenes3 import SCENES3  # noqa: E402
+SCENES.update(SCENES3)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "images")
@@ -327,6 +329,97 @@ PINS += [
          products=["lumbar_ec", "sihoo_m57"]),
 ]
 
+# ---- batch 3: quick setup fixes and accessories
+PINS += [
+    dict(n=41, slug="desk-too-high-fix", keyword="desk too high",
+         title="Desk Too High? Raise Your Chair, Then Add a Footrest", text="Desk Too High? Easy Fix",
+         head="Is Your Desk|Too *High?*",
+         desc="Most desks are built for tall people. If your shoulders creep up while you type, raise your chair until your elbows clear the desk, then add a footrest so your feet stay supported.",
+         kicker="Quick fix", sub="Raise the chair, then bring the floor up to your feet.", scene="rig_compare",
+         panels=[dict(tag="Desk too high", caption="Shoulders creep up", desk_raise=0.5,
+                      pose=dict(uarm=164, farm=84, fuarm=162, ffarm=84), strain=["shoulder"]),
+                 dict(tag="Chair up + footrest", caption="Elbows level with the desk", lift=0.5, desk_raise=0.5,
+                      footrest=True)],
+         products=["footrest_ec", "seat_ec"]),
+    dict(n=42, slug="do-you-need-a-footrest", keyword="under desk footrest",
+         title="Do You Need a Footrest? The 5-Second Test", text="Do You Need a Footrest?",
+         head="Do You Need a|*Footrest?*",
+         desc="Sit back in your chair. If your feet don't rest flat on the floor, the seat edge presses into your thighs. A footrest closes the gap in seconds.",
+         kicker="5-second test", sub="If your feet don't reach the floor, yes.", scene="rig_compare",
+         panels=[dict(tag="Feet dangling", caption="Seat edge presses the thighs", legs=0.82, gap=True,
+                      strain=["knee"]),
+                 dict(tag="With a footrest", caption="Feet supported, thighs level", legs=0.82, footrest=True)],
+         products=["footrest_ec", "seat_ec"]),
+    dict(n=43, slug="best-office-chair-recline-angle", keyword="office chair recline angle",
+         title="Don't Sit at 90 Degrees: The Better Backrest Angle", text="Don't Sit at 90 Degrees",
+         head="Don't Sit at|*90 Degrees*",
+         desc="Sitting bolt upright isn't the goal. A slight recline of 100-110 degrees lets the backrest take some of your weight. Lock it there and keep the lumbar support in place.",
+         kicker="Backrest angle", sub="A slight recline lets the chair carry some of your weight.", scene="chair_annot",
+         recline=14, dims=["recline"], arm=False,
+         pose=dict(lumbar=-8, thoracic=-12, neck=18, uarm=172, farm=128, fuarm=170, ffarm=128),
+         callouts=[("backrest", "Lock the backrest here", "L", 40), ("arc", "Recline 100–110°", "R", 520),
+                   ("ear", "Head stays level", "R", 40), ("lumbar", "Lumbar stays in contact", "L", 110)],
+         products=["steelcase_s1", "lumbar_ec"]),
+    dict(n=44, slug="office-chair-armrest-height", keyword="office chair armrest height",
+         title="How High Should Office Chair Armrests Be?", text="Set Your Armrests Right",
+         head="Set Your|*Armrests* Right",
+         desc="Armrests set too high push your shoulders up; too low and you lean to one side. Set them level with your desk so your elbows rest at about 90 degrees.",
+         kicker="Chair setup", sub="Level with your desk, shoulders relaxed.", scene="chair_annot",
+         dims=["elbow_line"],
+         callouts=[("shoulder", "Shoulders down, not shrugged", "R", 40), ("elbow", "Elbows about 90°", "R", 110),
+                   ("armrest", "Armrest at elbow height", "R", 520), ("lumbar", "Back against the chair", "L", 40)],
+         products=["sihoo_m57", "gimars"]),
+    dict(n=45, slug="where-to-put-lumbar-pillow", keyword="lumbar pillow placement",
+         title="Where to Put a Lumbar Pillow (Lower Than You Think)", text="Where to Put a Lumbar Pillow",
+         head="Where to Put a|*Lumbar Pillow*",
+         desc="A lumbar pillow belongs in the small of your back, around belt-line height, not between your shoulder blades. Sit all the way back so it fills the curve.",
+         kicker="Lumbar support", sub="Around belt-line height, not up between the shoulders.", scene="chair_annot",
+         arm=False, lumbar_col=TERRA, dims=["belt_line", "lumbar_ring"],
+         callouts=[("lumbar", "In the small of the back", "L", 40), ("shoulder", "Not up between the shoulders", "R", 40),
+                   ("hip", "Hips all the way back", "R", 520)],
+         products=["lumbar_ec", "seat_ec"]),
+    dict(n=46, slug="is-an-ergonomic-chair-worth-it", keyword="is an ergonomic chair worth it",
+         title="Is an Ergonomic Chair Worth It? A Side-by-Side Look", text="Is an Ergonomic Chair Worth It?",
+         head="Is an Ergonomic|Chair *Worth It?*",
+         desc="A basic office chair is fine for short sessions. If you sit for most of the day, adjustable lumbar, seat depth and armrests make the difference. Here's how they compare.",
+         kicker="Side by side", sub="What you get for the extra money.", scene="chair_compare", right="basic",
+         sides=(("Ergonomic chair", "Adjusts to your body"), ("Basic chair", "One shape for everyone")),
+         compare=[("Lumbar adjusts to your back", "No lumbar support"), ("Seat depth + arms adjust", "Fixed seat and arms"),
+                  ("Made for full workdays", "Fine for short sessions")],
+         verdict="Sit most of the day? Adjustability matters.",
+         products=["sihoo_m57", "steelcase_s1"]),
+    dict(n=47, slug="standing-desk-mistakes", keyword="standing desk mistakes",
+         title="5 Standing Desk Mistakes (And How to Fix Them)", text="5 Standing Desk Mistakes",
+         head="5 Standing Desk|*Mistakes*",
+         desc="Bought a standing desk and still sore? Avoid these five mistakes: locked knees, standing all day, the wrong desk height, a low screen and a hard floor.",
+         kicker="Standing desks", sub="Small fixes that make standing comfortable.", scene="standing_tips",
+         tips=["Locking your knees", "Standing all day long", "Desk above elbow height", "Screen below eye level",
+               "Hard floor, no mat"],
+         products=["topo_mat", "flexispot_e7"]),
+    dict(n=48, slug="standing-desk-accessories", keyword="standing desk accessories",
+         title="6 Standing Desk Accessories That Actually Help", text="Standing Desk Accessories",
+         head="Standing Desk|*Accessories*",
+         desc="A standing desk works better with the right extras: an anti-fatigue mat, a monitor arm, a visual timer to switch positions, a vertical mouse, a laptop stand and a wrist rest.",
+         kicker="Small upgrades", sub="Six extras that make a standing desk easier to use.", scene="essentials",
+         items=[("mat", "Anti-fatigue mat"), ("monitor_arm", "Monitor arm"), ("timer", "Sit-stand timer"),
+                ("vmouse", "Vertical mouse"), ("laptop_stand", "Laptop stand"), ("wrist_rest", "Wrist rest")],
+         products=["topo_mat", "vivo_arm", "timetimer", "mx_vertical", "nulaxy", "gimars"]),
+    dict(n=49, slug="vertical-mouse-vs-regular-mouse", keyword="vertical mouse",
+         title="Vertical Mouse vs Regular Mouse: What's the Difference?", text="Vertical vs Regular Mouse",
+         head="*Vertical* vs|Regular Mouse",
+         desc="A regular mouse turns your palm flat, which twists the forearm. A vertical mouse keeps your hand in a handshake position. It takes about a week to get used to.",
+         kicker="Side by side", sub="It's about how far your forearm twists.", scene="mouse_compare",
+         compare=[("Forearm stays neutral", "Forearm twists flat"), ("Wrist off the desk", "Wrist rests on the desk")],
+         verdict="Wrists tired by Friday? Try a handshake grip.",
+         products=["mx_vertical", "gimars"]),
+    dict(n=50, slug="how-to-set-up-a-monitor-arm", keyword="monitor arm setup",
+         title="How to Set Up a Monitor Arm in 4 Steps", text="Monitor Arm Setup",
+         head="Set Up Your|*Monitor Arm*",
+         desc="A monitor arm only helps if it's set right: top edge at eye level, about an arm's length away, tilted back slightly, clamped at the back edge of the desk.",
+         kicker="Screen setup", sub="Four adjustments, five minutes.", scene="monitor_setup",
+         products=["vivo_arm", "huanuo_dual"]),
+]
+
 HEAD_TOP = 118
 HEAD_LH = 102
 
@@ -430,6 +523,26 @@ def write_ab_csv():
                                 ("B", f"images/ab-test/{pin['n']:02d}-{pin['slug']}-B.png", AMAZON_TAG_B)):
                 w.writerow([pin["n"], v, img, pin["title"], pin["desc"], alt_text(pin), pin["keyword"], BOARD,
                             product_url(pin["products"][0], tag)])
+    return path
+
+
+RAW_BASE = ("https://raw.githubusercontent.com/gtressaoki-ctrl/eBay-automation/"
+            "claude/pinterest-posture-pins-affiliates-el8251/pinterest/posture-pins/images/")
+
+
+def write_bulk_csv(name, order, start, board="Desk Posture & Ergonomics"):
+    """Pinterest bulk-create CSV: two posts a day (13:00 and 01:00 UTC) from `start` (a datetime)."""
+    from datetime import timedelta
+    by_n = {p["n"]: p for p in PINS}
+    path = os.path.join(HERE, name)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["Title", "Media URL", "Pinterest board", "Thumbnail", "Description", "Link", "Publish date", "Keywords"])
+        for i, n in enumerate(order):
+            p = by_n[n]
+            when = start + timedelta(hours=12 * i)
+            w.writerow([p["title"], f"{RAW_BASE}{p['n']:02d}-{p['slug']}.png", board, "", p["desc"] + " #affiliate",
+                        product_url(p["products"][0]), when.strftime("%Y-%m-%dT%H:%M:%S"), p["keyword"]])
     return path
 
 
