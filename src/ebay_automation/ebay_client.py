@@ -75,11 +75,17 @@ class EbayClient:
     def get_inventory_item(self, sku: str) -> dict[str, Any]:
         return self._request("GET", f"/sell/inventory/v1/inventory_item/{sku}").json()
 
-    def create_or_replace_inventory_item(self, sku: str, item: dict[str, Any]) -> None:
-        self._request("PUT", f"/sell/inventory/v1/inventory_item/{sku}", json=item)
+    def create_or_replace_inventory_item(self, sku: str, item: dict[str, Any], language: str = "en-US") -> None:
+        # The item's locale has to match the site its offer goes on (en-GB for ebay.co.uk).
+        self._request(
+            "PUT", f"/sell/inventory/v1/inventory_item/{sku}", json=item,
+            extra_headers={"Content-Language": language},
+        )
 
-    def create_offer(self, offer: dict[str, Any]) -> str:
-        resp = self._request("POST", "/sell/inventory/v1/offer", json=offer)
+    def create_offer(self, offer: dict[str, Any], language: str = "en-US") -> str:
+        resp = self._request(
+            "POST", "/sell/inventory/v1/offer", json=offer, extra_headers={"Content-Language": language}
+        )
         return resp.json()["offerId"]
 
     def get_offer(self, offer_id: str) -> dict[str, Any]:
@@ -152,17 +158,25 @@ class EbayClient:
 
     # ---- Account API (business policies) --------------------------------------
 
-    def find_fulfillment_policy_id(self, name: str) -> str | None:
+    def find_policy_id(self, kind: str, name: str, marketplace_id: str | None = None) -> str | None:
+        """ID of the business policy of this kind ("fulfillment", "payment", "return") named `name`."""
         resp = self._request(
-            "GET", "/sell/account/v1/fulfillment_policy", params={"marketplace_id": self.config.ebay_marketplace_id}
+            "GET", f"/sell/account/v1/{kind}_policy",
+            params={"marketplace_id": marketplace_id or self.config.ebay_marketplace_id},
         )
-        for policy in resp.json().get("fulfillmentPolicies", []):
+        for policy in resp.json().get(f"{kind}Policies", []):
             if policy.get("name") == name:
-                return policy["fulfillmentPolicyId"]
+                return policy[f"{kind}PolicyId"]
         return None
 
+    def create_policy(self, kind: str, policy: dict[str, Any]) -> str:
+        return self._request("POST", f"/sell/account/v1/{kind}_policy", json=policy).json()[f"{kind}PolicyId"]
+
+    def find_fulfillment_policy_id(self, name: str, marketplace_id: str | None = None) -> str | None:
+        return self.find_policy_id("fulfillment", name, marketplace_id)
+
     def create_fulfillment_policy(self, policy: dict[str, Any]) -> str:
-        return self._request("POST", "/sell/account/v1/fulfillment_policy", json=policy).json()["fulfillmentPolicyId"]
+        return self.create_policy("fulfillment", policy)
 
     def get_location(self, key: str) -> dict[str, Any] | None:
         try:
@@ -271,12 +285,14 @@ class EbayClient:
                 return campaign["campaignId"]
         return None
 
-    def create_cost_per_sale_campaign(self, campaign_name: str, bid_percentage: float) -> str:
+    def create_cost_per_sale_campaign(
+        self, campaign_name: str, bid_percentage: float, marketplace_id: str | None = None
+    ) -> str:
         resp = self._request(
             "POST",
             "/sell/marketing/v1/ad_campaign",
             json={
-                "marketplaceId": self.config.ebay_marketplace_id,
+                "marketplaceId": marketplace_id or self.config.ebay_marketplace_id,
                 "campaignName": campaign_name,
                 "fundingStrategy": {
                     "fundingModel": "COST_PER_SALE",
@@ -290,11 +306,13 @@ class EbayClient:
         location = resp.headers.get("Location", "")
         return location.rstrip("/").rsplit("/", 1)[-1]
 
-    def get_or_create_cost_per_sale_campaign(self, campaign_name: str, bid_percentage: float) -> str:
-        """One long-running campaign is reused across runs rather than
-        creating a fresh one every day."""
+    def get_or_create_cost_per_sale_campaign(
+        self, campaign_name: str, bid_percentage: float, marketplace_id: str | None = None
+    ) -> str:
+        """One long-running campaign (per site) is reused across runs rather
+        than creating a fresh one every day."""
         return self.find_campaign(campaign_name) or self.create_cost_per_sale_campaign(
-            campaign_name, bid_percentage
+            campaign_name, bid_percentage, marketplace_id
         )
 
     def promote_listing(self, campaign_id: str, sku: str, bid_percentage: float) -> None:

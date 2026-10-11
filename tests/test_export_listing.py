@@ -17,6 +17,14 @@ def isolated(monkeypatch, tmp_path):
     export_listing._policy_cache.clear()
     # Duty has its own test; the rest of these numbers predate it.
     monkeypatch.setenv("EXPORT_SELLER_DUTY_RATE", "0")
+    # ebay.com only, unless a test is about the other sites.
+    monkeypatch.setenv("EXPORT_MARKETS", "US")
+
+
+def _evaluate(jan, info, config):
+    """The ebay.com candidate, if any."""
+    found = export_listing.evaluate(jan, info, config)
+    return found[0] if found else None
 
 
 def _offer(price, name="ベイブレードX BX-01"):
@@ -33,16 +41,18 @@ class FakeEbay:
     def get_location(self, key):
         return self.location
 
-    def find_fulfillment_policy_id(self, name):
-        return self.policy_id
+    def find_policy_id(self, kind, name, marketplace_id=None):
+        if kind == "fulfillment":
+            return self.policy_id
+        return f"{kind.upper()}-{marketplace_id}"
 
     def set_available_quantity(self, sku, offer_id, qty):
         self.calls.append(("qty", sku, qty))
 
-    def create_or_replace_inventory_item(self, sku, item):
+    def create_or_replace_inventory_item(self, sku, item, language="en-US"):
         self.calls.append(("item", sku, item))
 
-    def create_offer(self, offer):
+    def create_offer(self, offer, language="en-US"):
         self.calls.append(("offer", offer))
         return "OFFER1"
 
@@ -61,7 +71,8 @@ class FakeEbay:
     def get_orders(self):
         return self.orders
 
-    def get_or_create_cost_per_sale_campaign(self, name, bid):
+    def get_or_create_cost_per_sale_campaign(self, name, bid, marketplace_id=None):
+        self.calls.append(("campaign", name, marketplace_id))
         return "CAMP1"
 
     def promote_listing(self, campaign, sku, bid):
@@ -96,11 +107,11 @@ def _entry(**kw):
 
 
 def test_evaluate_prices_under_competitor_and_requires_profit(monkeypatch):
-    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 60.0)
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 60.0)
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
     info = {"rate": 12.0, "category_id": "1234", "title": "Beyblade X BX-01"}
 
-    candidate = export_listing.evaluate(JAN, info, Config(export_undercut_usd_cents=50))
+    candidate = _evaluate(JAN, info, Config(export_undercut_usd_cents=50))
 
     assert candidate.price == 59.5
     assert candidate.profit_jpy >= 1500
@@ -108,15 +119,15 @@ def test_evaluate_prices_under_competitor_and_requires_profit(monkeypatch):
 
 
 def test_evaluate_rejects_thin_margin_and_pack_mismatch(monkeypatch):
-    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 30.0)
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 30.0)
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
     info = {"rate": 12.0, "category_id": "1", "title": "Beyblade X BX-01"}
-    assert export_listing.evaluate(JAN, info, Config()) is None  # thin margin
+    assert _evaluate(JAN, info, Config()) is None  # thin margin
 
-    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 120.0)
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 120.0)
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(600, "1パック"))
     info = {"rate": 12.0, "category_id": "1", "title": "Beyblade X Booster Box"}
-    assert export_listing.evaluate(JAN, info, Config()) is None  # box vs single pack
+    assert _evaluate(JAN, info, Config()) is None  # box vs single pack
 
 
 def test_create_draft_uses_catalog_photos_and_export_policies():
@@ -282,7 +293,7 @@ def test_dry_run_needs_no_export_setup_and_creates_nothing(monkeypatch, tmp_path
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
     candidate = export_listing.Candidate(JAN, "1", 12.0, 60.0, 59.5, _offer(2500), 3000, 0.3)
-    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [candidate])
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip, markets=None: [candidate])
 
     class CatalogOnly(FakeEbay):
         def __init__(self, config):
@@ -301,7 +312,7 @@ def test_dry_run_needs_no_export_setup_and_creates_nothing(monkeypatch, tmp_path
 
 def test_unconfigured_scheduled_run_falls_back_to_dry_run(monkeypatch, tmp_path):
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(tmp_path / "s.md"))
-    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [])
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip, markets=None: [])
     unset = FakeEbay()
     unset.location, unset.policy_id = None, None  # Japan Export Setup never ran
     monkeypatch.setattr(export_listing, "EbayClient", lambda config: unset)
@@ -328,13 +339,13 @@ def test_size_for(title, size):
 def test_stadium_is_priced_with_large_shipping(monkeypatch):
     # The first live dry run priced BX-10 at small-parcel shipping and
     # showed ¥3,014 profit; at the large rate it no longer clears the floor.
-    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 66.81)
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 66.81)
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2750))
     info = {"rate": 3.5, "category_id": "1", "title": "Takara Tomy Beyblade X Extreme Stadium - BX-10"}
-    assert export_listing.evaluate(JAN, info, Config()) is None
+    assert _evaluate(JAN, info, Config()) is None
 
     info["title"] = "Takara Tomy Beyblade X BX-10 Starter"
-    assert export_listing.evaluate(JAN, info, Config()).size == "small"
+    assert _evaluate(JAN, info, Config()).size == "small"
 
 
 def test_stock_guard_uses_the_listing_size(monkeypatch):
@@ -445,7 +456,7 @@ def test_first_order_ships_from_hand():
 
 def test_run_opens_photo_request_when_catalog_has_no_product(monkeypatch):
     candidate = export_listing.Candidate(JAN, "222", 2.0, 40.0, 39.5, _offer(1500), 2000, 0.3, "small", "Tomica Premium 01")
-    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [candidate])
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip, markets=None: [candidate])
 
     class NoCatalog(FakeEbay):
         def __init__(self, config):
@@ -512,7 +523,7 @@ def test_setup_policy_body_is_free_shipping_with_handling_days():
 
 def test_slow_sellers_do_not_get_photo_requests(monkeypatch):
     slow = export_listing.Candidate(JAN, "1", 0.1, 166.3, 165.8, _offer(9900), 8808, 0.35, "small", "TLV-NEO F355")
-    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: [slow])
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip, markets=None: [slow])
 
     class NoCatalog(FakeEbay):
         def __init__(self, config):
@@ -561,7 +572,7 @@ def test_unprofitable_photo_request_is_withdrawn(monkeypatch):
 
 
 def test_profitable_photo_request_stays_open(monkeypatch):
-    export_state.save_listing("JX-" + JAN, _photo_entry(price_usd=80.0))
+    export_state.save_listing("JX-" + JAN, _photo_entry(price=80.0))
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(3000))
     github = FakeGithub()
     export_sync.sync_photo_requests(Config(export_seller_duty_rate=0.15), github)
@@ -570,7 +581,7 @@ def test_profitable_photo_request_stays_open(monkeypatch):
 
 
 def _catalog_run(monkeypatch, candidates, publish_error=None, **cfg):
-    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip: candidates)
+    monkeypatch.setattr(export_listing, "find_candidates", lambda config, skip, markets=None: candidates)
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
 
     class Catalog(FakeEbay):
@@ -636,10 +647,10 @@ def test_sweep_covers_categories_and_sets_size_floor(monkeypatch):
 
 
 def test_size_floor_raises_shipping(monkeypatch):
-    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config: 60.0)
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 60.0)
     monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
     info = {"rate": 5.0, "category_id": "1", "title": "Item", "size_floor": "large"}
-    candidate = export_listing.evaluate(JAN, info, Config(export_min_profit_jpy=-100000))
+    candidate = _evaluate(JAN, info, Config(export_min_profit_jpy=-100000))
     assert candidate.size == "large"
 
 
@@ -678,3 +689,119 @@ def test_already_published_listings_are_promoted_once():
     export_listing.promote_published(Config(), ebay)
     export_listing.promote_published(Config(), ebay)
     assert len([c for c in ebay.calls if c[0] == "promote"]) == 1
+
+
+# ---- other eBay sites (AU, GB) -------------------------------------------------
+
+from ebay_automation import export_markets  # noqa: E402
+
+
+@pytest.fixture
+def three_currencies(monkeypatch):
+    rates = {"USD": 150.0, "AUD": 100.0, "GBP": 200.0, "JPY": 1.0}
+    monkeypatch.setattr(fx, "rate_to_jpy", lambda currency, config: rates.get(currency))
+
+
+def test_other_sites_price_from_ebay_com_and_pay_no_duty(monkeypatch, three_currencies):
+    # No Japan-shipped competitor on ebay.com.au / ebay.co.uk: price at ebay.com's, converted.
+    monkeypatch.setattr(
+        export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 60.0 if currency == "USD" else None
+    )
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    info = {"rate": 4.0, "category_id": "1", "title": "Beyblade X BX-01"}
+    markets = [export_markets.MARKETS[k] for k in ("US", "AU", "GB")]
+
+    found = {c.market.key: c for c in export_listing.evaluate(JAN, info, Config(export_seller_duty_rate=0.15), markets)}
+
+    assert found["AU"].price == 89.5  # $60 = A$90, less 0.50
+    assert found["GB"].price == 44.5  # $60 = £45, less 0.50
+    assert "換算" in found["AU"].price_basis
+    # Same yen revenue, but the US one pays 15% duty.
+    assert found["AU"].profit_jpy - found["US"].profit_jpy > 1500
+
+
+def test_uk_listing_stays_under_the_135_pound_vat_line(monkeypatch, three_currencies):
+    monkeypatch.setattr(export_listing, "_cheapest_competitor", lambda jan, config, currency="USD": 200.0)
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(9000))
+    info = {"rate": 4.0, "category_id": "1", "title": "Beyblade X Stadium"}
+    found = export_listing.evaluate(JAN, info, Config(), [export_markets.MARKETS["GB"]])
+    assert found == []  # £199.50 is over £135
+
+
+def test_au_draft_is_its_own_listing_on_ebay_com_au(monkeypatch, three_currencies):
+    monkeypatch.setattr(export_markets, "suggest_category", lambda title, market, config: "AU-CAT")
+    ebay = FakeEbay()
+    candidate = export_listing.Candidate(
+        JAN, "US-CAT", 4.0, 90.0, 89.5, _offer(2500), 3000, 0.3, market=export_markets.MARKETS["AU"]
+    )
+    product = {"epid": "999", "title": "Beyblade X BX-01", "image": {"imageUrl": "https://i.ebayimg.com/a.jpg"}}
+
+    entry = export_listing.create_draft(Config(), ebay, candidate, product)
+
+    _, sku, item = ebay.calls[0]
+    _, offer = ebay.calls[1]
+    assert sku == entry["sku"] == "JXAU-" + JAN and entry["market"] == "AU"
+    assert "epid" not in item["product"]
+    assert offer["marketplaceId"] == "EBAY_AU" and offer["categoryId"] == "AU-CAT"
+    assert offer["pricingSummary"]["price"] == {"value": "89.50", "currency": "AUD"}
+    # ebay.com's configured policy IDs are not reused; the AU ones are found by name.
+    assert offer["listingPolicies"] == {
+        "fulfillmentPolicyId": "FP-BY-NAME", "paymentPolicyId": "PAYMENT-EBAY_AU", "returnPolicyId": "RETURN-EBAY_AU",
+    }
+
+
+def test_export_skus_of_every_site_are_recognised():
+    assert export_state.is_export_sku("JX-" + JAN)
+    assert export_state.is_export_sku("JXAU-" + JAN) and export_state.is_export_sku("JXGB-" + JAN)
+    assert not export_state.is_export_sku("MUG-1")
+    assert export_markets.for_sku("JXGB-" + JAN).currency == "GBP"
+
+
+def test_au_order_is_recorded_in_aud_and_profit_uses_it(monkeypatch, three_currencies):
+    sku = "JXAU-" + JAN
+    export_state.save_listing(sku, _entry(sku=sku, market="AU", price=89.5, currency="AUD", price_usd=None))
+    ebay = FakeEbay()
+    ebay.orders = [{
+        "orderId": "O-AU", "lineItems": [{"sku": sku, "lineItemId": "L1", "quantity": 1,
+                                          "lineItemCost": {"value": "89.50", "currency": "AUD"}}],
+    }]
+    github = FakeGithub()
+    export_sync.sync_orders(Config(), ebay, github)
+    item = export_state.load_orders()["O-AU"]["items"][0]
+    assert (item["price"], item["currency"], item["market"]) == (89.5, "AUD", "AU")
+    assert "A$89.50" in github.issues[0]["body"]
+
+
+def test_au_listing_is_promoted_in_its_own_campaign(three_currencies):
+    ebay = FakeEbay()
+    entry = _entry(sku="JXAU-" + JAN, market="AU", price=89.5, currency="AUD", expected_profit_jpy=3000)
+    assert export_listing.promote(Config(), ebay, entry) is None
+    assert ("campaign", "japan-export-cps-au", "EBAY_AU") in ebay.calls
+
+
+def test_setup_creates_all_three_policies_on_a_new_site():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("export_setup", "scripts/export_setup.py")
+    setup = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(setup)
+
+    class SetupEbay:
+        def __init__(self):
+            self.created = []
+
+        def find_policy_id(self, kind, name, marketplace_id=None):
+            return None
+
+        def create_policy(self, kind, body):
+            if kind == "fulfillment" and "Economy" in body["shippingOptions"][0]["shippingServices"][0]["shippingServiceCode"]:
+                raise EbayApiError("POST", "u", 400, "service not allowed")
+            self.created.append((kind, body["marketplaceId"], body))
+            return f"{kind}-1"
+
+    ebay, lines = SetupEbay(), []
+    assert setup.setup_market(ebay, Config(), export_markets.MARKETS["GB"], "Japan export", lines)
+    assert [k for k, _, _ in ebay.created] == ["fulfillment", "payment", "return"]
+    shipping = ebay.created[0][2]["shippingOptions"][0]["shippingServices"][0]
+    assert shipping["shippingServiceCode"] == "UK_StandardShippingFromOutside"
+    assert shipping["shippingCost"]["currency"] == "GBP"

@@ -27,7 +27,7 @@ import logging
 
 import requests
 
-from . import export_research, export_state, yahoo_shopping
+from . import export_markets, export_research, export_state, yahoo_shopping
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_research import ProductOpportunity
@@ -45,16 +45,18 @@ def source_check(entry: dict, config: Config) -> tuple[yahoo_shopping.DomesticOf
     offer = yahoo_shopping.cheapest_new_offer(entry["jan"], config)
     if offer is None:
         return None, None, "仕入れ先の在庫なし"
+    price, currency = export_markets.price_of(entry)
+    config = export_markets.market_config(config, export_markets.of(entry))
     computed = export_research.profit_jpy(
-        entry["price_usd"], "USD", offer.price_jpy, offer.free_shipping,
+        price, currency, offer.price_jpy, offer.free_shipping,
         entry.get("size", config.export_listing_size), config
     )
     if computed is None:
         return offer, None, "為替レート取得失敗"
     profit = computed[0]
     probe = ProductOpportunity(
-        title=entry["title"], ebay_url="", jan=entry["jan"], sale_price=entry["price_usd"],
-        currency="USD", units_per_month=0,
+        title=entry["title"], ebay_url="", jan=entry["jan"], sale_price=price,
+        currency=currency, units_per_month=0,
     )
     mismatch = export_research._mismatch_reason(probe, offer, config)
     if mismatch:
@@ -140,7 +142,8 @@ def order_issue_body(order: dict, items: list[dict], config: Config) -> str:
         else:
             source = "要確認"
         profit = f"¥{it['expected_profit_jpy']:,}" if it.get("expected_profit_jpy") is not None else "-"
-        lines.append(f"| {it['title'][:50]} | {it['quantity']} | ${it['price_usd']:.2f} | {source} | {profit} |")
+        price = export_markets.money(*export_markets.price_of(it))
+        lines.append(f"| {it['title'][:50]} | {it['quantity']} | {price} | {source} | {profit} |")
     lines += [
         "",
         "### やること",
@@ -169,14 +172,18 @@ def sync_orders(config: Config, ebay: EbayClient, github: GithubClient | None) -
             if not export_state.is_export_sku(sku) or sku not in listings:
                 continue
             entry = listings[sku]
-            unit = float((li.get("lineItemCost") or {}).get("value") or entry["price_usd"]) / max(1, int(li["quantity"]))
+            listed_price, listed_currency = export_markets.price_of(entry)
+            cost = li.get("lineItemCost") or {}
+            unit = float(cost.get("value") or listed_price) / max(1, int(li["quantity"]))
             items.append(
                 {
                     "sku": sku,
                     "line_item_id": li["lineItemId"],
                     "quantity": int(li["quantity"]),
                     "title": entry["title"],
-                    "price_usd": round(unit, 2),
+                    "price": round(unit, 2),
+                    "currency": cost.get("currency") or listed_currency,
+                    "market": export_markets.of(entry).key,
                     "source_price_jpy": entry.get("source_price_jpy"),
                     "source_url": entry.get("source_url"),
                     "expected_profit_jpy": entry.get("expected_profit_jpy"),
