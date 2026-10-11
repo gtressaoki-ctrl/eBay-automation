@@ -19,13 +19,12 @@ import re
 
 import requests
 
-from . import export_state
+from . import export_markets, export_state
 from .config import Config
 from .ebay_client import EbayApiError, EbayClient
 from .export_listing import put_listing
 from .export_sync import source_check
 from .github_client import GithubClient
-from .pipeline_research import listing_url
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +99,7 @@ def handle_photos(config: Config, ebay: EbayClient, github: GithubClient, issue_
     aspects = {"Brand": [brand_for(title)]} if brand_for(title) else {}
     product = {"title": title, "imageUrls": eps_urls, "aspects": aspects, "ean": [entry["jan"]]}
     try:
-        offer_id = put_listing(config, ebay, sku, product, entry["category_id"], entry["price_usd"])
+        offer_id = put_listing(config, ebay, sku, product, entry["category_id"], export_markets.price_of(entry)[0])
         listing_id = ebay.publish_offer(offer_id)
     except EbayApiError as exc:
         note = "今月の販売上限（出品数・金額）に達しています。" if exc.is_selling_limit else exc.body[:600]
@@ -116,7 +115,7 @@ def handle_photos(config: Config, ebay: EbayClient, github: GithubClient, issue_
         title=title,
         ebay_offer_id=offer_id,
         ebay_listing_id=listing_id,
-        listing_url=listing_url(listing_id),
+        listing_url=f"https://{export_markets.of(entry).domain}/itm/{listing_id}",
         image_urls=eps_urls,
         on_hand=1,
         quantity=1,

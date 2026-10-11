@@ -247,6 +247,16 @@ class Config:
             if q.strip()
         ]
     )
+    # eBay sites to list on (export_markets.py). Each gets its own listing in
+    # its own currency; AU and GB carry no seller-paid duty.
+    export_markets: list[str] = field(
+        default_factory=lambda: [
+            m.strip().upper() for m in _str_env("EXPORT_MARKETS", "US,AU,GB").split(",") if m.strip()
+        ]
+    )
+    # With no Japan-shipped competitor on ebay.com.au / ebay.co.uk, price at
+    # the ebay.com competitor converted to the local currency.
+    export_price_from_us: bool = field(default_factory=lambda: _bool_env("EXPORT_PRICE_FROM_US", True))
     export_daily_listing_quota: int = field(default_factory=lambda: _int_env("EXPORT_DAILY_LISTING_QUOTA", 3))
     # Category sweep: rather than only the search phrases above, sample
     # Japan-shipped listings in every top-level eBay US category and let

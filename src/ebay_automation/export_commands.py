@@ -21,7 +21,7 @@ import logging
 import os
 import re
 
-from . import export_photos, export_research, export_state
+from . import export_markets, export_photos, export_research, export_state
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_listing import publish_draft, published_note
@@ -135,9 +135,13 @@ def handle_shipped(config: Config, ebay: EbayClient, github: GithubClient, issue
     note = ""
     if cost is not None:
         record["purchase_cost_jpy"] = cost
-        sale = sum(i["price_usd"] * i["quantity"] for i in record["items"])
+        currency = export_markets.price_of(record["items"][0])[1]
+        sale = sum(export_markets.price_of(i)[0] * i["quantity"] for i in record["items"])
         size = record["items"][0].get("size", config.export_listing_size)
-        computed = export_research.profit_jpy(sale, "USD", cost, True, size, config)
+        market = export_markets.MARKETS.get(record["items"][0].get("market", ""), export_markets.US)
+        computed = export_research.profit_jpy(
+            sale, currency, cost, True, size, export_markets.market_config(config, market)
+        )
         if computed:
             record["profit_jpy"] = computed[0]
             note = f"\n\n実際の仕入れ値 ¥{cost:,} での利益（概算・国際送料は設定値）: **¥{computed[0]:,}**"

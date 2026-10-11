@@ -4,7 +4,9 @@ name: Japan Export Listing
 # issue for each. Nothing is published or bought without /approve.
 on:
   schedule:
-    - cron: "30 22 * * *"  # 07:30 JST daily
+    # 16:10 JST: just after the Browse API's daily quota resets (07:00 UTC),
+    # so other workflows' searches cannot leave this run with none.
+    - cron: "10 7 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -47,6 +49,8 @@ jobs:
           EXPORT_MERCHANT_LOCATION_KEY: ${{ vars.EXPORT_MERCHANT_LOCATION_KEY }}
           EXPORT_FULFILLMENT_POLICY_ID: ${{ vars.EXPORT_FULFILLMENT_POLICY_ID }}
           EXPORT_FULFILLMENT_POLICY_NAME: ${{ vars.EXPORT_FULFILLMENT_POLICY_NAME }}
+          EXPORT_MARKETS: ${{ vars.EXPORT_MARKETS }}
+          EXPORT_PRICE_FROM_US: ${{ vars.EXPORT_PRICE_FROM_US }}
           EXPORT_LISTING_QUERIES: ${{ vars.EXPORT_LISTING_QUERIES }}
           EXPORT_SWEEP_CATEGORIES: ${{ vars.EXPORT_SWEEP_CATEGORIES }}
           EXPORT_SWEEP_PER_CATEGORY: ${{ vars.EXPORT_SWEEP_PER_CATEGORY }}

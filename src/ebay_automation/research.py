@@ -68,7 +68,13 @@ class DemandReport:
     rejected: list[NicheDemand] = field(default_factory=list)
 
 
+# Browse calls made by this process; the app gets 5,000 a day across every workflow.
+browse_calls = 0
+
+
 def _browse_get(path: str, config: Config, params: dict | None = None) -> dict:
+    global browse_calls
+    browse_calls += 1
     resp = requests.get(
         f"{_BROWSE_BASE}{path}",
         headers={

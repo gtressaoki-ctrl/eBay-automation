@@ -2,7 +2,8 @@
 the print-on-demand files in ledger.py so neither pipeline can trip over
 the other's records.
 
-- state/export_listings.json: keyed by SKU (always "JX-<JAN>").
+- state/export_listings.json: keyed by SKU ("JX-<JAN>" on ebay.com,
+  "JXAU-<JAN>" / "JXGB-<JAN>" on ebay.com.au / ebay.co.uk).
 - state/export_orders.json: keyed by eBay order ID.
 """
 from __future__ import annotations
@@ -23,7 +24,9 @@ def sku_for(jan: str) -> str:
 
 
 def is_export_sku(sku: str | None) -> bool:
-    return bool(sku) and sku.startswith(SKU_PREFIX)
+    from .export_markets import for_sku
+
+    return for_sku(sku) is not None
 
 
 def _read(path: Path) -> dict:

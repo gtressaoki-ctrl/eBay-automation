@@ -161,8 +161,23 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 `export_listing.py` / `export_sync.py` / `export_commands.py` が、ベイブレードX（既定）を
 「売れてから国内で買って、自分で発送する」形で出品します。
 
+### 出品するサイト（`EXPORT_MARKETS`、既定 `US,AU,GB`）
+同じ商品を、サイトごとに別の出品（別SKU）として、そのサイトの通貨で出品する。
+
+| サイト | SKU | 通貨 | 関税・消費税 |
+|---|---|---|---|
+| ebay.com | `JX-<JAN>` | USD | 米国関税を出品者が前払い（`EXPORT_SELLER_DUTY_RATE`） |
+| ebay.com.au | `JXAU-<JAN>` | AUD | A$1,000以下はeBayが購入時にGST 10%を徴収、関税なし。出品者負担なし |
+| ebay.co.uk | `JXGB-<JAN>` | GBP | £135以下はeBayが購入時にVAT 20%を徴収、関税なし。出品者負担なし。£135を超える価格では出品しない |
+
+- 価格は、そのサイトの日本発送最安値より少し下。そのサイトに日本発送の競合がいなければ、ebay.com の最安値を
+  その日の為替で換算した価格（`EXPORT_PRICE_FROM_US=false` で、競合がいるサイトだけにする）。
+- カテゴリはサイトごとに番号が違うため、eBayのカテゴリ提案（Taxonomy API）で決める。写真と商品情報は同じeBayカタログのもの。
+- 広告キャンペーンもサイトごと（`japan-export-cps-au`、`japan-export-cps-gb`）。
+- 販売上限（点数・金額）はアカウント全体で共通。1日の出品数 `EXPORT_DAILY_LISTING_QUOTA` も全サイト合計で、利益の大きい順に使う。
+
 ### 流れ
-1. **毎朝 07:30 JST**（Japan Export Listing）: 日本発送で実際に売れている商品を探し、
+1. **毎日 16:10 JST**（Japan Export Listing。eBay検索APIの1日枠がリセットされる16:00 JST直後）: 日本発送で実際に売れている商品を探し、
    同じJANの日本発送最安値より少し下の価格で、Yahoo!ショッピングの最安在庫から
    `EXPORT_MIN_PROFIT_JPY` 以上の利益が出るものだけ下書きを作り、`[輸出・承認待ち]` Issueを開く。
    写真と商品情報は **eBayカタログの公式ストック写真** を使う（他の出品者の写真は使わない）。
@@ -191,6 +206,8 @@ Actions → **Japan Export Setup** → Run workflow で、`city`（例 `Yokohama
 - 発送元ロケーション `jp-home`（市区町村まで。購入者に「Located in」として表示されるのと同じ範囲。番地は使わない）
 - 配送ポリシー `Japan export`: 米国の購入者へ **送料無料**（価格に送料込み）、Economy Shipping from outside US、
   ハンドリング `EXPORT_HANDLING_DAYS`（既定5）営業日
+- ebay.com.au と ebay.co.uk には、同じ名前の配送・支払い・返品ポリシー（返品30日・返送料は購入者負担）。
+  ebay.com のポリシーは他のサイトでは使えないため。どれかが作れなかったサイトには出品しない（毎朝のログに出る）
 
 ※ 入力した市・都道府県は公開リポジトリのActions実行履歴に残る（出品ページに出る範囲と同じ）。
 ※ Variablesの設定は不要。別のポリシーを使いたいときだけ `EXPORT_FULFILLMENT_POLICY_ID` を設定する。

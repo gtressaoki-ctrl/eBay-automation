@@ -12,6 +12,10 @@ phrases in Config.export_listing_queries, Beyblade X by default):
    title, item specifics and eBay's own stock photos — never from another
    seller's photos. Products without a single catalog match are skipped.
 
+The same product is priced separately for each site in EXPORT_MARKETS
+(export_markets.py): ebay.com in USD, ebay.com.au in AUD and ebay.co.uk in
+GBP, each against the Japan-shipped competitors on that site.
+
 Each draft opens a GitHub issue; `/approve` publishes it (export_commands.py).
 
 Nothing is bought here. The seller buys after an eBay sale, receives and
@@ -31,12 +35,12 @@ from dataclasses import dataclass
 
 import requests
 
-from . import export_research, export_state, fx, yahoo_shopping
+from . import export_markets, export_research, export_state, fx, research, yahoo_shopping
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
+from .export_markets import US, Market, market_config, money, price_of
 from .export_research import ProductOpportunity
 from .github_client import GithubClient
-from .pipeline_research import listing_url
 from .research import _browse_get, _listing_age_days
 
 log = logging.getLogger(__name__)
@@ -102,21 +106,26 @@ class Candidate:
     margin: float
     size: str = "small"
     title: str = ""
+    market: Market = US
+    # Where competitor_price came from, shown on the issue.
+    price_basis: str = ""
 
     @property
     def expected_monthly_profit_jpy(self) -> int:
         return round(self.profit_jpy * self.units_per_month)
 
 
-def _total_usd(summary: dict) -> float | None:
+def _total(summary: dict, currency: str, config: Config) -> float | None:
+    """Item plus shipping in `currency` (a site can show listings priced in another one)."""
     price = summary.get("price") or {}
-    if price.get("currency") != "USD":
+    if not price.get("currency"):
         return None
     total = float(price.get("value") or 0)
     ship = ((summary.get("shippingOptions") or [{}])[0].get("shippingCost") or {})
-    if ship.get("currency") == "USD":
+    if ship.get("currency") == price["currency"]:
         total += float(ship.get("value") or 0)
-    return total or None
+    converted = export_markets.convert(total, price["currency"], currency, config)
+    return round(converted, 2) if converted else None
 
 
 def _selling_jans(config: Config) -> dict[str, dict]:
@@ -130,8 +139,10 @@ def _selling_jans(config: Config) -> dict[str, dict]:
         floor = _CATEGORY_SIZE_FLOOR.get(params.get("category_ids", ""), "small")
         try:
             search = _browse_get("/item_summary/search", config, {**params, "filter": _JP_NEW})
-        except requests.HTTPError:
-            log.warning("Search %s failed; skipping.", params)
+        except requests.RequestException as exc:
+            # A timeout on one search must not end the day's run.
+            status = getattr(getattr(exc, "response", None), "status_code", None) or type(exc).__name__
+            log.warning("Search %s failed (%s); skipping.", params, status)
             continue
         for summary in search.get("itemSummaries", []) or []:
             if summary["itemId"] in seen:
@@ -139,7 +150,7 @@ def _selling_jans(config: Config) -> dict[str, dict]:
             seen.add(summary["itemId"])
             try:
                 item = _browse_get(f"/item/{urllib.parse.quote(summary['itemId'], safe='')}", config)
-            except requests.HTTPError:
+            except requests.RequestException:
                 continue
             jan = export_research.valid_jan(item.get("gtin"))
             sold = ((item.get("estimatedAvailabilities") or [{}])[0]).get("estimatedSoldQuantity") or 0
@@ -157,56 +168,91 @@ def _selling_jans(config: Config) -> dict[str, dict]:
     return found
 
 
-def _cheapest_competitor(jan: str, config: Config) -> float | None:
+def _cheapest_competitor(jan: str, config: Config, currency: str = "USD") -> float | None:
+    """Cheapest new Japan-shipped listing of this JAN on config's site, in `currency`."""
     search = _browse_get("/item_summary/search", config, {"gtin": jan, "limit": 20, "filter": _JP_NEW})
-    prices = [p for p in (_total_usd(s) for s in search.get("itemSummaries", []) or []) if p]
+    prices = [p for p in (_total(s, currency, config) for s in search.get("itemSummaries", []) or []) if p]
     return min(prices) if prices else None
 
 
-def evaluate(jan: str, info: dict, config: Config) -> Candidate | None:
-    competitor = _cheapest_competitor(jan, config)
-    if competitor is None:
-        return None
-    price = round(competitor - config.export_undercut_usd_cents / 100, 2)
+def _market_prices(jan: str, config: Config, markets: list[Market]) -> dict[str, tuple[float, float, str]]:
+    """Site key -> (competitor price, our price, where the competitor price came from)."""
+    us_competitor = _cheapest_competitor(jan, config)
+    prices = {}
+    for market in markets:
+        basis = f"{market.domain} の日本発送最安"
+        if market.key == "US":
+            competitor = us_competitor
+        else:
+            competitor = _cheapest_competitor(jan, market_config(config, market), market.currency)
+            if competitor is None and us_competitor is not None and config.export_price_from_us:
+                competitor = export_markets.convert(us_competitor, "USD", market.currency, config)
+                basis = "ebay.com の日本発送最安を換算"
+        if competitor is None:
+            continue
+        competitor = round(competitor, 2)
+        price = round(competitor - config.export_undercut_usd_cents / 100, 2)
+        if market.max_price and price > market.max_price:
+            continue
+        prices[market.key] = (competitor, price, basis)
+    return prices
+
+
+def evaluate(jan: str, info: dict, config: Config, markets: list[Market] | None = None) -> list[Candidate]:
+    """One candidate per site where this JAN clears the profit floor."""
+    prices = _market_prices(jan, config, markets or [US])
+    if not prices:
+        return []
     offer = yahoo_shopping.cheapest_new_offer(jan, config)
     if offer is None:
-        return None
+        return []
     size = larger(size_for(info["title"], config), info.get("size_floor", "small"))
-    computed = export_research.profit_jpy(price, "USD", offer.price_jpy, offer.free_shipping, size, config)
-    if computed is None:
-        return None
-    profit, margin = computed
-    probe = ProductOpportunity(
-        title=info["title"], ebay_url="", jan=jan, sale_price=price, currency="USD", units_per_month=info["rate"]
-    )
-    if profit < config.export_min_profit_jpy or export_research._mismatch_reason(probe, offer, config):
-        return None
-    return Candidate(
-        jan=jan,
-        category_id=info["category_id"],
-        units_per_month=round(info["rate"], 2),
-        competitor_price=competitor,
-        price=price,
-        domestic=offer,
-        profit_jpy=profit,
-        margin=round(margin, 3),
-        size=size,
-        title=info["title"],
-    )
+    candidates = []
+    for key, (competitor, price, basis) in prices.items():
+        market = export_markets.MARKETS[key]
+        mconfig = market_config(config, market)
+        computed = export_research.profit_jpy(
+            price, market.currency, offer.price_jpy, offer.free_shipping, size, mconfig
+        )
+        if computed is None:
+            continue
+        profit, margin = computed
+        probe = ProductOpportunity(
+            title=info["title"], ebay_url="", jan=jan, sale_price=price, currency=market.currency,
+            units_per_month=info["rate"],
+        )
+        if profit < config.export_min_profit_jpy or export_research._mismatch_reason(probe, offer, mconfig):
+            continue
+        candidates.append(
+            Candidate(
+                jan=jan,
+                category_id=info["category_id"],
+                units_per_month=round(info["rate"], 2),
+                competitor_price=competitor,
+                price=price,
+                domestic=offer,
+                profit_jpy=profit,
+                margin=round(margin, 3),
+                size=size,
+                title=info["title"],
+                market=market,
+                price_basis=basis,
+            )
+        )
+    return candidates
 
 
-def find_candidates(config: Config, skip_jans: set[str]) -> list[Candidate]:
+def find_candidates(config: Config, skip_skus: set[str], markets: list[Market] | None = None) -> list[Candidate]:
+    markets = markets or [US]
     candidates = []
     for jan, info in _selling_jans(config).items():
-        if jan in skip_jans:
+        open_markets = [m for m in markets if export_markets.sku_for(jan, m) not in skip_skus]
+        if not open_markets:
             continue
         try:
-            candidate = evaluate(jan, info, config)
-        except requests.HTTPError:
+            candidates += evaluate(jan, info, config, open_markets)
+        except requests.RequestException:
             log.exception("Evaluating JAN %s failed; skipping.", jan)
-            continue
-        if candidate:
-            candidates.append(candidate)
     candidates.sort(key=lambda c: c.expected_monthly_profit_jpy, reverse=True)
     return candidates
 
@@ -235,26 +281,46 @@ def description(title: str, config: Config) -> str:
     )
 
 
-_policy_cache: dict[str, str] = {}
+_policy_cache: dict[tuple[str, str, str], str] = {}
+
+
+def policy_ids(config: Config, ebay: EbayClient, market: Market = US) -> dict[str, str | None]:
+    """The site's shipping, payment and return policies: as configured, or
+    found by name (EXPORT_FULFILLMENT_POLICY_NAME, created by export_setup.py)."""
+    mconfig = market_config(config, market)
+    name = config.export_fulfillment_policy_name
+
+    def lookup(kind: str, configured: str) -> str | None:
+        if configured:
+            return configured
+        key = (kind, market.marketplace_id, name)
+        if key not in _policy_cache:
+            found = ebay.find_policy_id(kind, name, market.marketplace_id)
+            if not found:
+                return None
+            _policy_cache[key] = found
+        return _policy_cache[key]
+
+    return {
+        "fulfillmentPolicyId": lookup("fulfillment", mconfig.export_fulfillment_policy_id),
+        "paymentPolicyId": lookup("payment", mconfig.ebay_payment_policy_id),
+        "returnPolicyId": lookup("return", mconfig.ebay_return_policy_id),
+    }
 
 
 def export_policy_id(config: Config, ebay: EbayClient) -> str | None:
-    """The Japan shipping policy: as configured, or found by name (created by export_setup.py)."""
-    if config.export_fulfillment_policy_id:
-        return config.export_fulfillment_policy_id
-    name = config.export_fulfillment_policy_name
-    if name not in _policy_cache:
-        found = ebay.find_fulfillment_policy_id(name)
-        if not found:
-            return None
-        _policy_cache[name] = found
-    return _policy_cache[name]
+    """The ebay.com Japan shipping policy."""
+    return policy_ids(config, ebay)["fulfillmentPolicyId"]
 
 
 def put_listing(
     config: Config, ebay: EbayClient, sku: str, product: dict, category_id: str, price: float
 ) -> str:
-    """Create the inventory item and its unpublished offer; returns the offer ID."""
+    """Create the inventory item and its unpublished offer on the SKU's site; returns the offer ID."""
+    market = export_markets.for_sku(sku) or US
+    if market.key != "US":
+        # ePIDs come from the ebay.com catalog; elsewhere the listing stands on its own details.
+        product = {k: v for k, v in product.items() if k != "epid"}
     body = description(product["title"], config)
     ebay.create_or_replace_inventory_item(
         sku,
@@ -263,35 +329,36 @@ def put_listing(
             "condition": "NEW",
             "product": {**product, "description": body},
         },
+        language=market.language,
     )
     return ebay.create_offer(
         {
             "sku": sku,
-            "marketplaceId": config.ebay_marketplace_id,
+            "marketplaceId": market.marketplace_id,
             "format": "FIXED_PRICE",
             "availableQuantity": 1,
             "categoryId": category_id,
             "listingDescription": body,
-            "pricingSummary": {"price": {"value": f"{price:.2f}", "currency": "USD"}},
+            "pricingSummary": {"price": {"value": f"{price:.2f}", "currency": market.currency}},
             "merchantLocationKey": config.export_merchant_location_key,
-            "listingPolicies": {
-                "fulfillmentPolicyId": export_policy_id(config, ebay),
-                "paymentPolicyId": config.ebay_payment_policy_id,
-                "returnPolicyId": config.ebay_return_policy_id,
-            },
-        }
+            "listingPolicies": policy_ids(config, ebay, market),
+        },
+        language=market.language,
     )
 
 
 def candidate_entry(candidate: Candidate, title: str, status: str, config: Config) -> dict:
     return {
-        "sku": export_state.sku_for(candidate.jan),
+        "sku": export_markets.sku_for(candidate.jan, candidate.market),
+        "market": candidate.market.key,
         "jan": candidate.jan,
         "title": title,
         "status": status,
         "category_id": candidate.category_id,
-        "price_usd": candidate.price,
-        "competitor_price_usd": candidate.competitor_price,
+        "price": candidate.price,
+        "currency": candidate.market.currency,
+        "competitor_price": candidate.competitor_price,
+        "price_basis": candidate.price_basis,
         "units_per_month": candidate.units_per_month,
         "source_price_jpy": candidate.domestic.price_jpy,
         "source_url": candidate.domestic.url,
@@ -311,12 +378,17 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
         raise ValueError(f"catalog product {product.get('epid')} has no stock photo")
     entry = candidate_entry(candidate, title, "pending_approval", config)
     entry["epid"] = product.get("epid")
+    if candidate.market.key != "US":
+        category = export_markets.suggest_category(title, candidate.market, config)
+        if not category:
+            raise ValueError(f"no {candidate.market.domain} category for {title!r}")
+        entry["category_id"] = category
     entry["ebay_offer_id"] = put_listing(
         config,
         ebay,
         entry["sku"],
         {"title": title, "epid": product.get("epid"), "imageUrls": images, "aspects": _aspects(product)},
-        candidate.category_id,
+        entry["category_id"],
         candidate.price,
     )
     return entry
@@ -337,7 +409,7 @@ def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
         status="published",
         quantity=1,
         ebay_listing_id=listing_id,
-        listing_url=listing_url(listing_id),
+        listing_url=f"https://{export_markets.of(entry).domain}/itm/{listing_id}",
         expected_profit_jpy=profit,
         source_price_jpy=offer.price_jpy,
         source_url=offer.url,
@@ -355,12 +427,18 @@ def promote(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     bid = config.export_promote_bid_percent
     if bid <= 0 or entry.get("promoted"):
         return None
-    usd = fx.rate_to_jpy("USD", config) or config.export_fx_fallback_usd_jpy
-    ad_cost = entry["price_usd"] * bid / 100 * usd
+    market = export_markets.of(entry)
+    price, currency = price_of(entry)
+    rate = fx.rate_to_jpy(currency, config)
+    if rate is None:
+        return "為替レート取得失敗のため広告は次回"
+    ad_cost = price * bid / 100 * rate
     if entry.get("expected_profit_jpy") is not None and ad_cost >= entry["expected_profit_jpy"]:
         return f"広告費（約¥{ad_cost:,.0f}）が利益を上回るため広告なし"
     try:
-        campaign = ebay.get_or_create_cost_per_sale_campaign(config.export_promote_campaign, bid)
+        campaign = ebay.get_or_create_cost_per_sale_campaign(
+            market_config(config, market).export_promote_campaign, bid, market.marketplace_id
+        )
         ebay.promote_listing(campaign, entry["sku"], bid)
     except EbayApiError as exc:
         if "already" in (exc.body or "").lower():
@@ -399,7 +477,7 @@ def photo_request_body(entry: dict) -> str:
         "",
         "| 項目 | 値 |",
         "|---|---|",
-        f"| 販売価格 | ${entry['price_usd']:.2f}（日本発送の最安 ${entry['competitor_price_usd']:.2f} より少し下） |",
+        f"| 販売価格 | {_price_cell(entry)} |",
         f"| 今の仕入れ値 | [¥{entry['source_price_jpy']:,}]({entry['source_url']})（Yahoo!ショッピング最安・新品・在庫あり） |",
         f"| 想定利益 / 個 | ¥{entry['expected_profit_jpy']:,}（利益率 {entry['margin']:.0%}・送料は{entry['size']}サイズで計算） |",
         f"| 同じ商品の売れ行き | 月 {entry['units_per_month']:.1f} 個（日本発送の出品1件あたり） |",
@@ -418,6 +496,14 @@ def photo_request_body(entry: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _price_cell(entry: dict) -> str:
+    price, currency = price_of(entry)
+    competitor = entry.get("competitor_price", entry.get("competitor_price_usd"))
+    basis = entry.get("price_basis") or "日本発送の最安"
+    site = export_markets.of(entry).domain
+    return f"{money(price, currency)} on {site}（{basis} {money(competitor, currency)} より少し下）"
+
+
 def issue_body(entry: dict, image_url: str | None) -> str:
     lines = [
         f"## {entry['title']}",
@@ -426,7 +512,7 @@ def issue_body(entry: dict, image_url: str | None) -> str:
         "",
         "| 項目 | 値 |",
         "|---|---|",
-        f"| 販売価格 | ${entry['price_usd']:.2f}（日本発送の最安 ${entry['competitor_price_usd']:.2f} より少し下） |",
+        f"| 販売価格 | {_price_cell(entry)} |",
         f"| 現在の仕入れ値 | [¥{entry['source_price_jpy']:,}]({entry['source_url']})（Yahoo!ショッピング最安・新品・在庫あり） |",
         f"| 想定利益 / 個 | ¥{entry['expected_profit_jpy']:,}（利益率 {entry['margin']:.0%}） |",
         f"| 同じ商品の売れ行き | 月 {entry['units_per_month']:.1f} 個（日本発送の出品1件あたり） |",
@@ -443,20 +529,25 @@ def issue_body(entry: dict, image_url: str | None) -> str:
 
 
 def _row(entry: dict) -> str:
+    price, currency = price_of(entry)
     return (
-        f"| {entry['title'][:60]} | ${entry['price_usd']:.2f} (競合 ${entry['competitor_price_usd']:.2f}) "
+        f"| {export_markets.of(entry).key} | {entry['title'][:60]} | {money(price, currency)} "
+        f"(競合 {money(entry['competitor_price'], currency)}) "
         f"| [¥{entry['source_price_jpy']:,}]({entry['source_url']}) | ¥{entry['expected_profit_jpy']:,} "
         f"| {entry['size']} | {entry['units_per_month']:.1f} |"
     )
 
 
-def _write_summary(found: int, rows: list[str], photo_rows: list[str]) -> None:
-    header = ["| 商品 | 販売価格 | 今の仕入れ値 | 利益/個 | 送料サイズ | 月販/出品 |", "|---|---|---|---|---|---|"]
+def _write_summary(found: int, rows: list[str], photo_rows: list[str], by_site: str = "") -> None:
+    header = [
+        "| サイト | 商品 | 販売価格 | 今の仕入れ値 | 利益/個 | 送料サイズ | 月販/出品 |",
+        "|---|---|---|---|---|---|---|",
+    ]
     report = "\n".join(
         [
             "## 輸出出品の候補（DRY RUN・下書きもIssueも作っていません）",
             "",
-            f"利益ラインを超えた候補: {found} 件",
+            f"利益ラインを超えた候補: {found} 件（サイト別: {by_site or 'なし'}）",
             "",
             f"### eBayカタログ写真で出品できるもの（{len(rows)} 件）",
             "",
@@ -482,6 +573,17 @@ def setup_missing(config: Config, ebay: EbayClient) -> list[str]:
     if not export_policy_id(config, ebay):
         missing.append(f"shipping policy '{config.export_fulfillment_policy_name}' (run Japan Export Setup)")
     return missing
+
+
+def live_markets(config: Config, ebay: EbayClient) -> list[Market]:
+    """Enabled sites whose shipping, payment and return policies all exist."""
+    live = []
+    for market in export_markets.enabled(config):
+        if all(policy_ids(config, ebay, market).values()):
+            live.append(market)
+        else:
+            log.warning("%s is not set up yet (run Japan Export Setup); not listing there.", market.domain)
+    return live
 
 
 def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> int:
@@ -523,14 +625,19 @@ def run(config: Config | None = None) -> int:
         publish_pending(config, ebay, GithubClient(config))
     if not config.dry_run:
         promote_published(config, ebay)
+    # A dry run shows every enabled site, set up or not, so a new site can be judged first.
+    markets = export_markets.enabled(config) if config.dry_run else live_markets(config, ebay)
     listings = export_state.load_listings()
     # Rejected products stay skipped, so a /reject is not undone the next morning.
     active = {
-        e["jan"] for e in listings.values()
+        sku for sku, e in listings.items()
         if e.get("status") in ("pending_approval", "published", "needs_photos", "rejected")
     }
-    candidates = find_candidates(config, active)
-    log.info("%d export candidates clear the profit floor", len(candidates))
+    candidates = find_candidates(config, active, markets)
+    log.info(
+        "%d export candidates clear the profit floor on %s (%d Browse calls)",
+        len(candidates), ", ".join(m.domain for m in markets), research.browse_calls,
+    )
 
     github = None if config.dry_run else GithubClient(config)
     created = 0
@@ -538,16 +645,25 @@ def run(config: Config | None = None) -> int:
     photo_requests = 0
     dry_rows: list[str] = []
     photo_rows: list[str] = []
+    products: dict[str, dict | None] = {}
     for candidate in candidates:
-        if created >= config.export_daily_listing_quota and photo_requests >= config.export_daily_photo_requests:
+        # A dry run shows every candidate; a real run stops at the daily quota.
+        if (
+            not config.dry_run
+            and created >= config.export_daily_listing_quota
+            and photo_requests >= config.export_daily_photo_requests
+        ):
             break
         try:
-            product = ebay.find_catalog_product(candidate.jan)
-        except EbayApiError:
+            if candidate.jan not in products:
+                products[candidate.jan] = ebay.find_catalog_product(candidate.jan)
+            product = products[candidate.jan]
+        except (EbayApiError, requests.RequestException):
             log.exception("Catalog lookup failed for %s", candidate.jan)
             continue
         if product is None:
-            if photo_requests >= config.export_daily_photo_requests:
+            # One photo request per product: the ebay.com one.
+            if candidate.market.key != "US" or photo_requests >= config.export_daily_photo_requests:
                 continue
             # A photo request means buying a unit up front; one that sells
             # once in ten months (as the first live run proposed) just ties
@@ -568,7 +684,7 @@ def run(config: Config | None = None) -> int:
             export_state.save_listing(entry["sku"], entry)
             log.info("Opened photo request #%s for %s", issue["number"], entry["sku"])
             continue
-        if created >= config.export_daily_listing_quota:
+        if created >= config.export_daily_listing_quota and not config.dry_run:
             continue
         if config.dry_run:
             dry_rows.append(_row(candidate_entry(candidate, product.get("title", "")[:80], "", config)))
@@ -576,7 +692,7 @@ def run(config: Config | None = None) -> int:
             continue
         try:
             entry = create_draft(config, ebay, candidate, product)
-        except (EbayApiError, ValueError):
+        except (EbayApiError, ValueError, requests.RequestException):
             log.exception("Drafting JAN %s failed; skipping.", candidate.jan)
             continue
         export_state.save_listing(entry["sku"], entry)
@@ -604,7 +720,10 @@ def run(config: Config | None = None) -> int:
             log.warning("Stopping for today: %s", stop_reason)
             break
     if config.dry_run:
-        _write_summary(len(candidates), dry_rows, photo_rows)
+        counts: dict[str, int] = {}
+        for c in candidates:
+            counts[c.market.key] = counts.get(c.market.key, 0) + 1
+        _write_summary(len(candidates), dry_rows, photo_rows, ", ".join(f"{k} {n}" for k, n in counts.items()))
     log.info("Created %d export drafts.", created)
     return created
 
