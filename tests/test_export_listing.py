@@ -1,3 +1,4 @@
+import requests
 import pytest
 
 from ebay_automation import export_commands, export_listing, export_state, export_sync, fx, yahoo_shopping
@@ -805,3 +806,17 @@ def test_setup_creates_all_three_policies_on_a_new_site():
     shipping = ebay.created[0][2]["shippingOptions"][0]["shippingServices"][0]
     assert shipping["shippingServiceCode"] == "UK_StandardShippingFromOutside"
     assert shipping["shippingCost"]["currency"] == "GBP"
+
+
+def test_a_timed_out_item_lookup_does_not_end_the_run(monkeypatch):
+    def flaky_browse(path, config, params=None):
+        if path == "/item_summary/search":
+            return {"itemSummaries": [{"itemId": "v1|1"}, {"itemId": "v1|2"}]}
+        if path.endswith("1"):
+            raise requests.exceptions.ReadTimeout("eBay took too long")
+        return {"gtin": JAN, "title": "Beyblade X BX-01", "categoryId": "1",
+                "estimatedAvailabilities": [{"estimatedSoldQuantity": 3}], "itemCreationDate": None}
+
+    monkeypatch.setattr(export_listing, "_browse_get", flaky_browse)
+    found = export_listing._selling_jans(Config(export_listing_queries=["beyblade x"], export_sweep_categories=[]))
+    assert JAN in found

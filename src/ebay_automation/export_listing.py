@@ -139,8 +139,10 @@ def _selling_jans(config: Config) -> dict[str, dict]:
         floor = _CATEGORY_SIZE_FLOOR.get(params.get("category_ids", ""), "small")
         try:
             search = _browse_get("/item_summary/search", config, {**params, "filter": _JP_NEW})
-        except requests.HTTPError as exc:
-            log.warning("Search %s failed (%s); skipping.", params, exc.response.status_code if exc.response is not None else "?")
+        except requests.RequestException as exc:
+            # A timeout on one search must not end the day's run.
+            status = getattr(getattr(exc, "response", None), "status_code", None) or type(exc).__name__
+            log.warning("Search %s failed (%s); skipping.", params, status)
             continue
         for summary in search.get("itemSummaries", []) or []:
             if summary["itemId"] in seen:
@@ -148,7 +150,7 @@ def _selling_jans(config: Config) -> dict[str, dict]:
             seen.add(summary["itemId"])
             try:
                 item = _browse_get(f"/item/{urllib.parse.quote(summary['itemId'], safe='')}", config)
-            except requests.HTTPError:
+            except requests.RequestException:
                 continue
             jan = export_research.valid_jan(item.get("gtin"))
             sold = ((item.get("estimatedAvailabilities") or [{}])[0]).get("estimatedSoldQuantity") or 0
@@ -249,7 +251,7 @@ def find_candidates(config: Config, skip_skus: set[str], markets: list[Market] |
             continue
         try:
             candidates += evaluate(jan, info, config, open_markets)
-        except requests.HTTPError:
+        except requests.RequestException:
             log.exception("Evaluating JAN %s failed; skipping.", jan)
     candidates.sort(key=lambda c: c.expected_monthly_profit_jpy, reverse=True)
     return candidates
@@ -651,7 +653,7 @@ def run(config: Config | None = None) -> int:
             if candidate.jan not in products:
                 products[candidate.jan] = ebay.find_catalog_product(candidate.jan)
             product = products[candidate.jan]
-        except EbayApiError:
+        except (EbayApiError, requests.RequestException):
             log.exception("Catalog lookup failed for %s", candidate.jan)
             continue
         if product is None:
@@ -685,7 +687,7 @@ def run(config: Config | None = None) -> int:
             continue
         try:
             entry = create_draft(config, ebay, candidate, product)
-        except (EbayApiError, ValueError):
+        except (EbayApiError, ValueError, requests.RequestException):
             log.exception("Drafting JAN %s failed; skipping.", candidate.jan)
             continue
         export_state.save_listing(entry["sku"], entry)
