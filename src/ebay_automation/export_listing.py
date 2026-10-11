@@ -538,7 +538,7 @@ def _row(entry: dict) -> str:
     )
 
 
-def _write_summary(found: int, rows: list[str], photo_rows: list[str]) -> None:
+def _write_summary(found: int, rows: list[str], photo_rows: list[str], by_site: str = "") -> None:
     header = [
         "| サイト | 商品 | 販売価格 | 今の仕入れ値 | 利益/個 | 送料サイズ | 月販/出品 |",
         "|---|---|---|---|---|---|---|",
@@ -547,7 +547,7 @@ def _write_summary(found: int, rows: list[str], photo_rows: list[str]) -> None:
         [
             "## 輸出出品の候補（DRY RUN・下書きもIssueも作っていません）",
             "",
-            f"利益ラインを超えた候補: {found} 件",
+            f"利益ラインを超えた候補: {found} 件（サイト別: {by_site or 'なし'}）",
             "",
             f"### eBayカタログ写真で出品できるもの（{len(rows)} 件）",
             "",
@@ -647,7 +647,12 @@ def run(config: Config | None = None) -> int:
     photo_rows: list[str] = []
     products: dict[str, dict | None] = {}
     for candidate in candidates:
-        if created >= config.export_daily_listing_quota and photo_requests >= config.export_daily_photo_requests:
+        # A dry run shows every candidate; a real run stops at the daily quota.
+        if (
+            not config.dry_run
+            and created >= config.export_daily_listing_quota
+            and photo_requests >= config.export_daily_photo_requests
+        ):
             break
         try:
             if candidate.jan not in products:
@@ -679,7 +684,7 @@ def run(config: Config | None = None) -> int:
             export_state.save_listing(entry["sku"], entry)
             log.info("Opened photo request #%s for %s", issue["number"], entry["sku"])
             continue
-        if created >= config.export_daily_listing_quota:
+        if created >= config.export_daily_listing_quota and not config.dry_run:
             continue
         if config.dry_run:
             dry_rows.append(_row(candidate_entry(candidate, product.get("title", "")[:80], "", config)))
@@ -715,7 +720,10 @@ def run(config: Config | None = None) -> int:
             log.warning("Stopping for today: %s", stop_reason)
             break
     if config.dry_run:
-        _write_summary(len(candidates), dry_rows, photo_rows)
+        counts: dict[str, int] = {}
+        for c in candidates:
+            counts[c.market.key] = counts.get(c.market.key, 0) + 1
+        _write_summary(len(candidates), dry_rows, photo_rows, ", ".join(f"{k} {n}" for k, n in counts.items()))
     log.info("Created %d export drafts.", created)
     return created
 
