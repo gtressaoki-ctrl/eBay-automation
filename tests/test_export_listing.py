@@ -61,6 +61,12 @@ class FakeEbay:
     def get_orders(self):
         return self.orders
 
+    def get_or_create_cost_per_sale_campaign(self, name, bid):
+        return "CAMP1"
+
+    def promote_listing(self, campaign, sku, bid):
+        self.calls.append(("promote", campaign, sku, bid))
+
 
 class FakeGithub:
     def __init__(self):
@@ -644,3 +650,31 @@ def test_waiting_drafts_are_published_when_auto_publish_is_on(monkeypatch):
     assert export_listing.publish_pending(Config(), FakeEbay(), github) == 1
     assert export_state.load_listings()["JX-" + JAN]["status"] == "published"
     assert github.closed == ["completed"]
+
+
+# ---- promoted listings -------------------------------------------------------
+
+
+def test_publish_promotes_at_low_bid(monkeypatch):
+    export_state.save_listing("JX-" + JAN, _entry(status="pending_approval", expected_profit_jpy=1500, source_price_jpy=2500))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    ebay = FakeEbay()
+    export_commands.handle_approval(Config(export_promote_bid_percent=3.0), ebay, FakeGithub(), 3, approve=True)
+    assert ("promote", "CAMP1", "JX-" + JAN, 3.0) in ebay.calls
+    assert export_state.load_listings()["JX-" + JAN]["promoted"] is True
+
+
+def test_no_ad_when_it_would_eat_the_profit():
+    ebay = FakeEbay()
+    # 3% of $60 at 150 yen = 270 yen, more than the 200 yen profit
+    note = export_listing.promote(Config(export_promote_bid_percent=3.0), ebay, _entry(expected_profit_jpy=200))
+    assert "広告なし" in note
+    assert not [c for c in ebay.calls if c[0] == "promote"]
+
+
+def test_already_published_listings_are_promoted_once():
+    export_state.save_listing("JX-" + JAN, _entry(expected_profit_jpy=1500))
+    ebay = FakeEbay()
+    export_listing.promote_published(Config(), ebay)
+    export_listing.promote_published(Config(), ebay)
+    assert len([c for c in ebay.calls if c[0] == "promote"]) == 1

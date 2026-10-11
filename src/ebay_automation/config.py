@@ -274,6 +274,13 @@ class Config:
     # Publish catalog-photo drafts straight away (after re-checking the
     # source) instead of waiting for /approve on the issue.
     export_auto_publish: bool = field(default_factory=lambda: _bool_env("EXPORT_AUTO_PUBLISH", True))
+    # Promoted Listings Standard for export listings: eBay charges this
+    # share of the sale only when an ad click sells. A seller with no
+    # feedback is buried in search otherwise. 0 turns it off.
+    export_promote_bid_percent: float = field(default_factory=lambda: _float_env("EXPORT_PROMOTE_BID_PERCENT", 3.0))
+    export_promote_campaign: str = field(
+        default_factory=lambda: _str_env("EXPORT_PROMOTE_CAMPAIGN", "japan-export-cps")
+    )
     export_photo_min_units_per_month: float = field(
         default_factory=lambda: _float_env("EXPORT_PHOTO_MIN_UNITS_PER_MONTH", 1.0)
     )
