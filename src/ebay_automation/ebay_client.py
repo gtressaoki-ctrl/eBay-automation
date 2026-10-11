@@ -12,6 +12,7 @@ expire in ~2h so we do not cache HTTP sessions across long-running jobs.
 from __future__ import annotations
 
 import datetime
+import re
 from typing import Any
 
 import requests
@@ -21,6 +22,36 @@ from .ebay_auth import get_user_access_token
 
 _PROD_BASE = "https://api.ebay.com"
 _SANDBOX_BASE = "https://api.sandbox.ebay.com"
+
+
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _words(title: str) -> set[str]:
+    return set(_WORD.findall((title or "").lower()))
+
+
+def pick_by_title(products: list[dict], title: str, floor: float = 0.5, lead: float = 0.15) -> dict | None:
+    """The product whose title shares the most words with `title`.
+
+    Only a clear match counts: at least `floor` of the product title's
+    words appear in `title`, and it beats the runner-up by `lead`. Variants
+    differ by a word or two (a colour, "Limited"), so anything closer is
+    left alone rather than listing the wrong edition.
+    """
+    wanted = _words(title)
+    if not wanted:
+        return None
+    scored = sorted(
+        ((len(_words(p.get("title")) & wanted) / max(1, len(_words(p.get("title")))), p) for p in products),
+        key=lambda sp: sp[0],
+        reverse=True,
+    )
+    if not scored or scored[0][0] < floor:
+        return None
+    if len(scored) > 1 and scored[0][0] - scored[1][0] < lead:
+        return None
+    return scored[0][1]
 
 
 class EbayApiError(RuntimeError):
@@ -121,24 +152,28 @@ class EbayClient:
 
     # ---- Catalog API -------------------------------------------------------
 
-    def find_catalog_product(self, gtin: str) -> dict[str, Any] | None:
-        """The single eBay catalog product for this GTIN, or None.
+    def find_catalog_product(self, gtin: str, title_hint: str = "") -> dict[str, Any] | None:
+        """The eBay catalog product for this GTIN, or None.
 
         Catalog products carry eBay's own stock photos and item specifics,
         which is what export listings use instead of copying another
-        seller's photos. Ambiguous GTINs (several products) return None:
-        the Inventory API would not pick up product details for them either.
+        seller's photos. When a GTIN maps to several products (colour or
+        edition variants share one more often than not), the one whose title
+        clearly matches `title_hint` — the title of the listing that is
+        actually selling — is used; with no clear winner, None.
         """
         resp = self._request(
             "GET",
             "/commerce/catalog/v1_beta/product_summary/search",
-            params={"gtin": gtin, "limit": 2},
+            params={"gtin": gtin, "limit": 10},
             extra_headers={"X-EBAY-C-MARKETPLACE-ID": self.config.ebay_marketplace_id},
         )
         if resp.status_code == 204:
             return None
         products = resp.json().get("productSummaries") or []
-        return products[0] if len(products) == 1 else None
+        if len(products) == 1:
+            return products[0]
+        return pick_by_title(products, title_hint)
 
     # ---- Media API ---------------------------------------------------------
 

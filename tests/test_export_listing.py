@@ -300,7 +300,7 @@ def test_dry_run_needs_no_export_setup_and_creates_nothing(monkeypatch, tmp_path
         def __init__(self, config):
             super().__init__()
 
-        def find_catalog_product(self, gtin):
+        def find_catalog_product(self, gtin, title_hint=""):
             return {"epid": "1", "title": "Beyblade X BX-01"}
 
     monkeypatch.setattr(export_listing, "EbayClient", CatalogOnly)
@@ -463,7 +463,7 @@ def test_run_opens_photo_request_when_catalog_has_no_product(monkeypatch):
         def __init__(self, config):
             super().__init__()
 
-        def find_catalog_product(self, gtin):
+        def find_catalog_product(self, gtin, title_hint=""):
             return None
 
     github = FakeGithub()
@@ -530,7 +530,7 @@ def test_slow_sellers_do_not_get_photo_requests(monkeypatch):
         def __init__(self, config):
             super().__init__()
 
-        def find_catalog_product(self, gtin):
+        def find_catalog_product(self, gtin, title_hint=""):
             return None
 
     github = FakeGithub()
@@ -590,7 +590,7 @@ def _catalog_run(monkeypatch, candidates, publish_error=None, **cfg):
             super().__init__()
             self.publish_error = publish_error
 
-        def find_catalog_product(self, gtin):
+        def find_catalog_product(self, gtin, title_hint=""):
             return {"epid": "9", "title": f"Beyblade X {gtin}", "image": {"imageUrl": "https://i.ebayimg.com/a.jpg"}}
 
     github = FakeGithub()
@@ -820,3 +820,24 @@ def test_a_timed_out_item_lookup_does_not_end_the_run(monkeypatch):
     monkeypatch.setattr(export_listing, "_browse_get", flaky_browse)
     found = export_listing._selling_jans(Config(export_listing_queries=["beyblade x"], export_sweep_categories=[]))
     assert JAN in found
+
+
+# ---- catalog variants ---------------------------------------------------------
+
+from ebay_automation.ebay_client import pick_by_title  # noqa: E402
+
+
+def test_shared_jan_picks_the_variant_the_seller_is_selling():
+    products = [
+        {"title": "Tamagotchi Uni Purple", "epid": "1"},
+        {"title": "Tamagotchi Uni Pink", "epid": "2"},
+        {"title": "Bandai Tamagotchi Paradise Blue Water Field", "epid": "3"},
+    ]
+    assert pick_by_title(products, "Bandai Tamagotchi Paradise Blue Water Field Japan")["epid"] == "3"
+
+
+def test_near_identical_variants_are_left_alone():
+    products = [{"title": "Tamagotchi Uni Purple"}, {"title": "Tamagotchi Uni Pink"}]
+    # The selling title names neither colour: listing either could be the wrong one.
+    assert pick_by_title(products, "Tamagotchi Uni Japan") is None
+    assert pick_by_title(products, "") is None
