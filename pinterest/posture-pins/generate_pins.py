@@ -18,8 +18,12 @@ import tempfile
 from PIL import Image
 
 from plate import H, W, plate_html, render_all
+from svgkit import TERRA
 from products import AMAZON_TAG, AMAZON_TAG_A, AMAZON_TAG_B, PRODUCTS, product_url
 from scenes import SCENES
+from scenes2 import SCENES2
+
+SCENES.update(SCENES2)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "images")
@@ -238,6 +242,89 @@ PINS = [
          stages=[("Week 1", "Upright feels awkward"), ("Week 2–3", "Mild muscle fatigue is common"),
                  ("Week 4–6", "Habits start to stick"), ("Week 8+", "Good posture feels natural")],
          products=["upright_go2", "udemy_reverse"]),
+]
+
+# ---- batch 2: chairs and desk setup (best-performing topic in the first month)
+PINS += [
+    dict(n=31, slug="how-to-set-office-chair-height", keyword="office chair height",
+         title="How to Set Your Office Chair to the Right Height", text="Set Your Chair Height",
+         head="Set Your Chair to|the *Right* Height",
+         desc="Most chairs are set too high or too low. Use your knee height as the guide: feet flat, thighs level, knees near 90 degrees. Takes one minute.",
+         kicker="Chair setup", sub="Use your own knee height as the guide.", scene="chair_annot",
+         dims=["seat_height", "knee"], arm=False,
+         callouts=[("hip", "Thighs level with the floor", "L", 40), ("toe", "Feet flat, not dangling", "R", 760),
+                   ("gas", "Lever sets the height", "R", 640)],
+         products=["sihoo_m57", "footrest_ec"]),
+    dict(n=32, slug="best-office-chair-features-for-back-pain", keyword="office chair for back pain",
+         title="What to Look For in an Office Chair for Back Pain", text="Office Chair for Back Pain",
+         head="Office Chair for|*Back Pain*",
+         desc="If your back aches after sitting, these chair features matter most: adjustable lumbar support, seat depth, recline and armrests. A quick checklist before you buy.",
+         kicker="Buyer's checklist", sub="Four features that matter most for your back.", scene="chair_annot",
+         dims=["lumbar_ring"], lumbar_col=TERRA,
+         callouts=[("lumbar", "Adjustable lumbar support", "L", 40), ("backrest", "Reclines and locks", "L", 110),
+                   ("armrest", "Armrests that adjust", "R", 40), ("seat_front", "Seat depth slides", "R", 520)],
+         products=["steelcase_s1", "sihoo_m57", "lumbar_ec"]),
+    dict(n=33, slug="ergonomic-chair-vs-gaming-chair", keyword="ergonomic chair vs gaming chair",
+         title="Ergonomic Chair vs Gaming Chair: Which Is Better for Posture", text="Ergonomic vs Gaming Chair",
+         head="Ergonomic vs|*Gaming* Chair",
+         desc="Gaming chairs look supportive, but posture comes from adjustability. Here's how an ergonomic chair compares for long workdays at a desk.",
+         kicker="Side by side", sub="Which one actually supports long workdays?", scene="chair_compare",
+         compare=[("Lumbar adjusts to your spine", "Fixed lumbar pillow"), ("Breathable mesh back", "Padded back runs warm"),
+                  ("Seat depth adjusts", "Bucket seat limits movement")],
+         verdict="For long workdays, adjustability beats looks.",
+         products=["sihoo_m57", "steelcase_s1"]),
+    dict(n=34, slug="do-you-need-a-monitor-arm", keyword="monitor arm for posture",
+         title="Do You Need a Monitor Arm? Before and After", text="Do You Need a Monitor Arm?",
+         head="Do You Need a|*Monitor Arm?*",
+         desc="Most monitor stands leave the screen too low, so your head tips forward. A monitor arm lifts it to eye level and clears space on your desk.",
+         kicker="Screen setup", sub="Same desk, same person, different screen height.", scene="monitor_arm",
+         products=["vivo_arm", "huanuo_dual"]),
+    dict(n=35, slug="dual-monitor-setup-for-posture", keyword="dual monitor setup ergonomics",
+         title="How to Set Up Dual Monitors Without Neck Strain", text="Dual Monitor Setup",
+         head="*Dual Monitor*|Setup Guide",
+         desc="Two screens can mean hours with your head turned. Put your main screen straight ahead, angle the second toward you, and keep both at the same height.",
+         kicker="Desk setup · plan view", sub="Keep your head straight for most of the day.", scene="dual_monitor",
+         tips=["Use one screen more? Centre it", "Use both equally? Centre the seam", "Same height for both", "Arm's length away"],
+         products=["huanuo_dual", "vivo_arm"]),
+    dict(n=36, slug="standing-desk-height-guide", keyword="standing desk height",
+         title="Standing Desk Height Guide for Better Posture", text="Standing Desk Height Guide",
+         head="Standing Desk|*Height* Guide",
+         desc="Set your standing desk to elbow height and your screen to eye level. A cushioned mat and soft knees make standing time more comfortable.",
+         kicker="Standing desks", sub="Elbows, screen and feet, in one picture.", scene="standing_height",
+         products=["flexispot_e7", "flexispot_conv"]),
+    dict(n=37, slug="standing-desk-converter-vs-standing-desk", keyword="standing desk converter vs standing desk",
+         title="Standing Desk Converter vs Standing Desk: Which to Choose", text="Converter vs Standing Desk",
+         head="*Converter* vs|Standing Desk",
+         desc="A desk converter sits on top of your current desk; a standing desk raises the whole surface. Here's how to choose for your space and budget.",
+         kicker="Side by side", sub="Two ways to stand while you work.", scene="converter_vs_desk",
+         compare=[("Keeps your current desk", "Replaces your desk"), ("Lower cost, no assembly", "More surface space"),
+                  ("Good for renters", "Smoother height changes")],
+         products=["flexispot_conv", "flexispot_e7"]),
+    dict(n=38, slug="office-chair-setup-in-5-steps", keyword="how to adjust office chair",
+         title="How to Adjust Your Office Chair in 5 Steps", text="Adjust Your Chair in 5 Steps",
+         head="Adjust Your Chair|in *5 Steps*",
+         desc="Height, depth, lumbar, armrests, recline. Adjust them in this order and your chair will support you instead of fighting you.",
+         kicker="Chair setup", sub="Do them in this order.", scene="chair_annot",
+         callouts=[("gas", "Height: feet flat", "R", 700), ("seat_front", "Depth: 2–3 finger gap", "R", 560),
+                   ("lumbar", "Lumbar: into the curve", "L", 40), ("armrest", "Arms: at elbow height", "R", 40),
+                   ("backrest", "Recline: 100–110°", "L", 110)],
+         products=["lumbar_ec", "seat_ec", "footrest_ec"]),
+    dict(n=39, slug="ergonomic-home-office-essentials", keyword="ergonomic home office essentials",
+         title="6 Ergonomic Home Office Essentials Worth Buying", text="Ergonomic Office Essentials",
+         head="Ergonomic Office|*Essentials*",
+         desc="Six small upgrades that make a home office easier on your neck, back and wrists: monitor arm, laptop stand, lumbar pillow, seat cushion, footrest and wrist rest.",
+         kicker="Small upgrades", sub="Six things that make a desk easier on your body.", scene="essentials",
+         items=[("monitor_arm", "Monitor arm"), ("laptop_stand", "Laptop stand"), ("lumbar", "Lumbar pillow"),
+                ("seat_cushion", "Seat cushion"), ("footrest", "Footrest"), ("wrist_rest", "Wrist rest")],
+         products=["vivo_arm", "nulaxy", "lumbar_ec", "seat_ec", "footrest_ec", "gimars"]),
+    dict(n=40, slug="office-chair-seat-depth", keyword="office chair seat depth",
+         title="Seat Depth: The Chair Setting Most People Miss", text="The Chair Setting You Miss",
+         head="The Chair Setting|Most People *Miss*",
+         desc="If your chair seat presses into the back of your knees, it's too deep. Leave a 2-3 finger gap, or add a lumbar pillow to bring you forward.",
+         kicker="Seat depth", sub="Leave a small gap behind your knees.", scene="chair_annot", zoom=True, arm=False,
+         dims=["seat_depth"],
+         callouts=[("seat_front", "Gap behind the knees", "R", 160), ("lumbar", "Pillow if the seat is too deep", "L", 160)],
+         products=["lumbar_ec", "sihoo_m57"]),
 ]
 
 HEAD_TOP = 118

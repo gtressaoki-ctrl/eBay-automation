@@ -715,6 +715,15 @@ def sc_flatlay(pin, top):
         elif kind == "band":
             out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="130" ry="58" fill="none" stroke="{TERRA}" stroke-width="16"/>')
             out.append(f'<ellipse cx="{fmt(cc[0] + 16)}" cy="{fmt(cc[1] + 8)}" rx="104" ry="44" fill="none" stroke="{SAGE}" stroke-width="12"/>')
+        elif kind == "monitor_arm":
+            out.append(rect(cc[0] - 150, cc[1] + 40, 60, 22, rx=4, stroke=LINE, sw=2))
+            out.append(line((cc[0] - 120, cc[1] + 40), (cc[0] - 120, cc[1] - 40), sw=8))
+            out.append(polyline([(cc[0] - 120, cc[1] - 40), (cc[0] - 10, cc[1] - 10), (cc[0] + 70, cc[1] - 40)], sw=7))
+            out.append(circle((cc[0] - 10, cc[1] - 10), 9, fill=PAPER, stroke=LINE, sw=2))
+            out.append(rect(cc[0] + 70, cc[1] - 90, 90, 120, rx=6, fill=INK))
+        elif kind == "seat_cushion":
+            out.append(rect(cc[0] - 140, cc[1] - 65, 280, 130, rx=46, fill=SAGE_SOFT, stroke=SAGE, sw=2))
+            out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]+65)} L{fmt(cc[0]-40)},{fmt(cc[1]+15)} Q{fmt(cc[0])},{fmt(cc[1]-15)} {fmt(cc[0]+40)},{fmt(cc[1]+15)} L{fmt(cc[0]+40)},{fmt(cc[1]+65)}Z", fill=PAPER, stroke=SAGE, sw=2))
         out.append(text(x0 + (0 if c == 0 else 24), y0 + 36, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
         out.append(text(cc[0], y0 + rh - 26, lab, size=32, family=SERIF, fill=INK, anchor="middle"))
     return "".join(out)
@@ -837,7 +846,7 @@ def sc_doorway(pin, top):
     return "".join(out)
 
 
-SCENES = {
+SCENES = {  # batch-2 scenes are merged in from scenes2.py by generate_pins
     "desk_guide": sc_desk_guide, "signs": sc_signs, "forward_head": sc_forward_head,
     "exercise_grid": sc_exercise_grid, "pain": sc_pain, "headache": sc_headache, "timeline": sc_timeline,
     "before_after": sc_before_after, "phone": sc_phone, "monitor_height": sc_monitor_height, "chair_check": sc_chair_check,
