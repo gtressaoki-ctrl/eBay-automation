@@ -194,7 +194,7 @@ Actions → **Japan Export Setup** → Run workflow で、`city`（例 `Yokohama
 ※ Variablesの設定は不要。別のポリシーを使いたいときだけ `EXPORT_FULFILLMENT_POLICY_ID` を設定する。
 
 ### 調整できる値（Variables、未設定なら既定値）
-- `EXPORT_SWEEP_CATEGORIES`（既定: eBay USの主要20カテゴリ）と `EXPORT_SWEEP_PER_CATEGORY`（既定50）— 毎朝、各カテゴリで
+- `EXPORT_SWEEP_CATEGORIES`（既定: eBay USの主要20カテゴリ）と `EXPORT_SWEEP_PER_CATEGORY`（既定25）— 毎朝、各カテゴリで
   日本発送・新品の出品を集め、実際に売れているものから候補を探す（ジャンル決め打ちをしない）。家電・カメラ・楽器など
   大きくなりがちなカテゴリは、送料を中・大サイズ以上で計算する
 - `EXPORT_MIN_PROFIT_JPY`（既定300）— 1個あたりの最低利益。評価と販売上限を伸ばすため、今は薄利でも売る設定
