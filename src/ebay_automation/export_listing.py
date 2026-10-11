@@ -35,7 +35,7 @@ from dataclasses import dataclass
 
 import requests
 
-from . import export_markets, export_research, export_state, fx, yahoo_shopping
+from . import export_markets, export_research, export_state, fx, research, yahoo_shopping
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_markets import US, Market, market_config, money, price_of
@@ -139,8 +139,8 @@ def _selling_jans(config: Config) -> dict[str, dict]:
         floor = _CATEGORY_SIZE_FLOOR.get(params.get("category_ids", ""), "small")
         try:
             search = _browse_get("/item_summary/search", config, {**params, "filter": _JP_NEW})
-        except requests.HTTPError:
-            log.warning("Search %s failed; skipping.", params)
+        except requests.HTTPError as exc:
+            log.warning("Search %s failed (%s); skipping.", params, exc.response.status_code if exc.response is not None else "?")
             continue
         for summary in search.get("itemSummaries", []) or []:
             if summary["itemId"] in seen:
@@ -632,7 +632,10 @@ def run(config: Config | None = None) -> int:
         if e.get("status") in ("pending_approval", "published", "needs_photos", "rejected")
     }
     candidates = find_candidates(config, active, markets)
-    log.info("%d export candidates clear the profit floor", len(candidates))
+    log.info(
+        "%d export candidates clear the profit floor on %s (%d Browse calls)",
+        len(candidates), ", ".join(m.domain for m in markets), research.browse_calls,
+    )
 
     github = None if config.dry_run else GithubClient(config)
     created = 0

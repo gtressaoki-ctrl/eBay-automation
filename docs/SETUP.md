@@ -177,7 +177,7 @@ Settings > Secrets and variables > Actions で設定（`GITHUB_TOKEN` は自動�
 - 販売上限（点数・金額）はアカウント全体で共通。1日の出品数 `EXPORT_DAILY_LISTING_QUOTA` も全サイト合計で、利益の大きい順に使う。
 
 ### 流れ
-1. **毎朝 07:30 JST**（Japan Export Listing）: 日本発送で実際に売れている商品を探し、
+1. **毎日 16:10 JST**（Japan Export Listing。eBay検索APIの1日枠がリセットされる16:00 JST直後）: 日本発送で実際に売れている商品を探し、
    同じJANの日本発送最安値より少し下の価格で、Yahoo!ショッピングの最安在庫から
    `EXPORT_MIN_PROFIT_JPY` 以上の利益が出るものだけ下書きを作り、`[輸出・承認待ち]` Issueを開く。
    写真と商品情報は **eBayカタログの公式ストック写真** を使う（他の出品者の写真は使わない）。
