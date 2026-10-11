@@ -1,0 +1,37 @@
+name: Trim EQUINOX Listings
+
+# Cuts the EQUINOX test listings to the minimum (scripts/trim_equinox.py).
+# Without "apply" it only prints the plan.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "End / zero the listings (otherwise plan only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  trim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Trim EQUINOX listings
+        env:
+          PYTHONPATH: src
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+          APPLY: ${{ inputs.apply && 'true' || 'false' }}
+        run: python scripts/trim_equinox.py
