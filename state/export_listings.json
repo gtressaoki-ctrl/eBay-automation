@@ -145,5 +145,28 @@
     "published_at": "2026-10-11T10:02:42+00:00",
     "checked_at": "2026-10-12T16:04:27+00:00",
     "paused_reason": ""
+  },
+  "JXAU-4580130921650": {
+    "sku": "JXAU-4580130921650",
+    "market": "AU",
+    "jan": "4580130921650",
+    "title": "Nikon Monarch M7 8X30 Binoculars",
+    "status": "pending_approval",
+    "category_id": "83880",
+    "price": 544.78,
+    "currency": "AUD",
+    "competitor_price": 545.28,
+    "price_basis": "www.ebay.com.au の日本発送最安",
+    "units_per_month": 1.78,
+    "source_price_jpy": 41789,
+    "source_url": "https://store.shopping.yahoo.co.jp/densidonya/4580130921650.html",
+    "source_name": "【ラッピング可】【即日発送】【新品】Nikon ニコン 双眼鏡 MONARCH M7 8x30",
+    "expected_profit_jpy": 3886,
+    "margin": 0.066,
+    "size": "medium",
+    "created_at": "2026-10-12T16:52:25+00:00",
+    "epid": "8050978106",
+    "ebay_offer_id": "309609082011",
+    "issue_number": 67
   }
 }
