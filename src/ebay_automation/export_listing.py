@@ -656,7 +656,7 @@ def run(config: Config | None = None) -> int:
             break
         try:
             if candidate.jan not in products:
-                products[candidate.jan] = ebay.find_catalog_product(candidate.jan)
+                products[candidate.jan] = ebay.find_catalog_product(candidate.jan, candidate.title)
             product = products[candidate.jan]
         except (EbayApiError, requests.RequestException):
             log.exception("Catalog lookup failed for %s", candidate.jan)
