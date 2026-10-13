@@ -4,17 +4,17 @@ title: Privacy Policy
 
 # Privacy Policy
 
-_Last updated: 2026-10-08_
+_Last updated: 2026-10-13_
 
 This policy covers Shop Pin Publisher (the "app") by Slow Japan Trails,
-an automation that creates Pins for our own product listings on our own
-Pinterest account.
+an automation that creates Pins for our own product listings and travel
+guides on our own Pinterest account.
 
 ## What the app accesses
 
 - **Our own Pinterest account only.** The app is authorised by the shop
   owner through Pinterest's OAuth flow and uses the granted access to
-  create Pins and boards for our own products and to read the performance
+  create Pins and boards for our own products and guides and to read the performance
   of those Pins.
 - It does not access, collect or store data about any other Pinterest
   user.
