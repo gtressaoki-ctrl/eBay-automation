@@ -41,6 +41,7 @@ from .ebay_client import EbayApiError, EbayClient
 from .export_markets import US, Market, market_config, money, price_of
 from .export_research import ProductOpportunity
 from .github_client import GithubClient
+from .pipeline_research import _UPDATABLE_OFFER_FIELDS
 from .research import _browse_get, _listing_age_days
 
 log = logging.getLogger(__name__)
@@ -451,6 +452,101 @@ def promote(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     return None
 
 
+def _cheapest_other(jan: str, config: Config, currency: str, own_listing_id: str) -> float | None:
+    """Cheapest new Japan-shipped listing of this JAN on config's site other than ours."""
+    search = _browse_get("/item_summary/search", config, {"gtin": jan, "limit": 20, "filter": _JP_NEW})
+    prices = [
+        _total(s, currency, config)
+        for s in search.get("itemSummaries", []) or []
+        if own_listing_id not in (s.get("itemId", ""), s.get("legacyItemId", ""))
+        and f"|{own_listing_id}|" not in s.get("itemId", "")
+    ]
+    prices = [p for p in prices if p]
+    return min(prices) if prices else None
+
+
+def lowest_price(
+    entry: dict, offer: yahoo_shopping.DomesticOffer, min_profit: int, config: Config
+) -> float | None:
+    """The lowest price (in the listing's currency) that still leaves `min_profit` yen."""
+    market = export_markets.of(entry)
+    mconfig = market_config(config, market)
+    size = entry.get("size", config.export_listing_size)
+
+    def profit(price: float) -> int | None:
+        computed = export_research.profit_jpy(
+            price, market.currency, offer.price_jpy, offer.free_shipping, size, mconfig
+        )
+        return computed[0] if computed else None
+
+    lo, hi = 1.0, max(price_of(entry)[0] * 3, 10.0)
+    if profit(hi) is None or profit(hi) < min_profit:
+        return None
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if (profit(mid) or -10**9) >= min_profit:
+            hi = mid
+        else:
+            lo = mid
+    return round(hi + 0.005, 2)
+
+
+def reprice(config: Config, ebay: EbayClient, entry: dict) -> str | None:
+    """Move a live listing to just under the cheapest other Japan-shipped
+    listing on its site, never below the minimum-profit price; a note when it changed."""
+    from .export_sync import source_check
+
+    market = export_markets.of(entry)
+    mconfig = market_config(config, market)
+    offer, _, _ = source_check(entry, config)
+    if offer is None or not entry.get("ebay_listing_id"):
+        return None
+    competitor = _cheapest_other(entry["jan"], mconfig, market.currency, entry["ebay_listing_id"])
+    if competitor is None:
+        return None  # the only Japan-shipped listing: nothing to undercut
+    floor = lowest_price(entry, offer, config.export_reprice_min_profit_jpy, config)
+    if floor is None:
+        return None  # source got dearer; the stock guard pauses it
+    target = round(competitor * (1 - config.export_reprice_undercut_pct / 100), 2)
+    new = max(target, floor)
+    if market.max_price:
+        new = min(new, market.max_price)
+    price, currency = price_of(entry)
+    if abs(new - price) < 0.5:
+        return None
+    note = f"{money(price, currency)} -> {money(new, currency)} (競合 {money(competitor, currency)})"
+    if config.dry_run:
+        return note + "（dry run・未変更）"
+    body = {k: v for k, v in ebay.get_offer(entry["ebay_offer_id"]).items() if k in _UPDATABLE_OFFER_FIELDS}
+    body["pricingSummary"] = {"price": {"value": f"{new:.2f}", "currency": currency}}
+    ebay.update_offer(entry["ebay_offer_id"], body, language=market.language)
+    computed = export_research.profit_jpy(
+        new, currency, offer.price_jpy, offer.free_shipping, entry.get("size", config.export_listing_size), mconfig
+    )
+    entry.update(
+        price=new, currency=currency, competitor_price=competitor,
+        expected_profit_jpy=computed[0] if computed else entry.get("expected_profit_jpy"),
+        repriced_at=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    )
+    entry.pop("price_usd", None)
+    entry.pop("competitor_price_usd", None)
+    export_state.save_listing(entry["sku"], entry)
+    return note
+
+
+def reprice_published(config: Config, ebay: EbayClient) -> None:
+    for sku, entry in export_state.load_listings().items():
+        if entry.get("status") != "published":
+            continue
+        try:
+            note = reprice(config, ebay, entry)
+        except (EbayApiError, requests.RequestException) as exc:
+            log.warning("Re-pricing %s failed: %s", sku, getattr(exc, "body", exc))
+            continue
+        if note:
+            log.info("Re-priced %s: %s", sku, note)
+
+
 def promote_published(config: Config, ebay: EbayClient) -> None:
     """Catch up listings published before promotion existed (or that failed then)."""
     for entry in export_state.load_listings().values():
@@ -623,6 +719,7 @@ def run(config: Config | None = None) -> int:
         config = dataclasses.replace(config, dry_run=True)
     if config.export_auto_publish and not config.dry_run:
         publish_pending(config, ebay, GithubClient(config))
+    reprice_published(config, ebay)
     if not config.dry_run:
         promote_published(config, ebay)
     # A dry run shows every enabled site, set up or not, so a new site can be judged first.

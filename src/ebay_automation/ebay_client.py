@@ -91,8 +91,10 @@ class EbayClient:
     def get_offer(self, offer_id: str) -> dict[str, Any]:
         return self._request("GET", f"/sell/inventory/v1/offer/{offer_id}").json()
 
-    def update_offer(self, offer_id: str, offer: dict[str, Any]) -> None:
-        self._request("PUT", f"/sell/inventory/v1/offer/{offer_id}", json=offer)
+    def update_offer(self, offer_id: str, offer: dict[str, Any], language: str = "en-US") -> None:
+        self._request(
+            "PUT", f"/sell/inventory/v1/offer/{offer_id}", json=offer, extra_headers={"Content-Language": language}
+        )
 
     def set_available_quantity(self, sku: str, offer_id: str, quantity: int) -> None:
         self._request(
