@@ -597,8 +597,8 @@ def sc_chair_tips(pin, top):
     floor_y = ART_BOTTOM - 30
     hip = (L + 1.05 * u, floor_y - 1.9 * u - 0.2 * u)
     out.append(floor(L, 470, floor_y))
-    out.append(chair_side(hip, u, floor_y, lumbar=TERRA_SOFT, arm=True, back_h=2.9))
-    s, j = seated(hip, u, pose(SIT, uarm=178, farm=92))
+    out.append(chair_side(hip, u, floor_y, lumbar=pin.get("lumbar_col", TERRA_SOFT), arm=True, back_h=2.9))
+    s, j = seated(hip, u, pose(SIT, **dict(dict(uarm=178, farm=92), **pin.get("pose", {}))))
     out.append(s)
     x0 = 540
     for i, t in enumerate(pin["tips"]):

@@ -13,12 +13,12 @@ The visual system is **Plumb Line**, described in [`DESIGN_PHILOSOPHY.md`](DESIG
 |---|---|
 | `images/NN-slug.png` | The 30 pin images, ready to upload |
 | `contact-sheet.png` | All 30 at a glance |
-| `batch2-sheet.png` / `batch3-sheet.png` | Batch 2 (31–40, chairs and desk setup) and batch 3 (41–50, quick fixes and accessories) |
+| `batch2-sheet.png` … `batch4-sheet.png` | Batch 2 (31–40, chairs and desk setup), batch 3 (41–50, quick fixes and accessories) and batch 4 (51–60, laptops, keyboards, sit-stand rhythm, gifts) |
 | `pinterest-bulk-batchN.csv` | Pinterest bulk-create CSV per batch: public image URLs, board, link and publish time (UTC, two a day) |
 | `pins.csv` | Per pin: title, description, alt text, keyword, board, link (primary affiliate) and other products |
 | `AFFILIATES.md` | Product table per pin (auto-generated) |
 | `generate_pins.py` | Pin data (copy, scene, products) and the build pipeline |
-| `scenes2.py` / `scenes3.py` | Scenes added for batches 2 and 3 |
+| `scenes2.py` … `scenes4.py` | Scenes added for batches 2–4 |
 | `scenes.py` / `svgkit.py` | Vector illustration code: scenes, silhouettes, furniture, annotations |
 | `plate.py` / `render.mjs` | HTML plate template, rendered to PNG with Playwright (Chromium) |
 | `products.py` | Affiliate product master list (ASINs / URLs) |

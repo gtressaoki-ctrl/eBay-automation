@@ -8,7 +8,7 @@ from svgkit import (INK, LINE, MONO, PAPER, SAGE, SAGE_SOFT, SERIF, TERRA, TERRA
                     side_figure, strain, text)
 
 
-def _rig(u, hipx, floor_y, lift=0.0, legs=1.0, desk_top=None, p=SIT, footrest=False, desk_x1=None):
+def _rig(u, hipx, floor_y, lift=0.0, legs=1.0, desk_top=None, p=SIT, footrest=False, desk_x1=None, screen_low=False):
     """Seated at a desk where chair height, leg length and desk height vary independently."""
     out = [floor(L, R, floor_y)]
     hip = (hipx, floor_y - 1.9 * u - 0.2 * u - lift * u)
@@ -17,7 +17,7 @@ def _rig(u, hipx, floor_y, lift=0.0, legs=1.0, desk_top=None, p=SIT, footrest=Fa
     dx1 = desk_x1 or R - 40
     out.append(desk_side(hip[0] + 1.25 * u, dx1, dtop, floor_y, u))
     fig, j = seated(hip, u, p, legs=legs)
-    m, st, sb = monitor_side(hip[0] + 4.0 * u, dtop, u, j["eye"][1] - 0.05 * u)
+    m, st, sb = monitor_side(hip[0] + 4.0 * u, dtop, u, dtop - 1.75 * u if screen_low else j["eye"][1] - 0.05 * u)
     out.append(m)
     out.append(keyboard_side(hip[0] + 1.5 * u, hip[0] + 2.35 * u, dtop, u))
     foot_y = hip[1] + 1.9 * u * legs + 0.2 * u
@@ -40,10 +40,12 @@ def sc_rig_compare(pin, top):
         dtop = fy - 2.1 * u - 0.82 * u - cfg.get("desk_raise", 0.0) * u
         p = pose(SIT, **cfg.get("pose", {}))
         s, j, g = _rig(u, L + 1.1 * u, fy, lift=cfg.get("lift", 0.0), legs=cfg.get("legs", 1.0), desk_top=dtop,
-                       p=p, footrest=cfg.get("footrest", False))
+                       p=p, footrest=cfg.get("footrest", False), screen_low=cfg.get("screen_low", False))
         out.append(s)
         for name in cfg.get("strain", []):
             out.append(strain(j[name], 24))
+        if cfg.get("sightline"):
+            out.append(line(j["eye"], g["screen_top"], stroke=SAGE if k else TERRA, sw=1.2, dash="1 6"))
         if cfg.get("gap"):
             x = j["toe"][0] + 0.25 * u
             out.append(dimension((x, g["foot_y"]), (x, fy), None, col=TERRA))
