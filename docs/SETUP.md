@@ -219,6 +219,7 @@ Actions → **Japan Export Setup** → Run workflow で、`city`（例 `Yokohama
 - `EXPORT_MIN_PROFIT_JPY`（既定300）— 1個あたりの最低利益。評価と販売上限を伸ばすため、今は薄利でも売る設定
 - `EXPORT_LISTING_QUERIES` — 対象の検索語（`;` 区切り、既定はベイブレードX・トミカプレミアム・トミカリミテッドヴィンテージ・プラレール・たまごっち）
 - `EXPORT_DAILY_LISTING_QUOTA`（既定3）、`EXPORT_UNDERCUT_USD_CENTS`（既定50＝$0.50下げ）
+- `EXPORT_REPRICE_UNDERCUT_PCT`（既定3）と `EXPORT_REPRICE_MIN_PROFIT_JPY`（既定100）— 出品中の輸出品を毎日、同じサイトの日本発送最安（自分以外）より3%下に付け直す。利益が100円を切る価格までは下げない。最初の販売実績を最優先にするための設定
 - `EXPORT_LISTING_SIZE`（既定 `small`）、`EXPORT_MIN_COST_RATIO`（既定0.2）
 - `EXPORT_SELLER_DUTY_RATE`（既定0.15）と `EXPORT_DUTY_FEE_JPY`（既定300）— 米国関税を出品者が前払いする分。2026年4月から
   日本郵便の米国宛ては差出人の関税前払い（Zonos経由）が必須で、日本製品は15%。関税を購入者から徴収する発送方法

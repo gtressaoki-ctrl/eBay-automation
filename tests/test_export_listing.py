@@ -820,3 +820,69 @@ def test_a_timed_out_item_lookup_does_not_end_the_run(monkeypatch):
     monkeypatch.setattr(export_listing, "_browse_get", flaky_browse)
     found = export_listing._selling_jans(Config(export_listing_queries=["beyblade x"], export_sweep_categories=[]))
     assert JAN in found
+
+
+# ---- daily re-pricing -----------------------------------------------------------
+
+
+class RepriceEbay(FakeEbay):
+    def get_offer(self, offer_id):
+        return {"offerId": offer_id, "sku": "x", "status": "PUBLISHED", "availableQuantity": 1,
+                "pricingSummary": {"price": {"value": "60.00", "currency": "USD"}}, "categoryId": "1"}
+
+    def update_offer(self, offer_id, offer, language="en-US"):
+        self.calls.append(("update", offer_id, offer, language))
+
+
+def _live(**kw):
+    return _entry(ebay_listing_id="111", size="small", price=60.0, currency="USD", **kw)
+
+
+def test_reprice_undercuts_the_cheapest_other_listing(monkeypatch):
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    # Our own listing (111) is in the results and must not be undercut.
+    monkeypatch.setattr(export_listing, "_browse_get", lambda path, config, params=None: {"itemSummaries": [
+        {"itemId": "v1|111|0", "price": {"value": "60.00", "currency": "USD"}},
+        {"itemId": "v1|222|0", "price": {"value": "58.00", "currency": "USD"}},
+    ]})
+    ebay = RepriceEbay()
+    entry = _live()
+    note = export_listing.reprice(Config(export_reprice_undercut_pct=3.0), ebay, entry)
+
+    _, _, body, _ = next(c for c in ebay.calls if c[0] == "update")
+    assert body["pricingSummary"]["price"] == {"value": "56.26", "currency": "USD"}  # 58 less 3%
+    assert "offerId" not in body and "status" not in body
+    assert entry["price"] == 56.26 and "price_usd" not in entry and "56.26" in note
+
+
+def test_reprice_never_goes_below_the_minimum_profit(monkeypatch):
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    monkeypatch.setattr(export_listing, "_browse_get", lambda path, config, params=None: {"itemSummaries": [
+        {"itemId": "v1|222|0", "price": {"value": "20.00", "currency": "USD"}},
+    ]})
+    ebay = RepriceEbay()
+    entry = _live()
+    config = Config(export_reprice_min_profit_jpy=100)
+    export_listing.reprice(config, ebay, entry)
+    assert 100 <= entry["expected_profit_jpy"] < 200  # stopped at the floor, not at $19.40
+
+
+def test_the_only_japan_listing_keeps_its_price(monkeypatch):
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    monkeypatch.setattr(export_listing, "_browse_get", lambda path, config, params=None: {"itemSummaries": [
+        {"itemId": "v1|111|0", "price": {"value": "60.00", "currency": "USD"}},
+    ]})
+    ebay = RepriceEbay()
+    assert export_listing.reprice(Config(), ebay, _live()) is None
+    assert not [c for c in ebay.calls if c[0] == "update"]
+
+
+def test_dry_run_shows_the_new_price_without_changing_it(monkeypatch):
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    monkeypatch.setattr(export_listing, "_browse_get", lambda path, config, params=None: {"itemSummaries": [
+        {"itemId": "v1|222|0", "price": {"value": "58.00", "currency": "USD"}},
+    ]})
+    ebay = RepriceEbay()
+    entry = _live()
+    assert "dry run" in export_listing.reprice(Config(dry_run=True), ebay, entry)
+    assert entry["price"] == 60.0 and not [c for c in ebay.calls if c[0] == "update"]
