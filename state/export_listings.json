@@ -197,5 +197,28 @@
     "epid": "2317082703",
     "ebay_offer_id": "310921845011",
     "issue_number": 71
+  },
+  "JXAU-0889296167884": {
+    "sku": "JXAU-0889296167884",
+    "market": "AU",
+    "jan": "0889296167884",
+    "title": "HP 729 (F9J81A) Printhead Replacement Kit",
+    "status": "pending_approval",
+    "category_id": "51328",
+    "price": 575.06,
+    "currency": "AUD",
+    "competitor_price": 575.56,
+    "price_basis": "www.ebay.com.au の日本発送最安",
+    "units_per_month": 0.95,
+    "source_price_jpy": 44691,
+    "source_url": "https://store.shopping.yahoo.co.jp/nanos/0889296167884.html",
+    "source_name": "HP729 プリントヘッド F9J81A 取り寄せ商品",
+    "expected_profit_jpy": 3610,
+    "margin": 0.059,
+    "size": "medium",
+    "created_at": "2026-10-13T15:13:53+00:00",
+    "epid": "691342783",
+    "ebay_offer_id": "311074694011",
+    "issue_number": 72
   }
 }
