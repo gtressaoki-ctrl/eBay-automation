@@ -168,11 +168,13 @@ class Config:
             "PINTEREST_REDIRECT_URI", "https://shop.slowjapantrails.com/oauth.html"
         )
     )
-    # Trial-access apps can only write to the sandbox
-    # (https://api-sandbox.pinterest.com); switch to production once the
-    # app is granted Standard access.
+    # The app (Slow Japan Trails Publisher) has Trial access, which can only
+    # write to the sandbox; tokens are per environment, so authorization
+    # and pinning must both use it. Set PINTEREST_API_BASE to
+    # https://api.pinterest.com (and re-authorize) once Standard access is
+    # granted.
     pinterest_api_base: str = field(
-        default_factory=lambda: _str_env("PINTEREST_API_BASE", "https://api.pinterest.com")
+        default_factory=lambda: _str_env("PINTEREST_API_BASE", "https://api-sandbox.pinterest.com")
     )
     pinterest_board_name: str = field(
         default_factory=lambda: _str_env("PINTEREST_BOARD_NAME", "Funny Coffee Mugs")
