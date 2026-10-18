@@ -20,7 +20,7 @@ import re
 
 TITLE_MAX = 80
 # Marks a listing whose title has been rewritten to this format.
-SEO_VERSION = 1
+SEO_VERSION = 2
 
 # Who made it, in the order eBay's own aspects are trusted: music is sold
 # by artist, everything else by brand.
@@ -52,6 +52,14 @@ def _contains(title: str, words: str) -> bool:
     return _norm(words) in _norm(title)
 
 
+def _useful_spec(value: str) -> bool:
+    """Catalog values that say something: a model or size, not "Beyblade
+    Stadium" as a model or "1:1 (Life Size)" as a scale (both seen live)."""
+    if not value or re.search(r"life\s*size|\b1\s*[:/]\s*1\b", value, re.I):
+        return False
+    return bool(re.search(r"\d", value)) or len(value.split()) == 1
+
+
 def _fits(title: str, extra: str) -> bool:
     return len(f"{title} {extra}") <= TITLE_MAX
 
@@ -70,7 +78,9 @@ def seo_title(catalog_title: str, aspects: dict[str, list[str]]) -> str:
         return core[:TITLE_MAX].rsplit(" ", 1)[0]
     title = core
     for value in [_first(aspects, _MODEL_ASPECTS)] + [_first(aspects, [a]) for a in _SPEC_ASPECTS]:
-        if value and not _contains(title, value) and _fits(title, value):
+        if not _useful_spec(value):
+            continue
+        if not _contains(title, value) and _fits(title, value):
             title = f"{title} {value}"
     for filler in _FILLERS:
         if _contains(title, filler):
