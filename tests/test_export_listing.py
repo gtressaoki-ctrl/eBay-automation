@@ -967,3 +967,17 @@ def test_a_title_already_in_format_is_not_sent_again():
     assert export_listing.retitle(Config(), ebay, entry) is None
     assert not [c for c in ebay.calls if c[0] == "item"]
     assert entry["seo_version"] == export_seo.SEO_VERSION and entry["title_changed_at"].startswith("2026-10-18")
+
+
+def test_rewrite_starts_from_the_catalog_title():
+    bad = "Takara Tomy Beyblade X Extreme Stadium - BX-10 Beyblade Stadium 1:1 (Life Size)"
+
+    class ItemEbay(FakeEbay):
+        def get_inventory_item(self, sku):
+            return {"product": {"title": bad, "aspects": {"Brand": ["TOMY"], "Scale": ["1:1 (Life Size)"]}}}
+
+    ebay = ItemEbay()
+    entry = _entry(seo_version=2, title=bad, catalog_title="Takara Tomy Beyblade X Extreme Stadium - BX-10")
+    export_state.save_listing(entry["sku"], entry)
+    export_listing.retitle(Config(), ebay, entry)
+    assert "Life Size" not in entry["title"] and entry["title"].startswith("Takara Tomy Beyblade X Extreme Stadium")

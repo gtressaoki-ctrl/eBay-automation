@@ -390,6 +390,9 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
     entry = candidate_entry(candidate, title, "pending_approval", config)
     entry["epid"] = product.get("epid")
     entry["seo_version"] = export_seo.SEO_VERSION
+    # Rewrites start from the catalog's own title, never from one already
+    # filled out, so a word that should not have been added can be taken out.
+    entry["catalog_title"] = product.get("title", "")
     entry["title_changed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     if candidate.market.key != "US":
         category = export_markets.suggest_category(title, candidate.market, config)
@@ -561,7 +564,7 @@ def retitle(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     item = ebay.get_inventory_item(entry["sku"])
     product = item.get("product") or {}
     aspects = export_seo.with_ean(product.get("aspects") or {}, entry["jan"])
-    title = export_seo.seo_title(product.get("title") or entry["title"], aspects)
+    title = export_seo.seo_title(entry.get("catalog_title") or product.get("title") or entry["title"], aspects)
     note = f"{product.get('title', '')!r} -> {title!r}"
     if config.dry_run:
         return note + "（dry run・未変更）"

@@ -20,7 +20,7 @@ import re
 
 TITLE_MAX = 80
 # Marks a listing whose title has been rewritten to this format.
-SEO_VERSION = 2
+SEO_VERSION = 3
 
 # Who made it, in the order eBay's own aspects are trusted: music is sold
 # by artist, everything else by brand.
