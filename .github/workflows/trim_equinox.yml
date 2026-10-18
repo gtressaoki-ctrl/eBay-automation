@@ -9,6 +9,10 @@ on:
         description: "End / zero the listings (otherwise plan only)"
         type: boolean
         default: false
+      end_all:
+        description: "End every EQUINOX listing (otherwise keep the best T-shirt and sticker)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,4 +38,5 @@ jobs:
           EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
           EBAY_ENV: ${{ vars.EBAY_ENV }}
           APPLY: ${{ inputs.apply && 'true' || 'false' }}
+          END_ALL: ${{ inputs.end_all && 'true' || 'false' }}
         run: python scripts/trim_equinox.py

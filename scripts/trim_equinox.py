@@ -10,6 +10,8 @@ What stays, decided from the last 30 days of eBay traffic:
   and a sticker keeps 1. The other variants go to quantity 0.
 Every other EQUINOX listing is ended (withdrawn).
 
+With END_ALL=true every EQUINOX listing is ended instead.
+
 Without APPLY=true it only prints the plan.
 
 Usage (also the "Trim EQUINOX Listings" workflow):
@@ -62,12 +64,14 @@ def equinox_variants(ebay: EbayClient) -> list[dict]:
 
 
 def plan(
-    variants: list[dict], traffic: dict[str, dict[str, int]]
+    variants: list[dict], traffic: dict[str, dict[str, int]], end_all: bool = False
 ) -> tuple[dict[str, list[dict]], list[dict], list[list[dict]]]:
     """Variants kept per listing, variants set to quantity 0, and the listings to end."""
     listings: dict[str, list[dict]] = defaultdict(list)
     for v in variants:
         listings[v["listing_id"]].append(v)
+    if end_all:
+        return {}, [], list(listings.values())
 
     def kind(listing_id: str) -> str:
         return "shirt" if "shirt" in listings[listing_id][0]["title"].lower() else "sticker"
@@ -97,6 +101,7 @@ def plan(
 
 def main() -> None:
     apply = os.environ.get("APPLY", "").lower() == "true"
+    end_all = os.environ.get("END_ALL", "").lower() == "true"
     ebay = EbayClient(load_config())
     variants = equinox_variants(ebay)
     listing_ids = sorted({v["listing_id"] for v in variants if v["listing_id"]})
@@ -105,7 +110,7 @@ def main() -> None:
     except EbayApiError as exc:
         print(f"Traffic report unavailable ({exc.body[:200]}); deciding without it.")
         traffic = {}
-    kept, zeroed, ended = plan(variants, traffic)
+    kept, zeroed, ended = plan(variants, traffic, end_all)
 
     before = sum(v["price"] * v["quantity"] for v in variants)
     after = sum(v["price"] * v["quantity"] for vs in kept.values() for v in vs)

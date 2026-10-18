@@ -32,3 +32,9 @@ def test_a_listing_that_sold_is_kept():
     variants = [_v("A", "A1", "EQUINOX T-Shirt", "M"), _v("B", "B1", "EQUINOX T-Shirt", "M")]
     kept, _, ended = trim.plan(variants, {"A": {"LISTING_VIEWS_TOTAL": 50}, "B": {"TRANSACTION": 1}})
     assert set(kept) == {"B"} and ended[0][0]["listing_id"] == "A"
+
+
+def test_end_all_ends_every_listing():
+    variants = [_v("A", "A1", "EQUINOX T-Shirt", "M"), _v("B", "B1", "EQUINOX Sticker")]
+    kept, zeroed, ended = trim.plan(variants, {"A": {"TRANSACTION": 3}}, end_all=True)
+    assert kept == {} and zeroed == [] and sorted(g[0]["listing_id"] for g in ended) == ["A", "B"]
