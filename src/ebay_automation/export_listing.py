@@ -565,6 +565,11 @@ def retitle(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     note = f"{product.get('title', '')!r} -> {title!r}"
     if config.dry_run:
         return note + "（dry run・未変更）"
+    if title == product.get("title") and aspects == (product.get("aspects") or {}):
+        # Already in this format: nothing to send, and the title-change clock keeps running.
+        entry["seo_version"] = export_seo.SEO_VERSION
+        export_state.save_listing(entry["sku"], entry)
+        return None
     product = {**product, "title": title, "aspects": aspects, "ean": product.get("ean") or [entry["jan"]]}
     body = {k: v for k, v in item.items() if k in _ITEM_FIELDS}
     body["product"] = product

@@ -48,3 +48,11 @@ def test_maker_already_near_the_front_stays_put():
 def test_scale_written_differently_is_not_repeated():
     title = export_seo.seo_title("Tomytec LV-N191A 1/64 Motor", {"Brand": ["Tomytec"], "Scale": ["1:64"]})
     assert "1:64" not in title
+
+
+def test_meaningless_catalog_specs_are_left_out():
+    title = export_seo.seo_title(
+        "Takara Tomy Beyblade X Extreme Stadium - BX-10",
+        {"Brand": ["TOMY"], "Model": ["Beyblade Stadium"], "Scale": ["1:1 (Life Size)"]},
+    )
+    assert "Life Size" not in title and "1:1" not in title and title.count("Stadium") == 1

@@ -1,7 +1,7 @@
 import requests
 import pytest
 
-from ebay_automation import export_commands, export_listing, export_state, export_sync, fx, yahoo_shopping
+from ebay_automation import export_commands, export_listing, export_seo, export_state, export_sync, fx, yahoo_shopping
 from ebay_automation.config import Config
 from ebay_automation.ebay_client import EbayApiError
 from ebay_automation.yahoo_shopping import DomesticOffer
@@ -949,6 +949,21 @@ def test_live_listing_is_retitled_once():
     _, sku, body = next(c for c in ebay.calls if c[0] == "item")
     assert body["product"]["title"].startswith("Nujabes Modal Soul") and "sku" not in body and "locale" not in body
     assert body["product"]["aspects"]["EAN"] == [JAN] and body["product"]["imageUrls"]
-    assert entry["seo_version"] == 1 and entry["title_changed_at"]
+    assert entry["seo_version"] == export_seo.SEO_VERSION and entry["title_changed_at"]
     ebay.calls.clear()
     assert export_listing.retitle(Config(), ebay, entry) is None and not ebay.calls
+
+
+def test_a_title_already_in_format_is_not_sent_again():
+    title = export_seo.seo_title("Fujifilm PROVIA 100F", {"Brand": ["Fujifilm"]})
+
+    class ItemEbay(FakeEbay):
+        def get_inventory_item(self, sku):
+            return {"product": {"title": title, "aspects": {"Brand": ["Fujifilm"], "EAN": [JAN]}}}
+
+    ebay = ItemEbay()
+    entry = _entry(seo_version=1, title_changed_at="2026-10-18T00:00:00+00:00")
+    export_state.save_listing(entry["sku"], entry)
+    assert export_listing.retitle(Config(), ebay, entry) is None
+    assert not [c for c in ebay.calls if c[0] == "item"]
+    assert entry["seo_version"] == export_seo.SEO_VERSION and entry["title_changed_at"].startswith("2026-10-18")
