@@ -43,6 +43,11 @@ class EbayApiError(RuntimeError):
         body = self.body or ""
         return "number of items" in body or "amount you can list" in body
 
+    @property
+    def is_amount_limit(self) -> bool:
+        """The dollar side of the selling limit: a cheaper listing may still fit."""
+        return "amount you can list" in (self.body or "")
+
 
 class EbayClient:
     def __init__(self, config: Config):

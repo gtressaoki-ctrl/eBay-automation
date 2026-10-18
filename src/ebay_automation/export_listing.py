@@ -414,7 +414,11 @@ def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     try:
         listing_id = ebay.publish_offer(entry["ebay_offer_id"])
     except EbayApiError as exc:
-        return "今月の販売上限（出品数・金額）に達しています" if exc.is_selling_limit else f"eBayエラー: {exc.body[:400]}"
+        if exc.is_amount_limit:
+            return "今月の販売上限（金額）に達しています"
+        if exc.is_selling_limit:
+            return "今月の販売上限（出品数）に達しています"
+        return f"eBayエラー: {exc.body[:400]}"
     entry.update(
         status="published",
         quantity=1,
@@ -699,14 +703,18 @@ def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> i
     nobody is going to write.
     """
     published = 0
-    for sku, entry in export_state.load_listings().items():
-        if entry.get("status") != "pending_approval":
-            continue
+    waiting = [(sku, e) for sku, e in export_state.load_listings().items() if e.get("status") == "pending_approval"]
+
+    def usd(item: tuple[str, dict]) -> float:
+        price, currency = price_of(item[1])
+        return export_markets.convert(price, currency, "USD", config) or price
+
+    # Cheapest first, and a draft too big for what is left of the monthly
+    # limit does not stop the smaller ones behind it from going live.
+    for sku, entry in sorted(waiting, key=usd):
         failure = publish_draft(config, ebay, entry)
         if failure:
             log.info("Draft %s still not published: %s", sku, failure)
-            if "販売上限" in failure:
-                break
             continue
         published += 1
         if entry.get("issue_number"):
@@ -803,7 +811,9 @@ def run(config: Config | None = None) -> int:
             continue
         export_state.save_listing(entry["sku"], entry)
         failure = publish_draft(config, ebay, entry) if config.export_auto_publish else "approval"
-        if failure and failure != "approval" and "販売上限" in failure:
+        # Out of listings: nothing else goes live today. Out of dollars: a
+        # cheaper candidate further down may still fit.
+        if failure and failure != "approval" and "販売上限（出品数）" in failure:
             stop_reason = failure
         issue = github.create_issue(
             title=(
