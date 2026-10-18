@@ -28,6 +28,8 @@ from scenes3 import SCENES3  # noqa: E402
 SCENES.update(SCENES3)
 from scenes4 import SCENES4  # noqa: E402
 SCENES.update(SCENES4)
+from scenes5 import SCENES5  # noqa: E402
+SCENES.update(SCENES5)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "images")
@@ -508,6 +510,94 @@ PINS += [
          products=["vivo_arm", "huanuo_dual"]),
 ]
 
+# ---- batch 5: fresh designs for the best-performing topics (chairs, sitting, monitor height, desk setup)
+SLUMP_SIT = dict(lumbar=-16, thoracic=30, neck=48, head=6, uarm=150, farm=100, fuarm=152, ffarm=100)
+PINS += [
+    dict(n=61, slug="how-to-choose-an-office-chair-checklist", keyword="how to choose an office chair",
+         title="How to Choose an Office Chair: 5-Point Checklist", text="Office Chair Checklist",
+         head="Choosing an|*Office Chair*",
+         desc="Shopping for an office chair? Check these five things before you buy: lumbar support, seat depth, armrests, recline and seat height range.",
+         kicker="Buyer's checklist", sub="Check these five before you buy.", scene="chair_annot",
+         dims=["lumbar_ring"],
+         callouts=[("lumbar", "Lumbar adjusts up and down", "L", 40), ("backrest", "Recline that locks", "L", 110),
+                   ("armrest", "Armrests move", "R", 40), ("seat_front", "Seat depth slides", "R", 520),
+                   ("gas", "Height fits your desk", "R", 640)],
+         products=["sihoo_m57", "steelcase_s1"]),
+    dict(n=62, slug="ergonomic-chair-must-haves", keyword="ergonomic chair features",
+         title="5 Ergonomic Chair Must-Haves for Long Workdays", text="Ergonomic Chair Must-Haves",
+         head="Ergonomic Chair|*Must-Haves*",
+         desc="Not every 'ergonomic' chair is. Look for these five features if you sit for most of the day: adjustable lumbar, sliding seat, movable armrests, locking recline and a breathable back.",
+         kicker="Buyer's guide", sub="If it's missing one of these, keep looking.", scene="chair_tips",
+         tips=["Adjustable lumbar support", "A seat that slides", "Armrests that move", "Recline that locks",
+               "A breathable mesh back"],
+         products=["sihoo_m57", "steelcase_s1"]),
+    dict(n=63, slug="sitting-posture-wrong-vs-right", keyword="correct sitting posture at desk",
+         title="Sitting Posture at Your Desk: Wrong vs Right", text="Sitting Posture: Wrong vs Right",
+         head="Sitting Posture|Wrong vs *Right*",
+         desc="Same chair, same desk, two postures. Sit all the way back, let the chair support your lower back, and keep your head over your shoulders.",
+         kicker="Side by side", sub="Same desk, same chair, different habits.", scene="rig_compare",
+         panels=[dict(tag="Wrong", caption="Slumped, head forward", pose=SLUMP_SIT, strain=["neck", "back"]),
+                 dict(tag="Right", caption="Back supported, head level")],
+         products=["lumbar_ec", "seat_ec"]),
+    dict(n=64, slug="ergonomic-desk-setup-measurements", keyword="ergonomic desk height",
+         title="Ergonomic Desk Setup Measurements (Cheat Sheet)", text="Desk Setup Measurements",
+         head="Desk Setup|*Measurements*",
+         desc="Typical ranges for a seated desk setup: seat height 16-21 in, desk height 25-30 in, screen 20-30 in from your eyes with the top edge at eye level. Adjust to fit your body.",
+         kicker="Cheat sheet", sub="Typical ranges for seat, desk and screen.", scene="measurements",
+         dims=["SEAT 16–21 IN", "DESK 25–30 IN", "SCREEN 20–30 IN AWAY"],
+         products=["sihoo_m57", "vivo_arm", "footrest_ec"]),
+    dict(n=65, slug="monitor-height-too-high-too-low", keyword="monitor height",
+         title="Monitor Height: Too High, Too Low or Just Right?", text="Monitor Height Check",
+         head="Is Your Monitor|*Just Right?*",
+         desc="Too high and your chin tips up. Too low and your head drops forward. Set the top edge of the screen at or just below eye level, about an arm's length away.",
+         kicker="Screen height", sub="Three heights, one that works.", scene="monitor_zones",
+         tips=["Top edge at or just below eye level", "Centre about 15–20° below your eyes", "Roughly an arm's length away"],
+         products=["vivo_arm", "nulaxy"]),
+    dict(n=66, slug="upper-back-stretches-at-desk", keyword="upper back stretches at desk",
+         title="4 Upper Back Stretches You Can Do at Your Desk", text="Upper Back Desk Stretches",
+         head="Upper Back|*Desk Stretches*",
+         desc="Two minutes, no equipment, no getting changed. Four seated moves for a stiff upper back after hours at the computer.",
+         kicker="Two minutes", sub="Seated moves, no equipment needed.", scene="exercise_grid", badge="Two minutes",
+         exercises=[("upper_back_ext", "Upper-back extension", "8 reps"), ("scap_squeeze", "Blade squeeze", "10 reps"),
+                    ("chest_opener_seated", "Chest opener", "20 sec"), ("shoulder_rolls", "Shoulder rolls", "10 backward")],
+         products=["chirp", "theraband"]),
+    dict(n=67, slug="neck-stretches-at-desk", keyword="neck stretches at desk",
+         title="3-Minute Neck Stretches for Desk Workers", text="Neck Stretches at Your Desk",
+         head="Neck Stretches|at Your *Desk*",
+         desc="Stiff neck by the afternoon? Four gentle seated stretches you can do between meetings. Move slowly and stop if anything hurts.",
+         kicker="Three minutes", sub="Gentle moves between meetings.", scene="exercise_grid", badge="Three minutes",
+         exercises=[("chin_tuck_seated", "Chin tucks", "10 reps"), ("side_neck", "Side neck stretch", "20 sec / side"),
+                    ("neck_turn", "Slow neck turns", "5 / side"), ("shoulder_rolls", "Shoulder rolls", "10 backward")],
+         products=["chirp_neck", "restcloud"]),
+    dict(n=68, slug="upper-back-pain-from-sitting-checklist", keyword="upper back pain from sitting",
+         title="Upper Back Pain From Sitting? Check These 3 Things", text="Upper Back Pain From Sitting",
+         head="Upper Back Sore|From *Sitting?*",
+         desc="Upper back tension after a long day usually comes down to three things: screen height, back support and how long you sit without moving.",
+         kicker="Quick check", sub="Three things to check before anything else.", scene="pain", area="upper_back",
+         causes_title="CHECK THESE FIRST", causes=["Is your screen at eye level?", "Is your back supported?",
+                                                     "Do you move every 30–60 minutes?"],
+         products=["lumbar_ec", "chirp"]),
+    dict(n=69, slug="proper-sitting-posture-cheat-sheet", keyword="proper sitting posture",
+         title="Proper Sitting Posture: 6-Point Cheat Sheet", text="Sitting Posture Cheat Sheet",
+         head="Sitting Posture|*Cheat Sheet*",
+         desc="Run through these six points from head to toe: ears over shoulders, shoulders relaxed, elbows near 90 degrees, lower back supported, knees level with hips, feet flat.",
+         kicker="Head to toe", sub="Six checkpoints from head to toe.", scene="chair_annot", arm=False,
+         callouts=[("ear", "Ears over shoulders", "R", 40), ("shoulder", "Shoulders relaxed", "R", 110),
+                   ("elbow", "Elbows near 90°", "R", 180), ("lumbar", "Lower back supported", "L", 40),
+                   ("knee", "Knees level with hips", "R", 560), ("toe", "Feet flat on the floor", "R", 760)],
+         products=["lumbar_ec", "footrest_ec"]),
+    dict(n=70, slug="mesh-vs-padded-office-chair", keyword="mesh vs padded office chair",
+         title="Mesh vs Padded Office Chair: Which Is Better for Long Days?", text="Mesh vs Padded Chair",
+         head="*Mesh* vs|Padded Chair",
+         desc="Padded chairs feel soft in the showroom; mesh chairs tend to stay cooler and keep their shape. Here's how they compare for a full workday.",
+         kicker="Side by side", sub="Which holds up over a full workday?", scene="chair_compare", right="basic",
+         sides=(("Mesh chair", "Breathes and flexes"), ("Padded chair", "Soft at first")),
+         compare=[("Stays cool all day", "Can run warm"), ("Keeps its shape", "Foam can flatten"),
+                  ("Even, firm support", "Plush, softer feel")],
+         verdict="Long days? Mesh tends to age better.",
+         products=["sihoo_m57", "steelcase_s1"]),
+]
+
 HEAD_TOP = 118
 HEAD_LH = 102
 
@@ -619,7 +709,11 @@ RAW_BASE = ("https://raw.githubusercontent.com/gtressaoki-ctrl/eBay-automation/"
 
 
 def write_bulk_csv(name, order, start, board="Desk Posture & Ergonomics"):
-    """Pinterest bulk-create CSV: two posts a day (13:00 and 01:00 UTC) from `start` (a datetime)."""
+    """Pinterest bulk-create CSV: one post every 12 hours from `start` (a datetime).
+
+    Pinterest reads "Publish date" in the account's own time zone (JST here), not UTC,
+    so batch 5 onwards starts at 22:00 to land at 9am US Eastern and 9pm the next slot.
+    """
     from datetime import timedelta
     by_n = {p["n"]: p for p in PINS}
     path = os.path.join(HERE, name)
