@@ -266,10 +266,19 @@ def _aspects(product: dict) -> dict[str, list[str]]:
     }
 
 
+_EBAY_IMAGE_SIZE = re.compile(r"/s-l\d+\.")
+
+
 def _images(product: dict) -> list[str]:
+    """Catalog photo URLs at eBay's largest size.
+
+    The catalog hands out 640px renditions (s-l640); eBay rejected one
+    listing for a photo under its 500px minimum, and s-l1600 serves the
+    largest the photo has.
+    """
     urls = [(product.get("image") or {}).get("imageUrl")]
     urls += [img.get("imageUrl") for img in product.get("additionalImages", []) or []]
-    return [u for u in urls if u and u.startswith("https://")][:12]
+    return [_EBAY_IMAGE_SIZE.sub("/s-l1600.", u) for u in urls if u and u.startswith("https://")][:12]
 
 
 def description(title: str, config: Config) -> str:
