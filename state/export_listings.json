@@ -63,7 +63,7 @@
     "currency": "USD",
     "competitor_price": 79.0,
     "repriced_at": "2026-10-13T12:42:34+00:00",
-    "seo_version": 2,
+    "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:33+00:00"
   },
   "JX-4547410246117": {
@@ -93,14 +93,14 @@
     "currency": "USD",
     "competitor_price": 112.36,
     "repriced_at": "2026-10-13T12:42:39+00:00",
-    "seo_version": 2,
+    "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:36+00:00"
   },
   "JXGB-4904810910596": {
     "sku": "JXGB-4904810910596",
     "market": "GB",
     "jan": "4904810910596",
-    "title": "Takara Tomy Beyblade X Extreme Stadium - BX-10 Beyblade Stadium 1:1 (Life Size)",
+    "title": "Takara Tomy Beyblade X Extreme Stadium - BX-10 White New Free Shipping Genuine",
     "status": "published",
     "category_id": "261068",
     "price": 57.91,
@@ -125,8 +125,8 @@
     "checked_at": "2026-10-18T11:38:24+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-16T12:20:58+00:00",
-    "seo_version": 2,
-    "title_changed_at": "2026-10-18T12:45:40+00:00",
+    "seo_version": 3,
+    "title_changed_at": "2026-10-18T12:52:33+00:00",
     "catalog_title": "Takara Tomy Beyblade X Extreme Stadium - BX-10"
   },
   "JXAU-0193905352807": {
@@ -158,7 +158,7 @@
     "checked_at": "2026-10-18T11:38:27+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-17T11:34:01+00:00",
-    "seo_version": 2,
+    "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:44+00:00"
   },
   "JXAU-4580130921650": {
@@ -259,7 +259,7 @@
     "checked_at": "2026-10-18T11:38:28+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-15T12:37:52+00:00",
-    "seo_version": 2,
+    "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:46+00:00"
   },
   "JXGB-4909723012337": {
@@ -314,7 +314,7 @@
     "checked_at": "2026-10-18T11:38:29+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-17T11:34:07+00:00",
-    "seo_version": 2,
+    "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:50+00:00"
   },
   "JXGB-4543736301356": {
@@ -346,7 +346,7 @@
     "checked_at": "2026-10-18T11:38:31+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-18T11:39:07+00:00",
-    "seo_version": 2,
+    "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:53+00:00"
   },
   "JXAU-4543736301356": {
