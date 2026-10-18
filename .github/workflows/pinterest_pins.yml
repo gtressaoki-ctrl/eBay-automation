@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - name: Pin newly published listings
+      - name: Pin newly published listings and travel guides
         env:
           PYTHONPATH: src
           PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
@@ -30,6 +30,8 @@ jobs:
           PINTEREST_API_BASE: ${{ vars.PINTEREST_API_BASE }}
           PINTEREST_BOARD_NAME: ${{ vars.PINTEREST_BOARD_NAME }}
           PINTEREST_PINS_PER_RUN: ${{ vars.PINTEREST_PINS_PER_RUN }}
+          PINTEREST_GUIDE_BOARD_NAME: ${{ vars.PINTEREST_GUIDE_BOARD_NAME }}
+          PINTEREST_GUIDE_PINS_PER_RUN: ${{ vars.PINTEREST_GUIDE_PINS_PER_RUN }}
         run: python -m ebay_automation.pipeline_pinterest
       # Always commit: a token refresh rotates the refresh token, and losing
       # the new one would lock the next run out.

@@ -2,7 +2,7 @@
 """End live print-on-demand mug listings to free eBay selling-limit room.
 
 The monthly selling limit is shared with the Japan export listings, which
-actually sell. Offers are withdrawn (not deleted), and the Printify product
+have far higher market demand (sold-item data) than our mugs. Offers are withdrawn (not deleted), and the Printify product
 and eBay inventory item are kept, so any design can be republished later.
 Retired entries stay in state/pending_listings.json so research never lists
 the same design twice, and --pause stops the daily research run from

@@ -180,6 +180,19 @@ class Config:
         default_factory=lambda: _str_env("PINTEREST_BOARD_NAME", "Funny Coffee Mugs")
     )
     pinterest_pins_per_run: int = field(default_factory=lambda: _int_env("PINTEREST_PINS_PER_RUN", 2))
+    # Travel guides on our own site (pinterest_guides.py).
+    pinterest_guide_site: str = field(
+        default_factory=lambda: _str_env("PINTEREST_GUIDE_SITE", "https://slowjapantrails.com/")
+    )
+    pinterest_guide_board_name: str = field(
+        default_factory=lambda: _str_env("PINTEREST_GUIDE_BOARD_NAME", "Shikoku Travel Guides")
+    )
+    pinterest_guide_pins_per_run: int = field(
+        default_factory=lambda: _int_env("PINTEREST_GUIDE_PINS_PER_RUN", 2)
+    )
+    pinterest_guide_images_per_guide: int = field(
+        default_factory=lambda: _int_env("PINTEREST_GUIDE_IMAGES_PER_GUIDE", 6)
+    )
 
     # Japan export research (export_research.py): Japanese retail goods,
     # bought after an eBay sale, received and shipped by the seller.

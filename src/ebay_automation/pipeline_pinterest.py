@@ -8,12 +8,14 @@ exposure that doesn't depend on eBay's ranking.
 A few Pins a run rather than all at once: a steady trickle of fresh Pins
 is what Pinterest's feed favours, and it keeps us well inside API limits.
 
+Travel guides from our own site are pinned too (pinterest_guides.py).
+
 Run (GitHub Actions does this daily):
     PYTHONPATH=src python -m ebay_automation.pipeline_pinterest
 """
 from __future__ import annotations
 
-from . import ledger, pinterest_content
+from . import ledger, pinterest_content, pinterest_guides
 from .config import Config, load_config
 from .pinterest_client import PinterestApiError, PinterestClient
 
@@ -76,8 +78,12 @@ def run() -> None:
     if not configured(config):
         print("Pinterest not configured (PINTEREST_APP_ID / _APP_SECRET / _TOKEN_KEY); skipping.")
         return
-    pinned = pin_new_listings(config, PinterestClient(config))
+    client = PinterestClient(config)
+    pinned = pin_new_listings(config, client)
     print(f"Pinned {len(pinned)} listing(s).")
+    if config.pinterest_guide_site:
+        guides = pinterest_guides.pin_new_guides(config, client)
+        print(f"Pinned {len(guides)} travel guide photo(s).")
 
 
 if __name__ == "__main__":
