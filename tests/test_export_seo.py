@@ -38,3 +38,13 @@ def test_no_claims_we_cannot_keep():
 def test_ean_added_once():
     assert export_seo.with_ean({"Brand": ["X"]}, "4904810098492")["EAN"] == ["4904810098492"]
     assert export_seo.with_ean({"EAN": ["1"]}, "4904810098492")["EAN"] == ["1"]
+
+
+def test_maker_already_near_the_front_stays_put():
+    title = export_seo.seo_title("Takara Tomy Beyblade X Extreme Stadium - BX-10", {"Brand": ["TOMY"], "Type": ["Prototype"]})
+    assert title.startswith("Takara Tomy Beyblade X") and "Prototype" not in title
+
+
+def test_scale_written_differently_is_not_repeated():
+    title = export_seo.seo_title("Tomytec LV-N191A 1/64 Motor", {"Brand": ["Tomytec"], "Scale": ["1:64"]})
+    assert "1:64" not in title

@@ -27,7 +27,9 @@ SEO_VERSION = 1
 _MAKER_ASPECTS = ["Artist", "Brand", "Manufacturer"]
 _MODEL_ASPECTS = ["Model", "MPN", "Manufacturer Part Number"]
 # Specs worth the characters when the catalog title leaves them out.
-_SPEC_ASPECTS = ["Format", "Type", "Scale", "Size", "Number of Exposures", "Number in Pack", "Color", "Capacity"]
+# Not "Type": catalog values there can be odd ("Prototype" on a retail
+# Beyblade stadium) and a wrong word in a title misleads buyers.
+_SPEC_ASPECTS = ["Format", "Scale", "Size", "Number of Exposures", "Number in Pack", "Color", "Capacity"]
 _FILLERS = ["New", "Free Shipping", "from Japan", "Genuine", "Tracked"]
 _SHORT = {"Free Shipping": "F/S"}
 _NOT_A_VALUE = {"", "does not apply", "n/a", "na", "unbranded", "none", "other"}
@@ -41,8 +43,13 @@ def _first(aspects: dict[str, list[str]], names: list[str]) -> str:
     return ""
 
 
+def _norm(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
 def _contains(title: str, words: str) -> bool:
-    return words.lower() in title.lower()
+    """"1:64" is already in a title that says "1/64"."""
+    return _norm(words) in _norm(title)
 
 
 def _fits(title: str, extra: str) -> bool:
@@ -53,7 +60,9 @@ def seo_title(catalog_title: str, aspects: dict[str, list[str]]) -> str:
     """maker -> product -> specs -> fillers, at most 80 characters."""
     core = re.sub(r"\s{2,}", " ", catalog_title or "").strip()
     maker = _first(aspects, _MAKER_ASPECTS)
-    if maker and not core.lower().startswith(maker.lower()):
+    # Already near the front ("Takara Tomy Beyblade" for brand "TOMY"): leave it.
+    by_maker = bool(maker) and re.search(rf"\bby\s+{re.escape(maker)}\b", core, re.I)
+    if maker and not core.lower().startswith(maker.lower()) and (by_maker or maker.lower() not in core[:25].lower()):
         # "Modal Soul by Nujabes" -> "Nujabes Modal Soul": the maker moves to the front.
         core = re.sub(rf"\s*(?:\bby\s+)?{re.escape(maker)}\b", "", core, count=1, flags=re.I).strip(" -,/|")
         core = f"{maker} {core}".strip()
