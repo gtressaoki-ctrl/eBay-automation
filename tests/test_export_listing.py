@@ -152,7 +152,7 @@ def test_create_draft_uses_catalog_photos_and_export_policies():
     assert sku == "JX-" + JAN
     assert item["product"]["epid"] == "999"
     assert item["product"]["imageUrls"] == ["https://i.ebayimg.com/a.jpg", "https://i.ebayimg.com/b.jpg"]
-    assert item["product"]["aspects"] == {"Brand": ["Takara Tomy"]}
+    assert item["product"]["aspects"] == {"Brand": ["Takara Tomy"], "EAN": [JAN]}
     assert offer["merchantLocationKey"] == "jp-home"
     assert offer["listingPolicies"]["fulfillmentPolicyId"] == "FP-JP"
     assert offer["pricingSummary"]["price"]["value"] == "59.50"
@@ -932,3 +932,23 @@ def test_dollar_limit_keeps_trying_cheaper_candidates(monkeypatch):
     limit = EbayApiError("POST", "u", 400, "would cause you to exceed the amount you can list")
     github = _catalog_run(monkeypatch, [_cand(JAN), _cand("4549660000006")], publish_error=limit)
     assert len(github.issues) == 2 and "金額" in github.issues[0]["body"]
+
+
+def test_live_listing_is_retitled_once():
+    class ItemEbay(FakeEbay):
+        def get_inventory_item(self, sku):
+            return {"sku": sku, "locale": "en_US", "condition": "NEW",
+                    "availability": {"shipToLocationAvailability": {"quantity": 1}},
+                    "product": {"title": "Modal Soul by Nujabes (Record, 2024)", "aspects": {"Artist": ["Nujabes"]},
+                                "imageUrls": ["https://i.ebayimg.com/a.jpg"]}}
+
+    ebay = ItemEbay()
+    entry = _entry(title="Modal Soul by Nujabes (Record, 2024)")
+    export_state.save_listing(entry["sku"], entry)
+    export_listing.retitle(Config(), ebay, entry)
+    _, sku, body = next(c for c in ebay.calls if c[0] == "item")
+    assert body["product"]["title"].startswith("Nujabes Modal Soul") and "sku" not in body and "locale" not in body
+    assert body["product"]["aspects"]["EAN"] == [JAN] and body["product"]["imageUrls"]
+    assert entry["seo_version"] == 1 and entry["title_changed_at"]
+    ebay.calls.clear()
+    assert export_listing.retitle(Config(), ebay, entry) is None and not ebay.calls
