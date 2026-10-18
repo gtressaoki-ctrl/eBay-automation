@@ -35,7 +35,7 @@ from dataclasses import dataclass
 
 import requests
 
-from . import export_markets, export_research, export_state, fx, research, yahoo_shopping
+from . import export_markets, export_research, export_seo, export_state, fx, research, yahoo_shopping
 from .config import Config, load_config
 from .ebay_client import EbayApiError, EbayClient
 from .export_markets import US, Market, market_config, money, price_of
@@ -382,12 +382,15 @@ def candidate_entry(candidate: Candidate, title: str, status: str, config: Confi
 
 
 def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product: dict) -> dict:
-    title = product.get("title", "")[:80]
+    aspects = export_seo.with_ean(_aspects(product), candidate.jan)
+    title = export_seo.seo_title(product.get("title", ""), aspects)
     images = _images(product)
     if not images:
         raise ValueError(f"catalog product {product.get('epid')} has no stock photo")
     entry = candidate_entry(candidate, title, "pending_approval", config)
     entry["epid"] = product.get("epid")
+    entry["seo_version"] = export_seo.SEO_VERSION
+    entry["title_changed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     if candidate.market.key != "US":
         category = export_markets.suggest_category(title, candidate.market, config)
         if not category:
@@ -397,7 +400,7 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
         config,
         ebay,
         entry["sku"],
-        {"title": title, "epid": product.get("epid"), "imageUrls": images, "aspects": _aspects(product)},
+        {"title": title, "epid": product.get("epid"), "imageUrls": images, "aspects": aspects, "ean": [candidate.jan]},
         entry["category_id"],
         candidate.price,
     )
@@ -545,6 +548,46 @@ def reprice(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     entry.pop("competitor_price_usd", None)
     export_state.save_listing(entry["sku"], entry)
     return note
+
+
+# What an inventory item PUT takes back; the GET also returns read-only fields.
+_ITEM_FIELDS = ("availability", "condition", "conditionDescription", "packageWeightAndSize", "product")
+
+
+def retitle(config: Config, ebay: EbayClient, entry: dict) -> str | None:
+    """Rewrite a live listing's title and item specifics to the search format, once."""
+    if entry.get("seo_version", 0) >= export_seo.SEO_VERSION:
+        return None
+    item = ebay.get_inventory_item(entry["sku"])
+    product = item.get("product") or {}
+    aspects = export_seo.with_ean(product.get("aspects") or {}, entry["jan"])
+    title = export_seo.seo_title(product.get("title") or entry["title"], aspects)
+    note = f"{product.get('title', '')!r} -> {title!r}"
+    if config.dry_run:
+        return note + "（dry run・未変更）"
+    product = {**product, "title": title, "aspects": aspects, "ean": product.get("ean") or [entry["jan"]]}
+    body = {k: v for k, v in item.items() if k in _ITEM_FIELDS}
+    body["product"] = product
+    ebay.create_or_replace_inventory_item(entry["sku"], body, language=export_markets.of(entry).language)
+    entry.update(
+        title=title, seo_version=export_seo.SEO_VERSION,
+        title_changed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    )
+    export_state.save_listing(entry["sku"], entry)
+    return note
+
+
+def retitle_published(config: Config, ebay: EbayClient) -> None:
+    for sku, entry in export_state.load_listings().items():
+        if entry.get("status") != "published":
+            continue
+        try:
+            note = retitle(config, ebay, entry)
+        except (EbayApiError, requests.RequestException) as exc:
+            log.warning("Re-titling %s failed: %s", sku, getattr(exc, "body", exc))
+            continue
+        if note:
+            log.info("Re-titled %s: %s", sku, note)
 
 
 def reprice_published(config: Config, ebay: EbayClient) -> None:
@@ -736,6 +779,7 @@ def run(config: Config | None = None) -> int:
         config = dataclasses.replace(config, dry_run=True)
     if config.export_auto_publish and not config.dry_run:
         publish_pending(config, ebay, GithubClient(config))
+    retitle_published(config, ebay)
     reprice_published(config, ebay)
     if not config.dry_run:
         promote_published(config, ebay)

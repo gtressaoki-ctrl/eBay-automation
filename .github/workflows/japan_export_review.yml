@@ -1,0 +1,43 @@
+name: Japan Export Review
+
+# The listing review day, twice a month: one issue with each live export
+# listing's 30-day impressions / views / sales and what to look at.
+on:
+  schedule:
+    - cron: "13 0 1,15 * *"  # 09:13 JST on the 1st and 15th
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the review only (no issue)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Review export listings
+        env:
+          PYTHONPATH: src
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+          EXPORT_MARKETS: ${{ vars.EXPORT_MARKETS }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python -m ebay_automation.export_review
