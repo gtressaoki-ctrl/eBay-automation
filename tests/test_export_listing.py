@@ -886,3 +886,21 @@ def test_dry_run_shows_the_new_price_without_changing_it(monkeypatch):
     entry = _live()
     assert "dry run" in export_listing.reprice(Config(dry_run=True), ebay, entry)
     assert entry["price"] == 60.0 and not [c for c in ebay.calls if c[0] == "update"]
+
+
+def test_a_repriced_listing_stays_buyable_above_its_own_floor(monkeypatch):
+    # £57.91-style case: profit under the new-listing bar (300) but over the
+    # re-pricing floor (100) must not pause the listing.
+    sku = "JX-" + JAN
+    export_state.save_listing(sku, _entry(quantity=1, ebay_listing_id="1"))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    monkeypatch.setattr(export_sync.export_research, "profit_jpy", lambda *a, **k: (171, 0.02))
+    ebay = FakeEbay()
+    export_sync.sync_stock(Config(export_min_profit_jpy=300, export_reprice_min_profit_jpy=100), ebay)
+    assert export_state.load_listings()[sku]["quantity"] == 1
+    assert not [c for c in ebay.calls if c[0] == "qty"]
+
+
+def test_catalog_photos_are_requested_at_full_size():
+    product = {"image": {"imageUrl": "https://i.ebayimg.com/images/g/0RIAAOSw/s-l640.jpg"}}
+    assert export_listing._images(product) == ["https://i.ebayimg.com/images/g/0RIAAOSw/s-l1600.jpg"]

@@ -40,8 +40,14 @@ def _now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
 
 
-def source_check(entry: dict, config: Config) -> tuple[yahoo_shopping.DomesticOffer | None, int | None, str]:
-    """Current offer, profit at our price, and why we can't sell ("" if we can)."""
+def source_check(
+    entry: dict, config: Config, min_profit: int | None = None
+) -> tuple[yahoo_shopping.DomesticOffer | None, int | None, str]:
+    """Current offer, profit at our price, and why we can't sell ("" if we can).
+
+    `min_profit` defaults to EXPORT_MIN_PROFIT_JPY, the bar for a new listing.
+    """
+    floor = config.export_min_profit_jpy if min_profit is None else min_profit
     offer = yahoo_shopping.cheapest_new_offer(entry["jan"], config)
     if offer is None:
         return None, None, "仕入れ先の在庫なし"
@@ -61,8 +67,8 @@ def source_check(entry: dict, config: Config) -> tuple[yahoo_shopping.DomesticOf
     mismatch = export_research._mismatch_reason(probe, offer, config)
     if mismatch:
         return offer, profit, mismatch
-    if profit < config.export_min_profit_jpy:
-        return offer, profit, f"利益 ¥{profit:,} が下限 ¥{config.export_min_profit_jpy:,} 未満"
+    if profit < floor:
+        return offer, profit, f"利益 ¥{profit:,} が下限 ¥{floor:,} 未満"
     return offer, profit, ""
 
 
@@ -71,7 +77,10 @@ def sync_stock(config: Config, ebay: EbayClient) -> None:
         if entry.get("status") != "published":
             continue
         try:
-            offer, profit, blocked = source_check(entry, config)
+            # Re-pricing may take a live listing down to its own, lower floor
+            # (EXPORT_REPRICE_MIN_PROFIT_JPY); holding it to the new-listing
+            # bar would pause exactly the listings that were just cut to sell.
+            offer, profit, blocked = source_check(entry, config, config.export_reprice_min_profit_jpy)
         except requests.HTTPError:
             log.warning("Source check failed for %s; leaving it as is.", sku)
             continue
