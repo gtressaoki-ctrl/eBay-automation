@@ -356,5 +356,28 @@
     "epid": "26035051237",
     "ebay_offer_id": "315614720011",
     "issue_number": 78
+  },
+  "JX-4988018102519": {
+    "sku": "JX-4988018102519",
+    "market": "US",
+    "jan": "4988018102519",
+    "title": "Timely!! by Anri (Record, 2023)",
+    "status": "pending_approval",
+    "category_id": "176985",
+    "price": 69.28,
+    "currency": "USD",
+    "competitor_price": 69.78,
+    "price_basis": "www.ebay.com の日本発送最安",
+    "units_per_month": 19.35,
+    "source_price_jpy": 3806,
+    "source_url": "https://store.shopping.yahoo.co.jp/starclub/fljf-9535.html",
+    "source_name": "杏里 / Timely!!（完全生産限定盤） [レコード 12inch]",
+    "expected_profit_jpy": 390,
+    "margin": 0.037,
+    "size": "small",
+    "created_at": "2026-10-18T12:14:03+00:00",
+    "epid": "13060433377",
+    "ebay_offer_id": "316667919011",
+    "issue_number": 83
   }
 }
