@@ -904,3 +904,31 @@ def test_a_repriced_listing_stays_buyable_above_its_own_floor(monkeypatch):
 def test_catalog_photos_are_requested_at_full_size():
     product = {"image": {"imageUrl": "https://i.ebayimg.com/images/g/0RIAAOSw/s-l640.jpg"}}
     assert export_listing._images(product) == ["https://i.ebayimg.com/images/g/0RIAAOSw/s-l1600.jpg"]
+
+
+def test_waiting_drafts_go_cheapest_first_past_a_too_big_one(monkeypatch, three_currencies):
+    big, small = "JXAU-" + JAN, "JXGB-" + JAN
+    export_state.save_listing(big, _entry(sku=big, market="AU", price=545.0, currency="AUD",
+                                          status="pending_approval", ebay_offer_id="BIG"))
+    export_state.save_listing(small, _entry(sku=small, market="GB", price=59.0, currency="GBP",
+                                            status="pending_approval", ebay_offer_id="SMALL"))
+    # A cost that passes the pack-size check for both prices.
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(12000))
+    tried = []
+
+    class LimitEbay(FakeEbay):
+        def publish_offer(self, offer_id):
+            tried.append(offer_id)
+            if offer_id == "BIG":
+                raise EbayApiError("POST", "u", 400, "would cause you to exceed the amount you can list")
+            return "999"
+
+    assert export_listing.publish_pending(Config(export_min_profit_jpy=-10**6), LimitEbay(), FakeGithub()) == 1
+    assert tried == ["SMALL", "BIG"]
+    assert export_state.load_listings()[small]["status"] == "published"
+
+
+def test_dollar_limit_keeps_trying_cheaper_candidates(monkeypatch):
+    limit = EbayApiError("POST", "u", 400, "would cause you to exceed the amount you can list")
+    github = _catalog_run(monkeypatch, [_cand(JAN), _cand("4549660000006")], publish_error=limit)
+    assert len(github.issues) == 2 and "金額" in github.issues[0]["body"]
