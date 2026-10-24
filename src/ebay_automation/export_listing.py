@@ -410,6 +410,22 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
     return entry
 
 
+def _repairable(exc: EbayApiError) -> bool:
+    body = exc.body or ""
+    return "Picture policy" in body or "500 pixels" in body or ("value of" in body and "too long" in body.lower())
+
+
+def repair_item(ebay: EbayClient, entry: dict) -> None:
+    """Full-size catalog photos and item specifics within eBay's limits on a saved draft."""
+    item = ebay.get_inventory_item(entry["sku"])
+    product = dict(item.get("product") or {})
+    product["imageUrls"] = [_EBAY_IMAGE_SIZE.sub("/s-l1600.", u) for u in product.get("imageUrls") or []]
+    product["aspects"] = export_seo.with_ean(product.get("aspects") or {}, entry["jan"])
+    body = {k: v for k, v in item.items() if k in _ITEM_FIELDS}
+    body["product"] = product
+    ebay.create_or_replace_inventory_item(entry["sku"], body, language=export_markets.of(entry).language)
+
+
 def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     """Re-check the source, then publish; returns why not, or None once live."""
     from .export_sync import source_check  # export_sync builds on this module's helpers
@@ -418,7 +434,15 @@ def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
     if blocked:
         return blocked
     try:
-        listing_id = ebay.publish_offer(entry["ebay_offer_id"])
+        try:
+            listing_id = ebay.publish_offer(entry["ebay_offer_id"])
+        except EbayApiError as exc:
+            if not _repairable(exc):
+                raise
+            # Drafts made before a fix keep what eBay refused (a 640px
+            # photo, an over-long item specific): mend the item, try once more.
+            repair_item(ebay, entry)
+            listing_id = ebay.publish_offer(entry["ebay_offer_id"])
     except EbayApiError as exc:
         if exc.is_amount_limit:
             return "今月の販売上限（金額）に達しています"
