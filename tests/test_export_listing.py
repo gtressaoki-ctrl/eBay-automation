@@ -981,3 +981,32 @@ def test_rewrite_starts_from_the_catalog_title():
     export_state.save_listing(entry["sku"], entry)
     export_listing.retitle(Config(), ebay, entry)
     assert "Life Size" not in entry["title"] and entry["title"].startswith("Takara Tomy Beyblade X Extreme Stadium")
+
+
+def test_long_item_specifics_are_cut_to_ebays_limit():
+    long = "In the Mood for Love (Original Motion Picture Soundtrack) - Japanese Limited Edition"
+    out = export_seo.with_ean({"Release Title": [long]}, JAN)
+    assert len(out["Release Title"][0]) <= 65 and out["Release Title"][0].startswith("In the Mood for Love")
+
+
+def test_old_draft_with_a_small_photo_is_mended_and_published(monkeypatch):
+    sku = "JX-" + JAN
+    export_state.save_listing(sku, _entry(status="pending_approval"))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    attempts = []
+
+    class OldDraft(FakeEbay):
+        def get_inventory_item(self, sku):
+            return {"sku": sku, "condition": "NEW", "product": {
+                "title": "T", "imageUrls": ["https://i.ebayimg.com/images/g/x/s-l640.jpg"], "aspects": {}}}
+
+        def publish_offer(self, offer_id):
+            attempts.append(offer_id)
+            if len(attempts) == 1:
+                raise EbayApiError("POST", "u", 400, "does not meet eBay's Picture policy requirements")
+            return "777"
+
+    ebay = OldDraft()
+    assert export_listing.publish_draft(Config(), ebay, export_state.load_listings()[sku]) is None
+    _, _, body = next(c for c in ebay.calls if c[0] == "item")
+    assert body["product"]["imageUrls"] == ["https://i.ebayimg.com/images/g/x/s-l1600.jpg"] and len(attempts) == 2

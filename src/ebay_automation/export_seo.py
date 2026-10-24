@@ -92,9 +92,17 @@ def seo_title(catalog_title: str, aspects: dict[str, list[str]]) -> str:
     return title
 
 
+ASPECT_MAX = 65  # eBay rejects longer item-specific values ("Release Title's value ... too long")
+
+
+def _clip(value: str) -> str:
+    return value if len(value) <= ASPECT_MAX else value[:ASPECT_MAX].rsplit(" ", 1)[0].rstrip(" -,(")
+
+
 def with_ean(aspects: dict[str, list[str]], jan: str) -> dict[str, list[str]]:
-    """Item specifics plus the JAN as EAN, which buyers and the catalog match on."""
-    out = dict(aspects)
+    """Item specifics eBay accepts (values cut to 65 characters), plus the
+    JAN as EAN, which buyers and the catalog match on."""
+    out = {name: [_clip(v) for v in values] for name, values in aspects.items()}
     if jan and not out.get("EAN"):
         out["EAN"] = [jan]
     return out
