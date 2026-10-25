@@ -575,5 +575,31 @@
     "title_changed_at": "2026-10-24T12:10:16+00:00",
     "ebay_offer_id": "324876468011",
     "issue_number": 93
+  },
+  "JXAU-0088381755382": {
+    "sku": "JXAU-0088381755382",
+    "market": "AU",
+    "jan": "0088381755382",
+    "title": "Makita AS001GZ 40V Cordless Brushless Air Gun New Free Shipping from Japan",
+    "status": "pending_approval",
+    "category_id": "184653",
+    "price": 259.03,
+    "currency": "AUD",
+    "competitor_price": 259.53,
+    "price_basis": "www.ebay.com.au の日本発送最安",
+    "units_per_month": 1.61,
+    "source_price_jpy": 17200,
+    "source_url": "https://store.shopping.yahoo.co.jp/shimadougu-y/0088381755382.html",
+    "source_name": "マキタ AS001GZ 充電式エアダスタ 40Vmax 本体のみ (バッテリ・充電器別売) コードレス ◆",
+    "expected_profit_jpy": 1786,
+    "margin": 0.065,
+    "size": "medium",
+    "created_at": "2026-10-25T12:42:38+00:00",
+    "epid": "24053042461",
+    "seo_version": 3,
+    "catalog_title": "Makita AS001GZ 40V Cordless Brushless Air Gun",
+    "title_changed_at": "2026-10-25T12:42:38+00:00",
+    "ebay_offer_id": "325703694011",
+    "issue_number": 94
   }
 }
