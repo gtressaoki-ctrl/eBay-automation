@@ -136,15 +136,15 @@
     "title": "HP Designjet 713 Printhead Replacement Kit - Blue (3ED58A) New Free Shipping",
     "status": "published",
     "category_id": "51328",
-    "price": 292.3,
+    "price": 304.78,
     "currency": "AUD",
-    "competitor_price": 298.49,
+    "competitor_price": 314.21,
     "price_basis": "www.ebay.com.au の日本発送最安",
     "units_per_month": 0.96,
     "source_price_jpy": 22496,
     "source_url": "https://store.shopping.yahoo.co.jp/compmoto/0193905352807.html",
     "source_name": "日本HP 3ED58A HP713プリントヘッド交換キット 目安在庫=○",
-    "expected_profit_jpy": -498,
+    "expected_profit_jpy": 631,
     "margin": 0.094,
     "size": "medium",
     "created_at": "2026-10-11T09:42:16+00:00",
@@ -157,7 +157,7 @@
     "published_at": "2026-10-11T10:02:42+00:00",
     "checked_at": "2026-10-26T13:31:25+00:00",
     "paused_reason": "利益 ¥-498 が下限 ¥0 未満",
-    "repriced_at": "2026-10-24T11:58:29+00:00",
+    "repriced_at": "2026-10-26T14:12:13+00:00",
     "seo_version": 3,
     "title_changed_at": "2026-10-18T12:45:44+00:00"
   },
@@ -190,7 +190,7 @@
     "market": "AU",
     "jan": "4969363042262",
     "title": "Shimano SW 6000XG Spinning Reel",
-    "status": "pending_approval",
+    "status": "rejected",
     "category_id": "261030",
     "price": 648.2,
     "currency": "AUD",
@@ -207,7 +207,8 @@
     "epid": "2317082703",
     "ebay_offer_id": "310921845011",
     "issue_number": 71,
-    "issue_title": "[輸出・承認待ち] Shimano SW 6000XG Spinning Reel (JXAU-4969363042262)"
+    "issue_title": "[輸出・承認待ち] Shimano SW 6000XG Spinning Reel (JXAU-4969363042262)",
+    "paused_reason": "カタログ写真が小さすぎる（eBayの500px未満）"
   },
   "JXAU-0889296167884": {
     "sku": "JXAU-0889296167884",
@@ -392,7 +393,7 @@
     "title": "Anri Timely!! (Record, 2023) New Free Shipping from Japan Genuine Tracked",
     "status": "published",
     "category_id": "176985",
-    "price": 67.06,
+    "price": 66.12,
     "currency": "USD",
     "competitor_price": 62.8,
     "price_basis": "www.ebay.com の日本発送最安",
@@ -400,7 +401,7 @@
     "source_price_jpy": 3806,
     "source_url": "https://store.shopping.yahoo.co.jp/starclub/fljf-9535.html",
     "source_name": "杏里 / Timely!!（完全生産限定盤） [レコード 12inch]",
-    "expected_profit_jpy": 100,
+    "expected_profit_jpy": 1,
     "margin": 0.037,
     "size": "small",
     "created_at": "2026-10-18T12:14:03+00:00",
@@ -413,7 +414,7 @@
     "published_at": "2026-10-21T12:54:06+00:00",
     "seo_version": 3,
     "title_changed_at": "2026-10-21T12:54:24+00:00",
-    "repriced_at": "2026-10-24T11:58:44+00:00",
+    "repriced_at": "2026-10-26T14:12:24+00:00",
     "checked_at": "2026-10-26T13:31:34+00:00",
     "paused_reason": ""
   },
@@ -563,9 +564,9 @@
     "market": "AU",
     "jan": "4988031637449",
     "title": "Takanaka, Masayoshi An Insatiable High (Record, 2024) New Free Shipping Genuine",
-    "status": "pending_approval",
+    "status": "published",
     "category_id": "176985",
-    "price": 93.26,
+    "price": 90.95,
     "currency": "AUD",
     "competitor_price": 93.76,
     "price_basis": "www.ebay.com.au の日本発送最安",
@@ -573,7 +574,7 @@
     "source_price_jpy": 4400,
     "source_url": "https://store.shopping.yahoo.co.jp/hmv/14756047.html",
     "source_name": "高中正義 タカナカマサヨシ / AN INSATIABLE HIGH (再プレス / クリア・イエロー・ヴァイナル仕様 / 180グラム重量盤",
-    "expected_profit_jpy": 1781,
+    "expected_profit_jpy": 1572,
     "margin": 0.179,
     "size": "small",
     "created_at": "2026-10-24T12:10:16+00:00",
@@ -583,7 +584,12 @@
     "title_changed_at": "2026-10-24T12:10:16+00:00",
     "ebay_offer_id": "324876468011",
     "issue_number": 93,
-    "issue_title": "[輸出・枠待ち] Takanaka, Masayoshi An Insatiable High (Record, 2024) New Fr (JXAU-4988031637449)"
+    "issue_title": "[輸出・枠待ち] Takanaka, Masayoshi An Insatiable High (Record, 2024) New Fr (JXAU-4988031637449)",
+    "quantity": 1,
+    "ebay_listing_id": "860085696336",
+    "listing_url": "https://www.ebay.com.au/itm/860085696336",
+    "published_at": "2026-10-26T14:11:23+00:00",
+    "repriced_at": "2026-10-26T14:12:31+00:00"
   },
   "JXAU-0088381755382": {
     "sku": "JXAU-0088381755382",
@@ -636,7 +642,8 @@
     "catalog_title": "Modal Soul by Nujabes (Record, 2024)",
     "title_changed_at": "2026-10-26T10:52:38+00:00",
     "ebay_offer_id": "326575115011",
-    "issue_number": 96
+    "issue_number": 96,
+    "issue_title": "[輸出・枠待ち] Nujabes Modal Soul (Record, 2024) New Free Shipping from Jap (JXGB-4997184188296)"
   },
   "JXAU-4997184188296": {
     "sku": "JXAU-4997184188296",
@@ -662,6 +669,7 @@
     "catalog_title": "Modal Soul by Nujabes (Record, 2024)",
     "title_changed_at": "2026-10-26T10:52:42+00:00",
     "ebay_offer_id": "326575152011",
-    "issue_number": 97
+    "issue_number": 97,
+    "issue_title": "[輸出・枠待ち] Nujabes Modal Soul (Record, 2024) New Free Shipping from Jap (JXAU-4997184188296)"
   }
 }
