@@ -316,7 +316,7 @@ class Config:
     # matters more than the margin on them.
     export_reprice_undercut_pct: float = field(default_factory=lambda: _float_env("EXPORT_REPRICE_UNDERCUT_PCT", 3.0))
     export_reprice_min_profit_jpy: int = field(
-        default_factory=lambda: _int_env("EXPORT_REPRICE_MIN_PROFIT_JPY", 100)
+        default_factory=lambda: _int_env("EXPORT_REPRICE_MIN_PROFIT_JPY", 0)
     )
     # How far under the cheapest Japan-shipped competitor to price.
     export_undercut_usd_cents: int = field(default_factory=lambda: _int_env("EXPORT_UNDERCUT_USD_CENTS", 50))

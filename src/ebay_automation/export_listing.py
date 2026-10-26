@@ -410,6 +410,10 @@ def create_draft(config: Config, ebay: EbayClient, candidate: Candidate, product
     return entry
 
 
+# The catalog's photo is under eBay's 500px even at full size: no draft fix helps.
+NO_USABLE_PHOTO = "カタログ写真が小さすぎる（eBayの500px未満）"
+
+
 def _repairable(exc: EbayApiError) -> bool:
     body = exc.body or ""
     return "Picture policy" in body or "500 pixels" in body or ("value of" in body and "too long" in body.lower())
@@ -442,7 +446,12 @@ def publish_draft(config: Config, ebay: EbayClient, entry: dict) -> str | None:
             # Drafts made before a fix keep what eBay refused (a 640px
             # photo, an over-long item specific): mend the item, try once more.
             repair_item(ebay, entry)
-            listing_id = ebay.publish_offer(entry["ebay_offer_id"])
+            try:
+                listing_id = ebay.publish_offer(entry["ebay_offer_id"])
+            except EbayApiError as again:
+                if "Picture policy" in (again.body or "") or "500 pixels" in (again.body or ""):
+                    return NO_USABLE_PHOTO
+                raise
     except EbayApiError as exc:
         if exc.is_amount_limit:
             return "今月の販売上限（金額）に達しています"
@@ -799,6 +808,15 @@ def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> i
     # limit does not stop the smaller ones behind it from going live.
     for sku, entry in sorted(waiting, key=usd):
         failure = publish_draft(config, ebay, entry)
+        if failure == NO_USABLE_PHOTO:
+            entry["status"] = "rejected"
+            entry["paused_reason"] = failure
+            export_state.save_listing(sku, entry)
+            if entry.get("issue_number"):
+                github.comment_issue(entry["issue_number"], f"見送ります: {failure}。今後この商品は候補に出しません。")
+                github.close_issue(entry["issue_number"], "not_planned")
+            log.info("Dropped draft %s: %s", sku, failure)
+            continue
         if failure:
             log.info("Draft %s still not published: %s", sku, failure)
             # "承認待ち" read as if the seller had to do something; a draft that
