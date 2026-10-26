@@ -182,7 +182,8 @@
     "created_at": "2026-10-12T16:52:25+00:00",
     "epid": "8050978106",
     "ebay_offer_id": "309609082011",
-    "issue_number": 67
+    "issue_number": 67,
+    "issue_title": "[輸出・枠待ち] Nikon Monarch M7 8X30 Binoculars (JXAU-4580130921650)"
   },
   "JXAU-4969363042262": {
     "sku": "JXAU-4969363042262",
@@ -205,7 +206,8 @@
     "created_at": "2026-10-13T12:53:02+00:00",
     "epid": "2317082703",
     "ebay_offer_id": "310921845011",
-    "issue_number": 71
+    "issue_number": 71,
+    "issue_title": "[輸出・承認待ち] Shimano SW 6000XG Spinning Reel (JXAU-4969363042262)"
   },
   "JXAU-0889296167884": {
     "sku": "JXAU-0889296167884",
@@ -228,7 +230,8 @@
     "created_at": "2026-10-13T15:13:53+00:00",
     "epid": "691342783",
     "ebay_offer_id": "311074694011",
-    "issue_number": 72
+    "issue_number": 72,
+    "issue_title": "[輸出・枠待ち] HP 729 (F9J81A) Printhead Replacement Kit (JXAU-0889296167884)"
   },
   "JXGB-4988018102519": {
     "sku": "JXGB-4988018102519",
@@ -379,7 +382,8 @@
     "created_at": "2026-10-17T11:44:32+00:00",
     "epid": "26035051237",
     "ebay_offer_id": "315614720011",
-    "issue_number": 78
+    "issue_number": 78,
+    "issue_title": "[輸出・枠待ち] Tomytec LV-N191A 1/64 Hanamidai Motor Big Wide - 301356 (JXAU-4543736301356)"
   },
   "JX-4988018102519": {
     "sku": "JX-4988018102519",
@@ -470,7 +474,8 @@
     "catalog_title": "KANEHIDE BIO Okinawa Fucoidan - 213g",
     "title_changed_at": "2026-10-21T13:08:43+00:00",
     "ebay_offer_id": "320248493011",
-    "issue_number": 88
+    "issue_number": 88,
+    "issue_title": "[輸出・枠待ち] KANEHIDE BIO Okinawa Fucoidan - 213g New Free Shipping from  (JXGB-4958349250135)"
   },
   "JXGB-4988031900918": {
     "sku": "JXGB-4988031900918",
@@ -496,7 +501,8 @@
     "catalog_title": "In the Mood for Love (Original Soundtrack) -Japanese Limited Edition by Various (Record, 2026)",
     "title_changed_at": "2026-10-23T12:48:38+00:00",
     "ebay_offer_id": "323169892011",
-    "issue_number": 89
+    "issue_number": 89,
+    "issue_title": "[輸出・枠待ち] Various In the Mood for Love (Original Soundtrack) -Japanese (JXGB-4988031900918)"
   },
   "JXAU-4988031900918": {
     "sku": "JXAU-4988031900918",
@@ -522,7 +528,8 @@
     "catalog_title": "In the Mood for Love (Original Soundtrack) -Japanese Limited Edition by Various (Record, 2026)",
     "title_changed_at": "2026-10-23T12:48:45+00:00",
     "ebay_offer_id": "323170167011",
-    "issue_number": 90
+    "issue_number": 90,
+    "issue_title": "[輸出・枠待ち] Various In the Mood for Love (Original Soundtrack) -Japanese (JXAU-4988031900918)"
   },
   "JXGB-4988031637449": {
     "sku": "JXGB-4988031637449",
@@ -548,7 +555,8 @@
     "catalog_title": "An Insatiable High by Takanaka, Masayoshi (Record, 2024)",
     "title_changed_at": "2026-10-24T12:10:11+00:00",
     "ebay_offer_id": "324876403011",
-    "issue_number": 92
+    "issue_number": 92,
+    "issue_title": "[輸出・枠待ち] Takanaka, Masayoshi An Insatiable High (Record, 2024) New Fr (JXGB-4988031637449)"
   },
   "JXAU-4988031637449": {
     "sku": "JXAU-4988031637449",
@@ -574,7 +582,8 @@
     "catalog_title": "An Insatiable High by Takanaka, Masayoshi (Record, 2024)",
     "title_changed_at": "2026-10-24T12:10:16+00:00",
     "ebay_offer_id": "324876468011",
-    "issue_number": 93
+    "issue_number": 93,
+    "issue_title": "[輸出・枠待ち] Takanaka, Masayoshi An Insatiable High (Record, 2024) New Fr (JXAU-4988031637449)"
   },
   "JXAU-0088381755382": {
     "sku": "JXAU-0088381755382",
@@ -600,6 +609,59 @@
     "catalog_title": "Makita AS001GZ 40V Cordless Brushless Air Gun",
     "title_changed_at": "2026-10-25T12:42:38+00:00",
     "ebay_offer_id": "325703694011",
-    "issue_number": 94
+    "issue_number": 94,
+    "issue_title": "[輸出・枠待ち] Makita AS001GZ 40V Cordless Brushless Air Gun New Free Shipp (JXAU-0088381755382)"
+  },
+  "JXGB-4997184188296": {
+    "sku": "JXGB-4997184188296",
+    "market": "GB",
+    "jan": "4997184188296",
+    "title": "Nujabes Modal Soul (Record, 2024) New Free Shipping from Japan Genuine Tracked",
+    "status": "pending_approval",
+    "category_id": "176985",
+    "price": 70.38,
+    "currency": "GBP",
+    "competitor_price": 70.88,
+    "price_basis": "www.ebay.co.uk の日本発送最安",
+    "units_per_month": 23.89,
+    "source_price_jpy": 4950,
+    "source_url": "https://store.shopping.yahoo.co.jp/hmv/15226644.html",
+    "source_name": "Nujabes ヌジャベス / Modal Soul (2枚組アナログレコード)  〔LP〕",
+    "expected_profit_jpy": 4917,
+    "margin": 0.344,
+    "size": "small",
+    "created_at": "2026-10-26T10:52:38+00:00",
+    "epid": "15071192459",
+    "seo_version": 3,
+    "catalog_title": "Modal Soul by Nujabes (Record, 2024)",
+    "title_changed_at": "2026-10-26T10:52:38+00:00",
+    "ebay_offer_id": "326575115011",
+    "issue_number": 96
+  },
+  "JXAU-4997184188296": {
+    "sku": "JXAU-4997184188296",
+    "market": "AU",
+    "jan": "4997184188296",
+    "title": "Nujabes Modal Soul (Record, 2024) New Free Shipping from Japan Genuine Tracked",
+    "status": "pending_approval",
+    "category_id": "176985",
+    "price": 130.83,
+    "currency": "AUD",
+    "competitor_price": 131.33,
+    "price_basis": "www.ebay.com.au の日本発送最安",
+    "units_per_month": 23.89,
+    "source_price_jpy": 4950,
+    "source_url": "https://store.shopping.yahoo.co.jp/hmv/15226644.html",
+    "source_name": "Nujabes ヌジャベス / Modal Soul (2枚組アナログレコード)  〔LP〕",
+    "expected_profit_jpy": 4632,
+    "margin": 0.331,
+    "size": "small",
+    "created_at": "2026-10-26T10:52:42+00:00",
+    "epid": "15071192459",
+    "seo_version": 3,
+    "catalog_title": "Modal Soul by Nujabes (Record, 2024)",
+    "title_changed_at": "2026-10-26T10:52:42+00:00",
+    "ebay_offer_id": "326575152011",
+    "issue_number": 97
   }
 }
