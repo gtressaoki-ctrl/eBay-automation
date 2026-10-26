@@ -90,6 +90,9 @@ class FakeGithub:
     def close_issue(self, n, reason="completed"):
         self.closed.append(reason)
 
+    def set_issue_title(self, n, title):
+        self.titles = getattr(self, "titles", []) + [(n, title)]
+
     def create_issue(self, title, body, labels=None):
         self.issues.append({"title": title, "body": body, "labels": labels})
         return {"number": 7}
@@ -1010,3 +1013,15 @@ def test_old_draft_with_a_small_photo_is_mended_and_published(monkeypatch):
     assert export_listing.publish_draft(Config(), ebay, export_state.load_listings()[sku]) is None
     _, _, body = next(c for c in ebay.calls if c[0] == "item")
     assert body["product"]["imageUrls"] == ["https://i.ebayimg.com/images/g/x/s-l1600.jpg"] and len(attempts) == 2
+
+
+def test_drafts_waiting_for_the_limit_say_so(monkeypatch):
+    sku = "JX-" + JAN
+    export_state.save_listing(sku, _entry(status="pending_approval", issue_number=88))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+    ebay = FakeEbay()
+    ebay.publish_error = EbayApiError("POST", "u", 400, "would cause you to exceed the amount you can list")
+    github = FakeGithub()
+    export_listing.publish_pending(Config(), ebay, github)
+    export_listing.publish_pending(Config(), ebay, github)
+    assert len(github.titles) == 1 and github.titles[0][1].startswith("[輸出・枠待ち]")

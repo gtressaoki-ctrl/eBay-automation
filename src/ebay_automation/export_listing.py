@@ -770,6 +770,17 @@ def live_markets(config: Config, ebay: EbayClient) -> list[Market]:
     return live
 
 
+def issue_title(entry: dict, failure: str | None) -> str:
+    """出品済み / 枠待ち (goes live by itself once the selling limit has room) / 承認待ち."""
+    if not failure:
+        tag = "出品済み"
+    elif "販売上限" in failure:
+        tag = "枠待ち"
+    else:
+        tag = "承認待ち"
+    return f"[輸出・{tag}] {entry['title'][:60]} ({entry['sku']})"
+
+
 def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> int:
     """Publish drafts still waiting on /approve once auto-publish is on.
 
@@ -790,6 +801,16 @@ def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> i
         failure = publish_draft(config, ebay, entry)
         if failure:
             log.info("Draft %s still not published: %s", sku, failure)
+            # "承認待ち" read as if the seller had to do something; a draft that
+            # only waits for the selling limit says so.
+            waiting = issue_title(entry, failure)
+            if entry.get("issue_number") and entry.get("issue_title") != waiting:
+                try:
+                    github.set_issue_title(entry["issue_number"], waiting)
+                    entry["issue_title"] = waiting
+                    export_state.save_listing(sku, entry)
+                except requests.RequestException:
+                    log.warning("Could not retitle issue #%s", entry["issue_number"])
             continue
         published += 1
         if entry.get("issue_number"):
@@ -892,11 +913,7 @@ def run(config: Config | None = None) -> int:
         if failure and failure != "approval" and "販売上限（出品数）" in failure:
             stop_reason = failure
         issue = github.create_issue(
-            title=(
-                f"[輸出・出品済み] {entry['title'][:60]} ({entry['sku']})"
-                if not failure
-                else f"[輸出・承認待ち] {entry['title'][:60]} ({entry['sku']})"
-            ),
+            title=issue_title(entry, failure),
             body=issue_body(entry, (_images(product) or [None])[0])
             + ("" if failure in (None, "approval") else f"\n自動公開できませんでした: {failure}\n"),
             labels=["export-approval", "ebay-automation"],

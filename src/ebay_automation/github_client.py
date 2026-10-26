@@ -37,6 +37,12 @@ class GithubClient:
         resp.raise_for_status()
         return resp.json()
 
+    def set_issue_title(self, issue_number: int, title: str) -> dict:
+        url = f"{_API_BASE}/repos/{self.config.github_repository}/issues/{issue_number}"
+        resp = requests.patch(url, headers=self._headers(), json={"title": title}, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+
     def close_issue(self, issue_number: int, state_reason: str = "completed") -> dict:
         url = f"{_API_BASE}/repos/{self.config.github_repository}/issues/{issue_number}"
         resp = requests.patch(
