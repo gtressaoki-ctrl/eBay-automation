@@ -1025,3 +1025,20 @@ def test_drafts_waiting_for_the_limit_say_so(monkeypatch):
     export_listing.publish_pending(Config(), ebay, github)
     export_listing.publish_pending(Config(), ebay, github)
     assert len(github.titles) == 1 and github.titles[0][1].startswith("[輸出・枠待ち]")
+
+
+def test_a_draft_whose_photo_stays_too_small_is_dropped(monkeypatch):
+    sku = "JX-" + JAN
+    export_state.save_listing(sku, _entry(status="pending_approval", issue_number=71))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(2500))
+
+    class TinyPhoto(FakeEbay):
+        def get_inventory_item(self, sku):
+            return {"product": {"title": "Reel", "imageUrls": ["https://i.ebayimg.com/g/x/s-l640.jpg"], "aspects": {}}}
+
+        def publish_offer(self, offer_id):
+            raise EbayApiError("POST", "u", 400, "at least 500 pixels on the longest side")
+
+    github = FakeGithub()
+    export_listing.publish_pending(Config(), TinyPhoto(), github)
+    assert export_state.load_listings()[sku]["status"] == "rejected" and github.closed == ["not_planned"]
