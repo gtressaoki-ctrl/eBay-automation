@@ -72,8 +72,10 @@ def sc_standing_tips(pin, top):
     x0 = 540
     for i, t in enumerate(pin["tips"]):
         yy = top + 60 + i * 166
-        out.append(cross((x0 + 10, yy - 6), r=10))
-        out.append(text(x0 + 32, yy, f"MISTAKE {i + 1:02d}", size=14, family=MONO, fill=TERRA, ls=2))
+        good = pin.get("mode") == "tips"
+        out.append((check if good else cross)((x0 + 10, yy - 6), r=10))
+        out.append(text(x0 + 32, yy, f"{'TIP' if good else 'MISTAKE'} {i + 1:02d}", size=14, family=MONO,
+                        fill=SAGE if good else TERRA, ls=2))
         words = t.split()
         out.append(text(x0, yy + 48, " ".join(words[:3]), size=36, family=SERIF, fill=INK))
         if len(words) > 3:

@@ -13,7 +13,7 @@ The visual system is **Plumb Line**, described in [`DESIGN_PHILOSOPHY.md`](DESIG
 |---|---|
 | `images/NN-slug.png` | The 30 pin images, ready to upload |
 | `contact-sheet.png` | All 30 at a glance |
-| `batch2-sheet.png` … `batch5-sheet.png` | Batch 2 (31–40, chairs and desk setup), batch 3 (41–50, quick fixes and accessories) batch 4 (51–60, laptops, keyboards, sit-stand rhythm, gifts) and batch 5 (61–70, fresh designs for the best-performing topics) |
+| `batch2-sheet.png` … `batch6-sheet.png` | Batch 2 (31–40, chairs and desk setup), batch 3 (41–50, quick fixes and accessories) batch 4 (51–60, laptops, keyboards, sit-stand rhythm, gifts) batch 5 (61–70, fresh designs for the best-performing topics) and batch 6 (71–80, descriptions that lead with the product) |
 | `pinterest-bulk-batchN.csv` | Pinterest bulk-create CSV per batch: public image URLs, board, link and publish time (two a day; Pinterest reads the time in the account's time zone) |
 | `pins.csv` | Per pin: title, description, alt text, keyword, board, link (primary affiliate) and other products |
 | `AFFILIATES.md` | Product table per pin (auto-generated) |
@@ -55,3 +55,5 @@ Post A and B on different days, into the same board, with the same title and des
 - saves per impression.
 
 Then roll the winning style out to all 30 pins.
+
+**Result (Oct 27):** the B copies got 18–34 impressions against 364–1,204 for A. B reused A's title, description and link, so Pinterest largely treated it as a duplicate. The test did not isolate design, and A stays the house style. Future tests need their own title and description per variant.

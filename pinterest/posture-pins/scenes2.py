@@ -33,8 +33,14 @@ def sc_chair_annot(pin, top):
     if zoom:
         out.append(f'<defs><clipPath id="artclip"><rect x="{L}" y="{top + 150}" width="{R - L}" height="{ART_BOTTOM - top - 150}"/></clipPath></defs><g clip-path="url(#artclip)">')
     out.append(floor(L, R, floor_y))
-    out.append(chair_side(hip, u, floor_y, lumbar=pin.get("lumbar_col", TERRA_SOFT), arm=pin.get("arm", True),
-                          recline=pin.get("recline", 8), back_h=3.2))
+    if pin.get("chair") == "dining":
+        out.append(_dining_chair(hip, u, floor_y))
+        sy = hip[1] + 0.42 * u
+        out.append(rect(hip[0] - 0.7 * u, sy - 0.22 * u, 1.9 * u, 0.24 * u, rx=0.1 * u, fill=SAGE_SOFT, stroke=SAGE, sw=1.6))
+        out.append(f'<ellipse cx="{fmt(hip[0] - 0.6 * u)}" cy="{fmt(hip[1] - 0.8 * u)}" rx="{fmt(0.2 * u)}" ry="{fmt(0.42 * u)}" fill="{TERRA}"/>')
+    else:
+        out.append(chair_side(hip, u, floor_y, lumbar=pin.get("lumbar_col", TERRA_SOFT), arm=pin.get("arm", True),
+                              recline=pin.get("recline", 8), back_h=3.2))
     s, j = seated(hip, u, pose(SIT, **dict(dict(thoracic=-4, neck=3, uarm=180, farm=92), **pin.get("pose", {}))))
     out.append(s)
     a = _chair_anchors(hip, u, floor_y, j)
@@ -110,6 +116,21 @@ def _gaming_chair(hip, u, floor_y):
     return "".join(out)
 
 
+def _dining_chair(hip, u, floor_y):
+    """Plain four-legged dining chair in elevation (back on the left)."""
+    out = []
+    sy = hip[1] + 0.42 * u
+    x0, x1 = hip[0] - 0.75 * u, hip[0] + 1.25 * u
+    out.append(rect(x0, sy, x1 - x0, 0.16 * u, rx=3, fill=PAPER, stroke=LINE, sw=2))
+    out.append(line((x0 + 0.08 * u, sy + 0.16 * u), (x0 + 0.08 * u, floor_y), sw=0.1 * u))
+    out.append(line((x1 - 0.1 * u, sy + 0.16 * u), (x1 - 0.1 * u, floor_y), sw=0.1 * u))
+    out.append(line((x0 + 0.08 * u, sy + 0.9 * u), (x1 - 0.1 * u, sy + 0.9 * u), sw=1.6))
+    out.append(line((x0 + 0.04 * u, sy), (x0 - 0.06 * u, sy - 2.3 * u), sw=0.1 * u))
+    for k in (0.7, 1.4, 2.1):
+        out.append(line((x0 - 0.0 * u - k * 0.04 * u, sy - k * u), (x0 + 0.2 * u - k * 0.04 * u, sy - k * u), sw=0.08 * u))
+    return "".join(out)
+
+
 def sc_chair_compare(pin, top):
     out = []
     u = 78
@@ -128,7 +149,9 @@ def sc_chair_compare(pin, top):
         y = hip1[1] - 0.6 * u - k * 0.45 * u
         out.append(line((hip1[0] - 1.0 * u, y), (hip1[0] - 0.65 * u, y - 0.12 * u), sw=0.9, extra='opacity=".5"'))
     hip2 = (mid + 30 + 1.8 * u, floor_y - 2.1 * u)
-    if pin.get("right") == "basic":
+    if pin.get("right") == "dining":
+        out.append(_dining_chair(hip2, u, floor_y))
+    elif pin.get("right") == "basic":
         out.append(chair_side(hip2, u, floor_y, recline=1, back_h=2.1))
     else:
         out.append(_gaming_chair(hip2, u, floor_y))
