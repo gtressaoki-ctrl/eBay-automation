@@ -57,7 +57,7 @@
     "ebay_listing_id": "860029711234",
     "listing_url": "https://www.ebay.com/itm/860029711234",
     "published_at": "2026-10-10T13:30:02+00:00",
-    "checked_at": "2026-10-28T01:40:41+00:00",
+    "checked_at": "2026-10-28T08:58:24+00:00",
     "paused_reason": "",
     "price": 76.63,
     "currency": "USD",
@@ -87,7 +87,7 @@
     "ebay_listing_id": "860031034007",
     "listing_url": "https://www.ebay.com/itm/860031034007",
     "published_at": "2026-10-10T23:00:16+00:00",
-    "checked_at": "2026-10-28T01:40:42+00:00",
+    "checked_at": "2026-10-28T08:58:25+00:00",
     "paused_reason": "",
     "price": 95.13,
     "currency": "USD",
@@ -260,7 +260,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860044329036",
     "published_at": "2026-10-14T13:02:51+00:00",
     "issue_number": 74,
-    "checked_at": "2026-10-28T01:40:48+00:00",
+    "checked_at": "2026-10-28T08:58:30+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-21T12:54:39+00:00",
     "seo_version": 3,
@@ -295,7 +295,7 @@
     "seo_version": 3,
     "title_changed_at": "2026-10-23T12:35:48+00:00",
     "repriced_at": "2026-10-24T11:58:35+00:00",
-    "checked_at": "2026-10-28T01:40:50+00:00",
+    "checked_at": "2026-10-28T08:58:32+00:00",
     "paused_reason": ""
   },
   "JXGB-4902370534337": {
@@ -324,7 +324,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860050797636",
     "published_at": "2026-10-16T12:31:26+00:00",
     "issue_number": 76,
-    "checked_at": "2026-10-28T01:40:51+00:00",
+    "checked_at": "2026-10-28T08:58:33+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-27T13:10:20+00:00",
     "seo_version": 3,
@@ -356,7 +356,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860054178514",
     "published_at": "2026-10-17T11:44:29+00:00",
     "issue_number": 77,
-    "checked_at": "2026-10-28T01:40:53+00:00",
+    "checked_at": "2026-10-28T08:58:34+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-18T11:39:07+00:00",
     "seo_version": 3,
@@ -415,7 +415,7 @@
     "seo_version": 3,
     "title_changed_at": "2026-10-21T12:54:24+00:00",
     "repriced_at": "2026-10-26T14:12:24+00:00",
-    "checked_at": "2026-10-28T01:40:54+00:00",
+    "checked_at": "2026-10-28T08:58:36+00:00",
     "paused_reason": ""
   },
   "JXAU-4958349250135": {
@@ -448,7 +448,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860078999516",
     "published_at": "2026-10-24T11:57:55+00:00",
     "repriced_at": "2026-10-24T11:58:48+00:00",
-    "checked_at": "2026-10-28T01:40:56+00:00",
+    "checked_at": "2026-10-28T08:58:38+00:00",
     "paused_reason": ""
   },
   "JXGB-4958349250135": {
@@ -590,7 +590,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860085696336",
     "published_at": "2026-10-26T14:11:23+00:00",
     "repriced_at": "2026-10-26T14:12:31+00:00",
-    "checked_at": "2026-10-28T01:40:57+00:00",
+    "checked_at": "2026-10-28T08:58:39+00:00",
     "paused_reason": ""
   },
   "JXAU-0088381755382": {
