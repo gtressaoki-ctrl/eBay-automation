@@ -1,8 +1,9 @@
 name: Pinterest pins
 
+# Manual only: the app has Trial access (sandbox Pins, visible only to us)
+# and the Standard access review was not pursued. Restore the schedule
+# if Standard access is granted.
 on:
-  schedule:
-    - cron: "30 1 * * *"  # after the daily research run publishes new listings
   workflow_dispatch: {}
 
 concurrency:
