@@ -931,6 +931,26 @@ def test_waiting_drafts_go_cheapest_first_past_a_too_big_one(monkeypatch, three_
     assert export_state.load_listings()[small]["status"] == "published"
 
 
+def test_waiting_drafts_that_earn_more_per_dollar_of_limit_go_first(monkeypatch, three_currencies):
+    thin, rich = "JXAU-" + JAN, "JXGB-" + JAN
+    export_state.save_listing(thin, _entry(sku=thin, market="AU", price=59.0, currency="AUD",
+                                           status="pending_approval", ebay_offer_id="THIN",
+                                           expected_profit_jpy=300))
+    export_state.save_listing(rich, _entry(sku=rich, market="GB", price=87.0, currency="GBP",
+                                           status="pending_approval", ebay_offer_id="RICH",
+                                           expected_profit_jpy=5000))
+    monkeypatch.setattr(yahoo_shopping, "cheapest_new_offer", lambda jan, config: _offer(12000))
+    tried = []
+
+    class LimitEbay(FakeEbay):
+        def publish_offer(self, offer_id):
+            tried.append(offer_id)
+            raise EbayApiError("POST", "u", 400, "would cause you to exceed the amount you can list")
+
+    export_listing.publish_pending(Config(export_min_profit_jpy=-10**6), LimitEbay(), FakeGithub())
+    assert tried[0] == "RICH"
+
+
 def test_dollar_limit_keeps_trying_cheaper_candidates(monkeypatch):
     limit = EbayApiError("POST", "u", 400, "would cause you to exceed the amount you can list")
     github = _catalog_run(monkeypatch, [_cand(JAN), _cand("4549660000006")], publish_error=limit)

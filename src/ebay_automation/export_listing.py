@@ -804,9 +804,15 @@ def publish_pending(config: Config, ebay: EbayClient, github: GithubClient) -> i
         price, currency = price_of(item[1])
         return export_markets.convert(price, currency, "USD", config) or price
 
-    # Cheapest first, and a draft too big for what is left of the monthly
-    # limit does not stop the smaller ones behind it from going live.
-    for sku, entry in sorted(waiting, key=usd):
+    def profit_per_usd(item: tuple[str, dict]) -> tuple[float, float]:
+        cost = usd(item)
+        return (item[1].get("expected_profit_jpy") or 0) / max(cost, 1), -cost
+
+    # The selling limit (amount) is the scarce resource, so the drafts that
+    # earn the most per dollar of it go first; a draft too big for what is
+    # left of the limit does not stop the smaller ones behind it. Ties go
+    # cheapest first.
+    for sku, entry in sorted(waiting, key=profit_per_usd, reverse=True):
         failure = publish_draft(config, ebay, entry)
         if failure == NO_USABLE_PHOTO:
             entry["status"] = "rejected"
