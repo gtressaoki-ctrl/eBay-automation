@@ -134,7 +134,7 @@
     "market": "AU",
     "jan": "0193905352807",
     "title": "HP Designjet 713 Printhead Replacement Kit - Blue (3ED58A) New Free Shipping",
-    "status": "published",
+    "status": "withdrawn",
     "category_id": "51328",
     "price": 304.78,
     "currency": "AUD",
@@ -156,10 +156,11 @@
     "listing_url": "https://www.ebay.com.au/itm/860032543599",
     "published_at": "2026-10-11T10:02:42+00:00",
     "checked_at": "2026-10-26T13:31:25+00:00",
-    "paused_reason": "利益 ¥-498 が下限 ¥0 未満",
+    "paused_reason": "ended to free selling-limit room for higher-profit drafts",
     "repriced_at": "2026-10-26T14:12:13+00:00",
     "seo_version": 3,
-    "title_changed_at": "2026-10-18T12:45:44+00:00"
+    "title_changed_at": "2026-10-18T12:45:44+00:00",
+    "withdrawn_at": "2026-11-05T15:22:16+00:00"
   },
   "JXAU-4580130921650": {
     "sku": "JXAU-4580130921650",
@@ -391,7 +392,7 @@
     "market": "US",
     "jan": "4988018102519",
     "title": "Anri Timely!! (Record, 2023) New Free Shipping from Japan Genuine Tracked",
-    "status": "published",
+    "status": "withdrawn",
     "category_id": "176985",
     "price": 65.6,
     "currency": "USD",
@@ -416,14 +417,15 @@
     "title_changed_at": "2026-10-21T12:54:24+00:00",
     "repriced_at": "2026-10-30T14:04:56+00:00",
     "checked_at": "2026-11-03T10:01:57+00:00",
-    "paused_reason": "利益 ¥-6 が下限 ¥0 未満"
+    "paused_reason": "ended to free selling-limit room for higher-profit drafts",
+    "withdrawn_at": "2026-11-05T15:22:16+00:00"
   },
   "JXAU-4958349250135": {
     "sku": "JXAU-4958349250135",
     "market": "AU",
     "jan": "4958349250135",
     "title": "KANEHIDE BIO Okinawa Fucoidan - 213g New Free Shipping from Japan Genuine",
-    "status": "published",
+    "status": "withdrawn",
     "category_id": "180954",
     "price": 111.92,
     "currency": "AUD",
@@ -449,7 +451,8 @@
     "published_at": "2026-10-24T11:57:55+00:00",
     "repriced_at": "2026-10-24T11:58:48+00:00",
     "checked_at": "2026-11-05T12:43:38+00:00",
-    "paused_reason": ""
+    "paused_reason": "ended to free selling-limit room for higher-profit drafts",
+    "withdrawn_at": "2026-11-05T15:22:16+00:00"
   },
   "JXGB-4958349250135": {
     "sku": "JXGB-4958349250135",
