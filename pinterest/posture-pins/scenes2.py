@@ -152,7 +152,7 @@ def sc_chair_compare(pin, top):
     if pin.get("right") == "dining":
         out.append(_dining_chair(hip2, u, floor_y))
     elif pin.get("right") == "basic":
-        out.append(chair_side(hip2, u, floor_y, recline=1, back_h=2.1))
+        out.append(chair_side(hip2, u, floor_y, recline=1, back_h=2.1, lumbar=pin.get("right_lumbar")))
     else:
         out.append(_gaming_chair(hip2, u, floor_y))
     y0 = floor_y + 60
