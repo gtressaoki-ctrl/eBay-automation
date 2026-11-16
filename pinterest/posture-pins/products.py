@@ -59,6 +59,22 @@ PRODUCTS = {
 }
 
 
+# Per-category tracking IDs so Amazon reports show which kind of pin earns.
+# Fill in only with IDs that exist under Associates -> Manage Tracking IDs;
+# an unknown tag may not be credited, so anything missing falls back to AMAZON_TAG.
+CATEGORY_TAGS = {}
+CATEGORY = {
+    "sihoo_m57": "chair", "steelcase_s1": "chair", "lumbar_ec": "chair", "seat_ec": "chair", "footrest_ec": "chair",
+    "flexispot_e7": "stand", "flexispot_conv": "stand", "topo_mat": "stand",
+}
+
+
+def pin_tag(pin):
+    """Tracking ID for a pin: gift guides first, then the primary product's category, else accessories."""
+    cat = "gift" if "gift" in pin["keyword"] or "stocking" in pin["keyword"] else CATEGORY.get(pin["products"][0], "acc")
+    return CATEGORY_TAGS.get(cat, AMAZON_TAG)
+
+
 def product_url(key, tag=None):
     p = PRODUCTS[key]
     if "asin" in p:

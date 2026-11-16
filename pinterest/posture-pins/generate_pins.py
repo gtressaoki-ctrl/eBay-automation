@@ -19,7 +19,7 @@ from PIL import Image
 
 from plate import H, W, plate_html, render_all
 from svgkit import TERRA
-from products import AMAZON_TAG, AMAZON_TAG_A, AMAZON_TAG_B, PRODUCTS, product_url
+from products import AMAZON_TAG, AMAZON_TAG_A, AMAZON_TAG_B, PRODUCTS, pin_tag, product_url
 from scenes import SCENES
 from scenes2 import SCENES2
 
@@ -775,6 +775,93 @@ PINS += [
          products=["topo_mat", "flexispot_e7"]),
 ]
 
+# ---- batch 8: Black Friday / Cyber Monday run-up (big-ticket upgrades first)
+PINS += [
+    dict(n=91, slug="desk-upgrades-small-medium-big", keyword="home office upgrades",
+         title="Desk Upgrades, From a Small Fix to a Big One", text="Desk Upgrades: Small to Big",
+         head="Desk Upgrades,|Small to *Big*",
+         desc="Our pick: SIHOO M57 ergonomic chair, linked below. Not every fix needs a new chair. Start small with a pillow or footrest, step up to a monitor arm and keyboard, and save the chair or standing desk for last. Tap the link to see it on Amazon.",
+         kicker="Upgrade guide", sub="Start small, upgrade only what still bothers you.", scene="essentials",
+         tiers=["Small fix", "Medium upgrade", "Big upgrade"],
+         items=[("lumbar", "Lumbar pillow"), ("footrest", "Footrest"), ("monitor_arm", "Monitor arm"),
+                ("wrist_rest", "Ergonomic keyboard"), ("chair", "Ergonomic chair"), ("desk", "Standing desk")],
+         products=["sihoo_m57", "flexispot_e7", "vivo_arm", "lumbar_ec"]),
+    dict(n=92, slug="black-friday-home-office-shopping-list", keyword="black friday home office deals",
+         title="Black Friday Home Office Shopping List", text="Black Friday Office List",
+         head="Black Friday|*Desk List*",
+         desc="Our pick: FlexiSpot E7 Pro standing desk, linked below. If you've been waiting to upgrade your home office, this is the list: standing desk, ergonomic chair, monitor arm, standing mat, vertical mouse and seat cushion. Tap the link to see it on Amazon.",
+         kicker="Shopping list", sub="Six upgrades worth watching for.", scene="essentials",
+         items=[("desk", "Standing desk"), ("chair", "Ergonomic chair"), ("monitor_arm", "Monitor arm"),
+                ("mat", "Standing mat"), ("vmouse", "Vertical mouse"), ("seat_cushion", "Seat cushion")],
+         products=["flexispot_e7", "sihoo_m57", "vivo_arm", "topo_mat"]),
+    dict(n=93, slug="test-an-office-chair-in-60-seconds", keyword="how to test an office chair",
+         title="How to Test an Office Chair in 60 Seconds", text="Test a Chair in 60 Seconds",
+         head="Test a Chair in|*60 Seconds*",
+         desc="Our pick: SIHOO M57 ergonomic chair, linked below. Sit all the way back and check four things: lumbar meets your curve, 2-3 fingers behind your knees, feet flat, elbows level with the desk. Tap the link to see it on Amazon.",
+         kicker="Before you keep it", sub="Four checks the moment you sit down.", scene="chair_annot",
+         callouts=[("hip", "Sit all the way back", "R", 40), ("lumbar", "Lumbar meets your curve", "L", 40),
+                   ("seat_front", "2–3 fingers behind knees", "R", 110), ("toe", "Feet flat on the floor", "R", 760)],
+         products=["sihoo_m57", "steelcase_s1"]),
+    dict(n=94, slug="standing-desk-setup-in-5-minutes", keyword="standing desk setup",
+         title="Standing Desk Setup in 5 Minutes", text="Standing Desk Setup",
+         head="Standing Desk|*Setup*",
+         desc="Our pick: FlexiSpot E7 Pro standing desk, linked below. New desk? Five minutes of setup: elbows at 90 degrees, screen at eye level, monitor arm for range, mat underfoot and saved height presets. Tap the link to see it on Amazon.",
+         kicker="New desk?", sub="Five settings, five minutes.", scene="standing_tips", mode="tips",
+         tips=["Elbows at about 90°", "Screen top at eye level", "Monitor arm for range", "A cushioned mat underfoot",
+               "Save sit and stand presets"],
+         products=["flexispot_e7", "topo_mat"]),
+    dict(n=95, slug="sit-stand-split-for-beginners", keyword="how long should you stand at a standing desk",
+         title="Sit-Stand Split for Beginners: 45 Minutes, Then 15", text="The 45-15 Sit-Stand Split",
+         head="The *45-15*|Sit-Stand Split",
+         desc="Our pick: FlexiSpot E7 Pro standing desk, linked below. New to standing? Sit for 45 minutes, stand for 15, and repeat. Build up from there once standing feels easy. Tap the link to see it on Amazon.",
+         kicker="Sit-stand rhythm", sub="An easy starting point for new standers.", scene="rhythm",
+         segments=[(45, "Sit", "sit"), (15, "Stand", "stand")],
+         verdict="Start easy, then stand a little longer.",
+         products=["flexispot_e7", "timetimer"]),
+    dict(n=96, slug="cyber-monday-desk-gadgets", keyword="cyber monday desk accessories",
+         title="Cyber Monday Desk Gadgets That Are Actually Useful", text="Cyber Monday Desk Gadgets",
+         head="Cyber Monday|*Desk Gadgets*",
+         desc="Our pick: Logitech MX Vertical mouse, linked below. Skip the novelty gadgets. These six make long desk days easier: vertical mouse, monitor arm, laptop stand, visual timer, standing mat and resistance band. Tap the link to see it on Amazon.",
+         kicker="Shopping list", sub="Six gadgets worth the desk space.", scene="essentials",
+         items=[("vmouse", "Vertical mouse"), ("monitor_arm", "Monitor arm"), ("laptop_stand", "Laptop stand"),
+                ("timer", "Visual timer"), ("mat", "Standing mat"), ("band", "Resistance band")],
+         products=["mx_vertical", "vivo_arm", "nulaxy", "timetimer"]),
+    dict(n=97, slug="is-your-desk-too-low", keyword="desk too low",
+         title="Is Your Desk Too Low? Signs and Fixes", text="Is Your Desk Too Low?",
+         head="Is Your Desk|Too *Low?*",
+         desc="Our pick: FlexiSpot standing desk converter, linked below. A low desk makes you hunch to reach the keyboard. Raise the work surface to elbow height with a converter or a height-adjustable desk. Tap the link to see it on Amazon.",
+         kicker="Quick check", sub="Hunching to type? Raise the surface.", scene="rig_compare",
+         panels=[dict(tag="Desk too low", caption="Hunching to reach the keys", desk_raise=-0.45,
+                      pose=dict(lumbar=-8, thoracic=18, neck=26, uarm=170, farm=118, fuarm=168, ffarm=118),
+                      strain=["back"]),
+                 dict(tag="Surface at elbow height", caption="Upright, elbows relaxed")],
+         products=["flexispot_conv", "flexispot_e7"]),
+    dict(n=98, slug="evening-wind-down-stretches-desk", keyword="stretches after work",
+         title="4 Wind-Down Stretches After a Long Desk Day", text="Wind-Down Stretches",
+         head="Wind-Down|*Stretches*",
+         desc="Our pick: Chirp Wheel+ foam roller, linked below. End the workday with four slow stretches for your neck, chest, sides and shoulders. Three minutes, before you close the laptop. Tap the link to see it on Amazon.",
+         kicker="After work", sub="Three minutes before you log off.", scene="exercise_grid", badge="After work",
+         exercises=[("side_neck", "Side neck stretch", "20 sec / side"), ("chest_opener_seated", "Chest opener", "20 sec"),
+                    ("side_bend", "Side bend", "5 breaths / side"), ("shoulder_rolls", "Shoulder rolls", "10 backward")],
+         products=["chirp", "theraband"]),
+    dict(n=99, slug="new-office-chair-settings-to-check", keyword="new office chair setup",
+         title="Just Got a New Office Chair? Check These 5 Settings", text="New Chair? Check 5 Settings",
+         head="New Chair?|Check *5 Settings*",
+         desc="Our pick: Everlasting Comfort lumbar pillow, linked below. A new chair only helps once it's adjusted. Set height, seat depth, lumbar, armrests and recline before your first full day. Tap the link to see it on Amazon.",
+         kicker="After unboxing", sub="Adjust it before your first full day.", scene="chair_tips",
+         tips=["Height: feet flat", "Depth: 2–3 finger gap", "Lumbar: into the curve", "Arms: level with the desk",
+               "Recline: 100–110°"],
+         products=["lumbar_ec", "footrest_ec"]),
+    dict(n=100, slug="gifts-for-new-remote-workers", keyword="gifts for new remote workers",
+         title="Gifts for Someone Who Just Started Working From Home", text="Gifts for New Remote Workers",
+         head="Gifts for New|*Remote Workers*",
+         desc="Our pick: Nulaxy laptop stand, linked below. New to working from home? These six gifts turn a kitchen table into a workable desk: laptop stand, footrest, lumbar pillow, seat cushion, wrist rest and a visual timer. Tap the link to see it on Amazon.",
+         kicker="Holiday gift guide", sub="Turn a kitchen table into a workable desk.", scene="essentials",
+         items=[("laptop_stand", "Laptop stand"), ("footrest", "Footrest"), ("lumbar", "Lumbar pillow"),
+                ("seat_cushion", "Seat cushion"), ("wrist_rest", "Wrist rest"), ("timer", "Visual timer")],
+         products=["nulaxy", "footrest_ec", "lumbar_ec", "seat_ec", "gimars", "timetimer"]),
+]
+
 HEAD_TOP = 118
 HEAD_LH = 102
 
@@ -901,7 +988,8 @@ def write_bulk_csv(name, order, start, board="Desk Posture & Ergonomics"):
             p = by_n[n]
             when = start + timedelta(hours=12 * i)
             w.writerow([p["title"], f"{RAW_BASE}{p['n']:02d}-{p['slug']}.png", board, "", p["desc"] + " #affiliate",
-                        product_url(p["products"][0]), when.strftime("%Y-%m-%dT%H:%M:%S"), p["keyword"]])
+                        p.get("link") or product_url(p["products"][0], pin_tag(p)), when.strftime("%Y-%m-%dT%H:%M:%S"),
+                        p["keyword"]])
     return path
 
 

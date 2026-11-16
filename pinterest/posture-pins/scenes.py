@@ -676,6 +676,67 @@ def sc_topdown_keyboard(pin, top):
     return "".join(out)
 
 
+def flat_item(kind, cc):
+    """One flat-lay object centred on cc (about 300x140)."""
+    out = []
+    if kind == "lumbar":
+        out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="118" ry="62" fill="{TERRA}"/>')
+        out.append(path(f"M{fmt(cc[0]-118)},{fmt(cc[1])} C{fmt(cc[0]-60)},{fmt(cc[1]-28)} {fmt(cc[0]+60)},{fmt(cc[1]-28)} {fmt(cc[0]+118)},{fmt(cc[1])}",
+                        stroke=PAPER, sw=1.2, extra='opacity=".5"'))
+        out.append(line((cc[0] - 175, cc[1]), (cc[0] - 118, cc[1]), sw=2.4))
+        out.append(line((cc[0] + 118, cc[1]), (cc[0] + 175, cc[1]), sw=2.4))
+    elif kind == "laptop_stand":
+        out.append(rect(cc[0] - 130, cc[1] - 70, 260, 140, rx=10, stroke=LINE, sw=2))
+        out.append(rect(cc[0] - 110, cc[1] - 52, 220, 104, rx=6, fill=INK))
+    elif kind == "footrest":
+        out.append(rect(cc[0] - 150, cc[1] - 55, 300, 110, rx=40, fill=PAPER, stroke=LINE, sw=2))
+        for q in range(-4, 5):
+            out.append(circle((cc[0] + q * 28, cc[1]), 4, fill=INK_SOFT))
+    elif kind == "wrist_rest":
+        out.append(kb_plan(cc[0] - 150, cc[1] - 70, 300, 80))
+        out.append(rect(cc[0] - 150, cc[1] + 24, 300, 34, rx=17, fill=INK))
+    elif kind == "timer":
+        out.append(circle(cc, 70, fill=PAPER, stroke=LINE, sw=2))
+        e = add(cc, 110, 58)
+        out.append(path(f"M{fmt(cc[0])},{fmt(cc[1])} L{fmt(cc[0])},{fmt(cc[1]-58)} A58,58 0 0 1 {fmt(e[0])},{fmt(e[1])}Z", fill=TERRA))
+        for a in range(0, 360, 30):
+            out.append(line(add(cc, a, 62), add(cc, a, 68), sw=1.4))
+    elif kind == "band":
+        out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="130" ry="58" fill="none" stroke="{TERRA}" stroke-width="16"/>')
+        out.append(f'<ellipse cx="{fmt(cc[0] + 16)}" cy="{fmt(cc[1] + 8)}" rx="104" ry="44" fill="none" stroke="{SAGE}" stroke-width="12"/>')
+    elif kind == "monitor_arm":
+        out.append(rect(cc[0] - 150, cc[1] + 40, 60, 22, rx=4, stroke=LINE, sw=2))
+        out.append(line((cc[0] - 120, cc[1] + 40), (cc[0] - 120, cc[1] - 40), sw=8))
+        out.append(polyline([(cc[0] - 120, cc[1] - 40), (cc[0] - 10, cc[1] - 10), (cc[0] + 70, cc[1] - 40)], sw=7))
+        out.append(circle((cc[0] - 10, cc[1] - 10), 9, fill=PAPER, stroke=LINE, sw=2))
+        out.append(rect(cc[0] + 70, cc[1] - 90, 90, 120, rx=6, fill=INK))
+    elif kind == "seat_cushion":
+        out.append(rect(cc[0] - 140, cc[1] - 65, 280, 130, rx=46, fill=SAGE_SOFT, stroke=SAGE, sw=2))
+        out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]+65)} L{fmt(cc[0]-40)},{fmt(cc[1]+15)} Q{fmt(cc[0])},{fmt(cc[1]-15)} {fmt(cc[0]+40)},{fmt(cc[1]+15)} L{fmt(cc[0]+40)},{fmt(cc[1]+65)}Z", fill=PAPER, stroke=SAGE, sw=2))
+    elif kind == "mat":
+        out.append(rect(cc[0] - 150, cc[1] - 70, 300, 140, rx=30, fill=SAGE_SOFT, stroke=SAGE, sw=2))
+        out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]-70)} Q{fmt(cc[0]-15)},{fmt(cc[1])} {fmt(cc[0]-40)},{fmt(cc[1]+70)}", stroke=SAGE, sw=1.6))
+        out.append(path(f"M{fmt(cc[0]+40)},{fmt(cc[1]-70)} Q{fmt(cc[0]+15)},{fmt(cc[1])} {fmt(cc[0]+40)},{fmt(cc[1]+70)}", stroke=SAGE, sw=1.6))
+        out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="16" ry="30" fill="{SAGE}"/>')
+    elif kind == "vmouse":
+        out.append(line((cc[0] - 120, cc[1] + 62), (cc[0] + 120, cc[1] + 62), sw=2))
+        out.append(path(f"M{fmt(cc[0]-60)},{fmt(cc[1]+62)} L{fmt(cc[0]-52)},{fmt(cc[1]-40)} "
+                        f"Q{fmt(cc[0]-40)},{fmt(cc[1]-80)} {fmt(cc[0])},{fmt(cc[1]-68)} "
+                        f"Q{fmt(cc[0]+62)},{fmt(cc[1]-50)} {fmt(cc[0]+66)},{fmt(cc[1]+20)} L{fmt(cc[0]+66)},{fmt(cc[1]+62)}Z",
+                        fill=INK))
+        out.append(circle((cc[0] - 20, cc[1] - 20), 10, fill=TERRA))
+    elif kind == "chair":
+        out.append(chair_side((cc[0] - 10, cc[1] - 25), 40, cc[1] + 62, lumbar=SAGE_SOFT, arm=True, back_h=2.6))
+    elif kind == "desk":
+        out.append(rect(cc[0] - 130, cc[1] - 30, 260, 12, rx=3, fill=PAPER, stroke=LINE, sw=2))
+        for x in (cc[0] - 100, cc[0] + 100):
+            out.append(line((x, cc[1] - 18), (x, cc[1] + 62), sw=7))
+            out.append(line((x - 30, cc[1] + 64), (x + 30, cc[1] + 64), sw=4))
+        out.append(rect(cc[0] - 50, cc[1] - 92, 100, 56, rx=4, fill=INK))
+        out.append(line((cc[0], cc[1] - 36), (cc[0], cc[1] - 30), sw=4))
+    return "".join(out)
+
+
 def sc_flatlay(pin, top):
     out = []
     items = pin["items"]
@@ -690,53 +751,12 @@ def sc_flatlay(pin, top):
         x0 = L + c * cw
         y0 = top + 10 + r * rh
         cc = (x0 + cw / 2, y0 + rh / 2 - 6)
-        if kind == "lumbar":
-            out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="118" ry="62" fill="{TERRA}"/>')
-            out.append(path(f"M{fmt(cc[0]-118)},{fmt(cc[1])} C{fmt(cc[0]-60)},{fmt(cc[1]-28)} {fmt(cc[0]+60)},{fmt(cc[1]-28)} {fmt(cc[0]+118)},{fmt(cc[1])}",
-                            stroke=PAPER, sw=1.2, extra='opacity=".5"'))
-            out.append(line((cc[0] - 175, cc[1]), (cc[0] - 118, cc[1]), sw=2.4))
-            out.append(line((cc[0] + 118, cc[1]), (cc[0] + 175, cc[1]), sw=2.4))
-        elif kind == "laptop_stand":
-            out.append(rect(cc[0] - 130, cc[1] - 70, 260, 140, rx=10, stroke=LINE, sw=2))
-            out.append(rect(cc[0] - 110, cc[1] - 52, 220, 104, rx=6, fill=INK))
-        elif kind == "footrest":
-            out.append(rect(cc[0] - 150, cc[1] - 55, 300, 110, rx=40, fill=PAPER, stroke=LINE, sw=2))
-            for q in range(-4, 5):
-                out.append(circle((cc[0] + q * 28, cc[1]), 4, fill=INK_SOFT))
-        elif kind == "wrist_rest":
-            out.append(kb_plan(cc[0] - 150, cc[1] - 70, 300, 80))
-            out.append(rect(cc[0] - 150, cc[1] + 24, 300, 34, rx=17, fill=INK))
-        elif kind == "timer":
-            out.append(circle(cc, 70, fill=PAPER, stroke=LINE, sw=2))
-            e = add(cc, 110, 58)
-            out.append(path(f"M{fmt(cc[0])},{fmt(cc[1])} L{fmt(cc[0])},{fmt(cc[1]-58)} A58,58 0 0 1 {fmt(e[0])},{fmt(e[1])}Z", fill=TERRA))
-            for a in range(0, 360, 30):
-                out.append(line(add(cc, a, 62), add(cc, a, 68), sw=1.4))
-        elif kind == "band":
-            out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="130" ry="58" fill="none" stroke="{TERRA}" stroke-width="16"/>')
-            out.append(f'<ellipse cx="{fmt(cc[0] + 16)}" cy="{fmt(cc[1] + 8)}" rx="104" ry="44" fill="none" stroke="{SAGE}" stroke-width="12"/>')
-        elif kind == "monitor_arm":
-            out.append(rect(cc[0] - 150, cc[1] + 40, 60, 22, rx=4, stroke=LINE, sw=2))
-            out.append(line((cc[0] - 120, cc[1] + 40), (cc[0] - 120, cc[1] - 40), sw=8))
-            out.append(polyline([(cc[0] - 120, cc[1] - 40), (cc[0] - 10, cc[1] - 10), (cc[0] + 70, cc[1] - 40)], sw=7))
-            out.append(circle((cc[0] - 10, cc[1] - 10), 9, fill=PAPER, stroke=LINE, sw=2))
-            out.append(rect(cc[0] + 70, cc[1] - 90, 90, 120, rx=6, fill=INK))
-        elif kind == "seat_cushion":
-            out.append(rect(cc[0] - 140, cc[1] - 65, 280, 130, rx=46, fill=SAGE_SOFT, stroke=SAGE, sw=2))
-            out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]+65)} L{fmt(cc[0]-40)},{fmt(cc[1]+15)} Q{fmt(cc[0])},{fmt(cc[1]-15)} {fmt(cc[0]+40)},{fmt(cc[1]+15)} L{fmt(cc[0]+40)},{fmt(cc[1]+65)}Z", fill=PAPER, stroke=SAGE, sw=2))
-        elif kind == "mat":
-            out.append(rect(cc[0] - 150, cc[1] - 70, 300, 140, rx=30, fill=SAGE_SOFT, stroke=SAGE, sw=2))
-            out.append(path(f"M{fmt(cc[0]-40)},{fmt(cc[1]-70)} Q{fmt(cc[0]-15)},{fmt(cc[1])} {fmt(cc[0]-40)},{fmt(cc[1]+70)}", stroke=SAGE, sw=1.6))
-            out.append(path(f"M{fmt(cc[0]+40)},{fmt(cc[1]-70)} Q{fmt(cc[0]+15)},{fmt(cc[1])} {fmt(cc[0]+40)},{fmt(cc[1]+70)}", stroke=SAGE, sw=1.6))
-            out.append(f'<ellipse cx="{fmt(cc[0])}" cy="{fmt(cc[1])}" rx="16" ry="30" fill="{SAGE}"/>')
-        elif kind == "vmouse":
-            out.append(line((cc[0] - 120, cc[1] + 62), (cc[0] + 120, cc[1] + 62), sw=2))
-            out.append(path(f"M{fmt(cc[0]-60)},{fmt(cc[1]+62)} L{fmt(cc[0]-52)},{fmt(cc[1]-40)} "
-                            f"Q{fmt(cc[0]-40)},{fmt(cc[1]-80)} {fmt(cc[0])},{fmt(cc[1]-68)} "
-                            f"Q{fmt(cc[0]+62)},{fmt(cc[1]-50)} {fmt(cc[0]+66)},{fmt(cc[1]+20)} L{fmt(cc[0]+66)},{fmt(cc[1]+62)}Z",
-                            fill=INK))
-            out.append(circle((cc[0] - 20, cc[1] - 20), 10, fill=TERRA))
-        out.append(text(x0 + (0 if c == 0 else 24), y0 + 36, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
+        out.append(flat_item(kind, cc))
+        if pin.get("tiers"):
+            if c == 0:
+                out.append(text(x0, y0 + 36, pin["tiers"][r].upper(), size=15, family=MONO, fill=TERRA, ls=3))
+        else:
+            out.append(text(x0 + (0 if c == 0 else 24), y0 + 36, f"{i + 1:02d}", size=15, family=MONO, fill=TERRA, ls=2))
         out.append(text(cc[0], y0 + rh - 26, lab, size=32, family=SERIF, fill=INK, anchor="middle"))
     return "".join(out)
 

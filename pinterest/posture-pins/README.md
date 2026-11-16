@@ -13,7 +13,7 @@ The visual system is **Plumb Line**, described in [`DESIGN_PHILOSOPHY.md`](DESIG
 |---|---|
 | `images/NN-slug.png` | The 30 pin images, ready to upload |
 | `contact-sheet.png` | All 30 at a glance |
-| `batch2-sheet.png` … `batch7-sheet.png` | Batch 2 (31–40, chairs and desk setup), batch 3 (41–50, quick fixes and accessories) batch 4 (51–60, laptops, keyboards, sit-stand rhythm, gifts) batch 5 (61–70, fresh designs for the best-performing topics) batch 6 (71–80, descriptions that lead with the product) and batch 7 (81–90, holiday gift guides and Black Friday checklists) |
+| `batch2-sheet.png` … `batch8-sheet.png` | Batch 2 (31–40, chairs and desk setup), batch 3 (41–50, quick fixes and accessories) batch 4 (51–60, laptops, keyboards, sit-stand rhythm, gifts) batch 5 (61–70, fresh designs for the best-performing topics) batch 6 (71–80, descriptions that lead with the product) batch 7 (81–90, holiday gift guides and Black Friday checklists) and batch 8 (91–100, Black Friday and Cyber Monday upgrades) |
 | `pinterest-bulk-batchN.csv` | Pinterest bulk-create CSV per batch: public image URLs, board, link and publish time (two a day; Pinterest reads the time in the account's time zone) |
 | `pins.csv` | Per pin: title, description, alt text, keyword, board, link (primary affiliate) and other products |
 | `AFFILIATES.md` | Product table per pin (auto-generated) |
@@ -21,7 +21,8 @@ The visual system is **Plumb Line**, described in [`DESIGN_PHILOSOPHY.md`](DESIG
 | `scenes2.py` … `scenes5.py` | Scenes added for batches 2–5 |
 | `scenes.py` / `svgkit.py` | Vector illustration code: scenes, silhouettes, furniture, annotations |
 | `plate.py` / `render.mjs` | HTML plate template, rendered to PNG with Playwright (Chromium) |
-| `products.py` | Affiliate product master list (ASINs / URLs) |
+| `products.py` | Affiliate product master list (ASINs / URLs) and per-category tracking IDs (`CATEGORY_TAGS`) |
+| `guides.py` → `site/` | Static guide pages for list pins: every product with its own affiliate link (`python guides.py`) |
 | `fonts/` | Instrument Serif, Instrument Sans and DM Mono (SIL Open Font License) |
 
 ## Regenerate
