@@ -62,7 +62,7 @@ PRODUCTS = {
 # Per-category tracking IDs so Amazon reports show which kind of pin earns.
 # Fill in only with IDs that exist under Associates -> Manage Tracking IDs;
 # an unknown tag may not be credited, so anything missing falls back to AMAZON_TAG.
-CATEGORY_TAGS = {}
+CATEGORY_TAGS = {"chair": "deskchair0e-20", "stand": "deskstand-20", "acc": "deskacc0a-20", "gift": "deskgift0f-20"}
 CATEGORY = {
     "sihoo_m57": "chair", "steelcase_s1": "chair", "lumbar_ec": "chair", "seat_ec": "chair", "footrest_ec": "chair",
     "flexispot_e7": "stand", "flexispot_conv": "stand", "topo_mat": "stand",
