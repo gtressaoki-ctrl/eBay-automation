@@ -57,7 +57,7 @@
     "ebay_listing_id": "860029711234",
     "listing_url": "https://www.ebay.com/itm/860029711234",
     "published_at": "2026-10-10T13:30:02+00:00",
-    "checked_at": "2026-11-21T12:58:56+00:00",
+    "checked_at": "2026-11-21T20:39:41+00:00",
     "paused_reason": "",
     "price": 76.63,
     "currency": "USD",
@@ -122,7 +122,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860032506929",
     "published_at": "2026-10-11T09:42:13+00:00",
     "issue_number": 64,
-    "checked_at": "2026-11-21T12:59:00+00:00",
+    "checked_at": "2026-11-21T20:39:44+00:00",
     "paused_reason": "利益 ¥-19 が下限 ¥0 未満",
     "repriced_at": "2026-11-18T16:25:00+00:00",
     "seo_version": 3,
@@ -241,7 +241,7 @@
     "seo_version": 3,
     "title_changed_at": "2026-11-06T14:58:35+00:00",
     "repriced_at": "2026-11-07T13:57:04+00:00",
-    "checked_at": "2026-11-21T12:59:01+00:00",
+    "checked_at": "2026-11-21T20:39:45+00:00",
     "paused_reason": "利益 ¥-3,146 が下限 ¥0 未満"
   },
   "JXGB-4988018102519": {
@@ -270,7 +270,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860044329036",
     "published_at": "2026-10-14T13:02:51+00:00",
     "issue_number": 74,
-    "checked_at": "2026-11-21T12:59:03+00:00",
+    "checked_at": "2026-11-21T20:39:47+00:00",
     "paused_reason": "",
     "repriced_at": "2026-11-17T16:52:11+00:00",
     "seo_version": 3,
@@ -289,7 +289,7 @@
     "price_basis": "www.ebay.co.uk の日本発送最安",
     "units_per_month": 2.35,
     "source_price_jpy": 4672,
-    "source_url": "https://store.shopping.yahoo.co.jp/radiowave/hm151a.html",
+    "source_url": "https://store.shopping.yahoo.co.jp/e-connection/hm151a.html",
     "source_name": "HM-151(HM151)  ICOM アイコム リモコンハンドマイク アマチュア無線",
     "expected_profit_jpy": 683,
     "margin": 0.09,
@@ -305,7 +305,7 @@
     "seo_version": 3,
     "title_changed_at": "2026-10-23T12:35:48+00:00",
     "repriced_at": "2026-11-20T16:05:24+00:00",
-    "checked_at": "2026-11-21T12:59:04+00:00",
+    "checked_at": "2026-11-21T20:39:48+00:00",
     "paused_reason": ""
   },
   "JXGB-4902370534337": {
@@ -334,7 +334,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860050797636",
     "published_at": "2026-10-16T12:31:26+00:00",
     "issue_number": 76,
-    "checked_at": "2026-11-21T12:59:05+00:00",
+    "checked_at": "2026-11-21T20:39:50+00:00",
     "paused_reason": "",
     "repriced_at": "2026-11-21T15:18:59+00:00",
     "seo_version": 3,
@@ -366,7 +366,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860054178514",
     "published_at": "2026-10-17T11:44:29+00:00",
     "issue_number": 77,
-    "checked_at": "2026-11-21T12:59:07+00:00",
+    "checked_at": "2026-11-21T20:39:51+00:00",
     "paused_reason": "",
     "repriced_at": "2026-10-18T11:39:07+00:00",
     "seo_version": 3,
@@ -575,7 +575,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860121851244",
     "published_at": "2026-11-07T13:56:36+00:00",
     "repriced_at": "2026-11-20T16:05:32+00:00",
-    "checked_at": "2026-11-21T12:59:08+00:00",
+    "checked_at": "2026-11-21T20:39:53+00:00",
     "paused_reason": ""
   },
   "JXAU-4988031637449": {
@@ -609,7 +609,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860085696336",
     "published_at": "2026-10-26T14:11:23+00:00",
     "repriced_at": "2026-11-20T16:05:36+00:00",
-    "checked_at": "2026-11-21T12:59:10+00:00",
+    "checked_at": "2026-11-21T20:39:54+00:00",
     "paused_reason": ""
   },
   "JXAU-0088381755382": {
@@ -724,7 +724,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860100614859",
     "published_at": "2026-10-31T13:35:51+00:00",
     "repriced_at": "2026-11-13T15:19:38+00:00",
-    "checked_at": "2026-11-21T12:59:11+00:00",
+    "checked_at": "2026-11-21T20:39:56+00:00",
     "paused_reason": ""
   },
   "JXAU-4547366588132": {
@@ -757,7 +757,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860097964796",
     "published_at": "2026-10-30T14:04:03+00:00",
     "repriced_at": "2026-11-20T16:05:43+00:00",
-    "checked_at": "2026-11-21T12:59:13+00:00",
+    "checked_at": "2026-11-21T20:39:57+00:00",
     "paused_reason": ""
   },
   "JXAU-4904810910596": {
@@ -872,7 +872,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860146080426",
     "published_at": "2026-11-15T14:42:28+00:00",
     "repriced_at": "2026-11-15T14:43:47+00:00",
-    "checked_at": "2026-11-21T12:59:14+00:00",
+    "checked_at": "2026-11-21T20:39:59+00:00",
     "paused_reason": ""
   },
   "JXAU-4988031753781": {
