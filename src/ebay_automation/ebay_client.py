@@ -155,13 +155,20 @@ class EbayClient:
         EPS URLs are what listings should point at: eBay serves them itself,
         so nothing outside eBay has to stay online for the listing to work.
         """
-        url = f"{self.base_url}/commerce/media/v1_beta/image/create_image_from_file"
+        # The Media API lives on its own host (apim.ebay.com, apim.sandbox.ebay.com);
+        # api.ebay.com answers 404 for it.
+        media = self.base_url.replace("://api.", "://apim.") + "/commerce/media/v1_beta/image"
         headers = {"Authorization": f"Bearer {get_user_access_token(self.config)}"}
+        url = f"{media}/create_image_from_file"
         resp = requests.post(url, headers=headers, files={"image": (filename, data)}, timeout=60)
         if not resp.ok:
             raise EbayApiError("POST", url, resp.status_code, resp.text)
         image_id = resp.headers.get("Location", "").rstrip("/").rsplit("/", 1)[-1]
-        return self._request("GET", f"/commerce/media/v1_beta/image/{image_id}").json()["imageUrl"]
+        url = f"{media}/{image_id}"
+        resp = requests.get(url, headers=headers, timeout=30)
+        if not resp.ok:
+            raise EbayApiError("GET", url, resp.status_code, resp.text)
+        return resp.json()["imageUrl"]
 
     # ---- Account API (business policies) --------------------------------------
 
