@@ -66,3 +66,35 @@ def test_existing_offer_id_is_taken_from_the_error(spec):
     )
     mod.list_item(MagicMock(), ebay, spec)
     ebay.publish_offer.assert_called_once_with("777")
+
+
+def test_upload_image_uses_the_media_api_host(monkeypatch):
+    from ebay_automation import ebay_client
+
+    calls = []
+
+    class Resp:
+        def __init__(self, headers=None, body=None):
+            self.ok, self.status_code, self.text = True, 200, ""
+            self.headers, self._body = headers or {}, body
+
+        def json(self):
+            return self._body
+
+    def post(url, **kw):
+        calls.append(url)
+        return Resp(headers={"Location": "https://apim.ebay.com/commerce/media/v1_beta/image/IMG1"})
+
+    def get(url, **kw):
+        calls.append(url)
+        return Resp(body={"imageUrl": "https://i.ebayimg.com/x.jpg"})
+
+    monkeypatch.setattr(ebay_client.requests, "post", post)
+    monkeypatch.setattr(ebay_client.requests, "get", get)
+    monkeypatch.setattr(ebay_client, "get_user_access_token", lambda config: "t")
+    client = ebay_client.EbayClient(MagicMock(ebay_env="PRODUCTION"))
+    assert client.upload_image(b"x", "a.jpg") == "https://i.ebayimg.com/x.jpg"
+    assert calls == [
+        "https://apim.ebay.com/commerce/media/v1_beta/image/create_image_from_file",
+        "https://apim.ebay.com/commerce/media/v1_beta/image/IMG1",
+    ]
