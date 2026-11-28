@@ -1,0 +1,62 @@
+name: List owned item
+
+# Lists a used item the seller owns (state/owned_items/<name>.json + photos)
+# on ebay.com. Runs when a spec lands on main, or manually with its path.
+on:
+  push:
+    branches: [main]
+    paths: [state/owned_items/*.json]
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: "Spec file, e.g. state/owned_items/gopro_hero_session.json"
+        required: true
+        default: state/owned_items/gopro_hero_session.json
+
+concurrency:
+  group: ebay-automation-state
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Publish the listing
+        env:
+          PYTHONPATH: src
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_DEV_ID: ${{ secrets.EBAY_DEV_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          EBAY_MARKETPLACE_ID: ${{ vars.EBAY_MARKETPLACE_ID }}
+          EBAY_ENV: ${{ vars.EBAY_ENV }}
+          EBAY_PAYMENT_POLICY_ID: ${{ vars.EBAY_PAYMENT_POLICY_ID }}
+          EBAY_RETURN_POLICY_ID: ${{ vars.EBAY_RETURN_POLICY_ID }}
+          EXPORT_MERCHANT_LOCATION_KEY: ${{ vars.EXPORT_MERCHANT_LOCATION_KEY }}
+          EXPORT_FULFILLMENT_POLICY_ID: ${{ vars.EXPORT_FULFILLMENT_POLICY_ID }}
+          EXPORT_FULFILLMENT_POLICY_NAME: ${{ vars.EXPORT_FULFILLMENT_POLICY_NAME }}
+          EXPORT_MARKETS: ${{ vars.EXPORT_MARKETS }}
+          SPEC: ${{ inputs.spec || 'state/owned_items/gopro_hero_session.json' }}
+        run: python scripts/list_owned_item.py "$SPEC"
+      - name: Commit updated state
+        if: always()
+        run: |
+          git config user.name "ebay-automation-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/owned_listings.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(state): owned item listing [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              git push && break
+              git fetch origin main && git rebase origin/main
+              sleep $((RANDOM % 5 + 1))
+            done
+          fi
