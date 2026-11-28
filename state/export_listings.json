@@ -57,7 +57,7 @@
     "ebay_listing_id": "860029711234",
     "listing_url": "https://www.ebay.com/itm/860029711234",
     "published_at": "2026-10-10T13:30:02+00:00",
-    "checked_at": "2026-11-27T19:38:20+00:00",
+    "checked_at": "2026-11-28T02:57:00+00:00",
     "paused_reason": "",
     "price": 76.63,
     "currency": "USD",
@@ -241,7 +241,7 @@
     "seo_version": 3,
     "title_changed_at": "2026-11-06T14:58:35+00:00",
     "repriced_at": "2026-11-07T13:57:04+00:00",
-    "checked_at": "2026-11-27T19:38:26+00:00",
+    "checked_at": "2026-11-28T02:57:04+00:00",
     "paused_reason": "利益 ¥-3,245 が下限 ¥0 未満"
   },
   "JXGB-4988018102519": {
@@ -270,7 +270,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860044329036",
     "published_at": "2026-10-14T13:02:51+00:00",
     "issue_number": 74,
-    "checked_at": "2026-11-27T19:38:27+00:00",
+    "checked_at": "2026-11-28T02:57:06+00:00",
     "paused_reason": "",
     "repriced_at": "2026-11-22T15:15:16+00:00",
     "seo_version": 3,
@@ -305,7 +305,7 @@
     "seo_version": 3,
     "title_changed_at": "2026-10-23T12:35:48+00:00",
     "repriced_at": "2026-11-20T16:05:24+00:00",
-    "checked_at": "2026-11-27T19:38:29+00:00",
+    "checked_at": "2026-11-28T02:57:07+00:00",
     "paused_reason": ""
   },
   "JXGB-4902370534337": {
@@ -334,7 +334,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860050797636",
     "published_at": "2026-10-16T12:31:26+00:00",
     "issue_number": 76,
-    "checked_at": "2026-11-27T19:38:30+00:00",
+    "checked_at": "2026-11-28T02:57:09+00:00",
     "paused_reason": "",
     "repriced_at": "2026-11-24T18:51:40+00:00",
     "seo_version": 3,
@@ -366,7 +366,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860054178514",
     "published_at": "2026-10-17T11:44:29+00:00",
     "issue_number": 77,
-    "checked_at": "2026-11-27T19:38:31+00:00",
+    "checked_at": "2026-11-28T02:57:10+00:00",
     "paused_reason": "",
     "repriced_at": "2026-11-26T17:41:51+00:00",
     "seo_version": 3,
@@ -575,7 +575,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860121851244",
     "published_at": "2026-11-07T13:56:36+00:00",
     "repriced_at": "2026-11-20T16:05:32+00:00",
-    "checked_at": "2026-11-27T19:38:33+00:00",
+    "checked_at": "2026-11-28T02:57:12+00:00",
     "paused_reason": ""
   },
   "JXAU-4988031637449": {
@@ -609,7 +609,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860085696336",
     "published_at": "2026-10-26T14:11:23+00:00",
     "repriced_at": "2026-11-24T18:51:46+00:00",
-    "checked_at": "2026-11-27T19:38:34+00:00",
+    "checked_at": "2026-11-28T02:57:13+00:00",
     "paused_reason": ""
   },
   "JXAU-0088381755382": {
@@ -724,7 +724,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860100614859",
     "published_at": "2026-10-31T13:35:51+00:00",
     "repriced_at": "2026-11-24T18:51:50+00:00",
-    "checked_at": "2026-11-27T19:38:36+00:00",
+    "checked_at": "2026-11-28T02:57:15+00:00",
     "paused_reason": ""
   },
   "JXAU-4547366588132": {
@@ -757,7 +757,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860097964796",
     "published_at": "2026-10-30T14:04:03+00:00",
     "repriced_at": "2026-11-20T16:05:43+00:00",
-    "checked_at": "2026-11-27T19:38:37+00:00",
+    "checked_at": "2026-11-28T02:57:16+00:00",
     "paused_reason": ""
   },
   "JXAU-4904810910596": {
@@ -872,7 +872,7 @@
     "listing_url": "https://www.ebay.co.uk/itm/860146080426",
     "published_at": "2026-11-15T14:42:28+00:00",
     "repriced_at": "2026-11-15T14:43:47+00:00",
-    "checked_at": "2026-11-27T19:38:39+00:00",
+    "checked_at": "2026-11-28T02:57:18+00:00",
     "paused_reason": ""
   },
   "JXAU-4988031753781": {
@@ -906,7 +906,7 @@
     "listing_url": "https://www.ebay.com.au/itm/860174161926",
     "published_at": "2026-11-24T18:50:50+00:00",
     "repriced_at": "2026-11-24T18:51:57+00:00",
-    "checked_at": "2026-11-27T19:38:40+00:00",
+    "checked_at": "2026-11-28T02:57:19+00:00",
     "paused_reason": ""
   },
   "JX-4988031753781": {
